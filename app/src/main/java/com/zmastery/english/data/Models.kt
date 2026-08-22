@@ -31,8 +31,13 @@ enum class CourseType(val label: String, val icon: String) {
 }
 
 /**
- * Every course renders its lessons with a dedicated layout style.
- * This lets each course present content differently from the others.
+ * بعد التوحيد (شاشة الدرس الموحّدة): لم يعد النمط يوجّه إلى شاشة خاصة.
+ * دوره الآن ثلاثة أشياء فقط داخل نظام البلوكات:
+ *   ١) شارة بصرية في بطاقة العنوان (Hero).
+ *   ٢) ترتيب عرض البلوكات عبر [LessonBlocks.orderFor] — نفس المحتوى، سرد مختلف.
+ *   ٣) لا يخفي ولا يُظهر أي محتوى — الظهور يقرره وجود البيانات نفسها.
+ * أي كورس جديد مستقبلاً = بيانات JSON فقط، بلا أي كود واجهة.
+ * (يُستخدم أيضاً خارج الدروس: زر «درس تجريبي» في شاشة الكورس الفارغة.)
  */
 enum class LessonStyle {
     VOCAB_CARDS,        // من الصفر / bites — بطاقات كلمات
@@ -140,6 +145,12 @@ data class QuizItem(
     val options: List<String> = emptyList(),
     val answer: String,
     val explanationAr: String = "",
+    /**
+     * For `audio_quiz` items (phonetics course): the word the learner must
+     * HEAR before choosing. Captured from the JSON `word_to_speak` field so a
+     * listen button can be rendered next to the question.
+     */
+    val audioText: String = "",
 )
 
 enum class ReviewState(val label: String) { NEW("جديدة"), REVIEWING("قيد المراجعة"), SAVED("محفوظة") }

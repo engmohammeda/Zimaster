@@ -1,18 +1,14 @@
 package com.zmastery.english.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -20,15 +16,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zmastery.english.data.VocabWord
+import com.zmastery.english.ui.screens.lessons.blocks.*
 import com.zmastery.english.ui.theme.*
 import com.zmastery.english.viewmodel.AppViewModel
 
+/**
+ * شاشة الدرس الموحّدة — THE one lesson screen for every course.
+ *
+ * لا توجيه حسب نوع الكورس بعد الآن: الدرس يتحول إلى قائمة بلوكات مرتبة
+ * (LessonBlocks.visibleBlocks) وكل بلوك يظهر فقط إذا كانت بياناته موجودة.
+ * الكورس يحدد اللون + الأيقونة + ترتيب البلوكات فقط.
+ */
 @Composable
 fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}) {
     com.zmastery.english.ui.components.TrackStudyTime(vm, "lesson")
     val lesson = vm.lessons.firstOrNull { it.id == lessonId } ?: return
     val course = vm.courses.firstOrNull { it.id == lesson.courseId }
+    val style = course?.style
     val accent = Color(course?.accent ?: 0xFFE07856)
+
+    // ----- Lesson data signals -----
+    val words = vm.vocab.filter { it.id in lesson.newWordIds }
+    val phonetics = remember(lesson.rawJson) {
+        if (lesson.rawJson.isNotBlank()) com.zmastery.english.data.PhoneticsParser.parse(lesson.rawJson) else null
+    }
+    val hasPhonetics = phonetics?.content?.let {
+        it.focusSounds.isNotEmpty() || it.minimalPairs.isNotEmpty() || it.practiceScripts.isNotEmpty()
+    } == true
+    val segments = remember(lesson.id) {
+        lesson.segments.ifEmpty {
+            if (lesson.fullTextEn.isNotBlank()) splitToSentences(lesson.fullTextEn, lesson.fullTextAr) else emptyList()
+        }
+    }
+
+    // ----- Block-local UI state -----
+    var revealMode by remember(lessonId) { mutableStateOf(vm.revealMode) }
+    var readMode by remember(lessonId) { mutableStateOf(0) }        // 0 = segmented, 1 = full text
+    var showAllAr by remember(lessonId) { mutableStateOf(false) }
+    var showTranslations by remember(lessonId) { mutableStateOf(true) }
+
+    // ----- Dialog state -----
     var showConfirm by remember { mutableStateOf(false) }
     var showApproval by remember { mutableStateOf(false) }
     var showMentalLink by remember { mutableStateOf(false) }
@@ -41,66 +68,79 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
         if (!lesson.isCompleted) showConfirm = true else showUndo = true
     }
 
-    // ---- Route to the course-specific lesson viewer ----
-    when (course?.style) {
-        com.zmastery.english.data.LessonStyle.VOCAB_CARDS,
-        com.zmastery.english.data.LessonStyle.IDIOMS -> {
-            com.zmastery.english.ui.screens.lessons.VocabCardsLesson(
-                vm = vm,
-                lesson = lesson,
-                accent = accent,
-                onComplete = onCompleteClick,
-                onGenerateMentalLink = { showMentalLink = true },
-                onOpenQuiz = { onOpenQuiz(lessonId) },
-            )
-        }
-        com.zmastery.english.data.LessonStyle.GRAMMAR_RULES,
-        com.zmastery.english.data.LessonStyle.EXAM_PREP -> {
-            com.zmastery.english.ui.screens.lessons.GrammarLesson(
-                vm = vm,
-                lesson = lesson,
-                accent = accent,
-                onComplete = onCompleteClick,
-                onGenerateMentalLink = { showMentalLink = true },
-                onOpenQuiz = { onOpenQuiz(lessonId) },
-            )
-        }
-        com.zmastery.english.data.LessonStyle.CONVERSATION -> {
-            com.zmastery.english.ui.screens.lessons.ConversationLesson(
-                vm = vm,
-                lesson = lesson,
-                accent = accent,
-                onComplete = onCompleteClick,
-                onGenerateMentalLink = { showMentalLink = true },
-                onOpenQuiz = { onOpenQuiz(lessonId) },
-            )
-        }
-        com.zmastery.english.data.LessonStyle.READING_TEXT,
-        com.zmastery.english.data.LessonStyle.CULTURE,
-        com.zmastery.english.data.LessonStyle.STORY,
-        com.zmastery.english.data.LessonStyle.NEWS,
-        com.zmastery.english.data.LessonStyle.THINKING -> {
-            com.zmastery.english.ui.screens.lessons.ReadingLesson(
-                vm = vm,
-                lesson = lesson,
-                accent = accent,
-                style = course?.style ?: com.zmastery.english.data.LessonStyle.READING_TEXT,
-                onComplete = onCompleteClick,
-                onGenerateMentalLink = { showMentalLink = true },
-                onOpenQuiz = { onOpenQuiz(lessonId) },
-            )
-        }
-        com.zmastery.english.data.LessonStyle.PHONETICS_SOUNDS -> {
-            val ph = remember(lesson.rawJson) {
-                if (lesson.rawJson.isNotBlank()) com.zmastery.english.data.PhoneticsParser.parse(lesson.rawJson) else null
+    val blocks = remember(lesson, style, words.size, hasPhonetics) {
+        LessonBlocks.visibleBlocks(lesson, style, words.size, hasPhonetics)
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        blocks.forEach { kind ->
+            when (kind) {
+                LessonBlockKind.HERO -> item {
+                    LessonHeroBlock(
+                        lesson = lesson, accent = accent, style = style,
+                        wordCount = words.size, segmentCount = segments.size,
+                        soundCount = phonetics?.content?.focusSounds?.size ?: 0,
+                    )
+                }
+
+                LessonBlockKind.VOCAB_WORDS ->
+                    vocabBlock(words, accent, revealMode) { revealMode = it }
+
+                LessonBlockKind.KEY_SENTENCES ->
+                    keySentencesBlock(lesson.keySentences, accent)
+
+                LessonBlockKind.GRAMMAR_RULE ->
+                    grammarRuleBlock(lesson.explanationAr, lesson.logicAr, accent)
+
+                LessonBlockKind.EXAMPLES ->
+                    examplesBlock(lesson.examples, accent)
+
+                LessonBlockKind.DIALOGUE -> dialogueBlock(
+                    dialogues = lesson.dialogues, accent = accent,
+                    showTranslations = showTranslations,
+                    onToggleTranslations = { showTranslations = !showTranslations },
+                    vm = vm,
+                )
+
+                LessonBlockKind.KEY_EXPRESSIONS ->
+                    expressionsBlock(lesson.keyExpressions, accent)
+
+                LessonBlockKind.READING -> readingBlock(
+                    segments = segments,
+                    fullEn = lesson.fullTextEn.ifBlank { lesson.readingEn },
+                    fullAr = lesson.fullTextAr.ifBlank { lesson.readingAr },
+                    accent = accent,
+                    mode = readMode, onMode = { readMode = it },
+                    showAllAr = showAllAr, onToggleAllAr = { showAllAr = !showAllAr },
+                    vm = vm, lessonId = lesson.id, audioReady = lesson.audioReady,
+                )
+
+                LessonBlockKind.PHONETICS -> phonetics?.content?.let { phoneticsBlock(it) }
+
+                LessonBlockKind.WRITING ->
+                    writingBlock(lesson, accent)
+
+                LessonBlockKind.NOTES ->
+                    notesBlock(lesson.notes)
+
+                LessonBlockKind.KEY_POINTS ->
+                    keyPointsBlock(lesson.keyPoints, accent)
+
+                LessonBlockKind.QUIZ -> item {
+                    QuizLauncherCard(lesson.quiz.size, accent) { onOpenQuiz(lessonId) }
+                }
+
+                LessonBlockKind.ACTIONS -> {
+                    item { MentalLinkCard(onGenerateMentalLink = { showMentalLink = true }) }
+                    item { CompleteLessonButton(lesson.isCompleted, accent, onCompleteClick) }
+                }
             }
-            if (ph != null && ph.content.focusSounds.isNotEmpty()) {
-                com.zmastery.english.ui.screens.PhoneticsLessonScreen(ph, onComplete = onCompleteClick, isCompleted = lesson.isCompleted)
-            } else {
-                GenericLesson(vm, lesson, accent, onCompleteClick) { showMentalLink = true }
-            }
         }
-        else -> GenericLesson(vm, lesson, accent, onCompleteClick) { showMentalLink = true }
+        item { Spacer(Modifier.height(80.dp)) }
     }
 
     LessonDialogs(
@@ -139,7 +179,7 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
 
     // ── Step 2 · what about the words this lesson added? ──
     if (showUndoWords) {
-        val words = vm.wordsFromLesson(lesson.id)
+        val undoWords = vm.wordsFromLesson(lesson.id)
         AlertDialog(
             onDismissRequest = { showUndoWords = false },
             containerColor = ZSurface,
@@ -148,17 +188,17 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
             text = {
                 Column {
                     Text(
-                        "أضاف هذا الدرس ${words.size} كلمة للقاموس. هل تريد حذفها أيضاً؟",
+                        "أضاف هذا الدرس ${undoWords.size} كلمة للقاموس. هل تريد حذفها أيضاً؟",
                         color = ZTextSecondary, fontSize = 14.sp, lineHeight = 21.sp,
                     )
                     Spacer(Modifier.height(10.dp))
                     Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(10.dp)) {
-                            words.take(6).forEach { w ->
+                            undoWords.take(6).forEach { w ->
                                 Text("• ${w.english} — ${w.arabic}", color = ZTextMuted, fontSize = 12.sp, lineHeight = 19.sp)
                             }
-                            if (words.size > 6) {
-                                Text("و${words.size - 6} كلمة أخرى…", color = ZTextMuted, fontSize = 11.sp)
+                            if (undoWords.size > 6) {
+                                Text("و${undoWords.size - 6} كلمة أخرى…", color = ZTextMuted, fontSize = 11.sp)
                             }
                         }
                     }
@@ -182,119 +222,6 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
                 }) { Text("أبقِها في القاموس", color = ZEmerald, fontWeight = FontWeight.Bold) }
             },
         )
-    }
-}
-
-@Composable
-private fun GenericLesson(
-    vm: AppViewModel,
-    lesson: com.zmastery.english.data.Lesson,
-    accent: Color,
-    onComplete: () -> Unit,
-    onMentalLink: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.72f)))).padding(20.dp)
-        ) {
-            Column {
-                Text("الدرس ${lesson.no}", color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text(lesson.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                if (lesson.summaryAr.isNotBlank()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(lesson.summaryAr, color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
-                }
-            }
-        }
-
-        if (lesson.keySentences.isNotEmpty()) {
-            SectionCard("الجمل الأساسية", Icons.Filled.FormatQuote, accent) {
-                lesson.keySentences.forEach { s ->
-                    Column(Modifier.padding(vertical = 6.dp)) {
-                        Text(s.en, color = ZTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text(s.ar, color = ZTextSecondary, fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-
-        if (lesson.readingEn.isNotBlank() && lesson.keySentences.isEmpty()) {
-            SectionCard("نص القراءة", Icons.Filled.AutoStories, ZCyan) {
-                Text(lesson.readingEn, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(10.dp))
-                Divider(color = ZBorder)
-                Spacer(Modifier.height(10.dp))
-                Text(lesson.readingAr, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 24.sp)
-            }
-        }
-
-        if (lesson.dialogues.isNotEmpty()) {
-            SectionCard("الحوار", Icons.Filled.Forum, ZRose) {
-                lesson.dialogues.forEach { d ->
-                    Column(Modifier.padding(vertical = 5.dp)) {
-                        Text(d.speaker, color = ZRose, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text(d.en, color = ZTextPrimary, fontSize = 14.sp)
-                        Text(d.ar, color = ZTextSecondary, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-
-        if (lesson.keyPoints.isNotEmpty()) {
-            SectionCard("النقاط الرئيسية", Icons.Filled.Lightbulb, ZAmber) {
-                lesson.keyPoints.forEach { point ->
-                    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(ZAmber))
-                        Spacer(Modifier.width(10.dp))
-                        Text(point, color = ZTextPrimary, fontSize = 14.sp)
-                    }
-                }
-            }
-        }
-
-        if (lesson.notes.isNotEmpty()) {
-            SectionCard("ملاحظات الدرس", Icons.Filled.Lightbulb, ZAmber) {
-                lesson.notes.forEach { note ->
-                    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(ZAmber).align(Alignment.CenterVertically))
-                        Spacer(Modifier.width(10.dp))
-                        Text(note, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 22.sp)
-                    }
-                }
-            }
-        }
-
-        // Mental link generator
-        Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onMentalLink) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(ZPurple, ZIndigo))), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.AutoAwesome, null, tint = Color.White)
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("توليد رابط ذهني", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("انسخ مطالبة الذكاء الاصطناعي لتوليد الصور", color = ZTextSecondary, fontSize = 12.sp)
-                }
-                Icon(Icons.Filled.ContentCopy, null, tint = ZCyan)
-            }
-        }
-
-        Button(
-            onClick = onComplete,
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (lesson.isCompleted) ZEmerald else accent),
-        ) {
-            Icon(if (lesson.isCompleted) Icons.Filled.CheckCircle else Icons.Filled.Check, null, tint = Color.White)
-            Spacer(Modifier.width(8.dp))
-            Text(if (lesson.isCompleted) "تم الإكمال ✓ (اضغط للتراجع)" else "إكمال الدرس", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        }
-        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -454,19 +381,4 @@ private fun WordApprovalDialog(words: List<VocabWord>, onConfirm: (Set<Int>) -> 
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = ZTextSecondary) } },
     )
-}
-
-@Composable
-private fun SectionCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
-            Spacer(Modifier.height(12.dp))
-            content()
-        }
-    }
 }

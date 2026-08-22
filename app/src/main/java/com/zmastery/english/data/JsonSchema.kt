@@ -153,6 +153,8 @@ data class JsonQuiz(
     val options: List<String> = emptyList(),
     val answer: String = "",
     @SerialName("explanation_ar") val explanationAr: String = "",
+    /** phonetics audio_quiz: the word to pronounce aloud (nullable in some files). */
+    @SerialName("word_to_speak") val wordToSpeak: String? = null,
 )
 
 object ImportEngine {
