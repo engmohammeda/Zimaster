@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- المرحلة الرابعة · خلفية بوابة الإنقاذ: تدرّج بنفسجي متوهّج -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:startColor="#8B5CF6"
+        android:centerColor="#7C3AED"
+        android:endColor="#4C1D95"
+        android:angle="135" />
+    <corners android:radius="28dp" />
+    <stroke android:width="2dp" android:color="#C4B5FD" />
+</shape>

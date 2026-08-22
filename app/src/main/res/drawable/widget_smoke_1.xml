@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- الجزء 3 · دخان أحمر متصاعد — الإطار 1 (منخفض) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:gravity="top|left" android:left="6dp" android:top="14dp">
+        <shape android:shape="oval">
+            <size android:width="26dp" android:height="26dp" />
+            <solid android:color="#26DC2626" />
+        </shape>
+    </item>
+    <item android:gravity="top|left" android:left="20dp" android:top="4dp">
+        <shape android:shape="oval">
+            <size android:width="18dp" android:height="18dp" />
+            <solid android:color="#1AEF4444" />
+        </shape>
+    </item>
+    <item android:gravity="top|right" android:right="18dp" android:top="10dp">
+        <shape android:shape="oval">
+            <size android:width="22dp" android:height="22dp" />
+            <solid android:color="#1FDC2626" />
+        </shape>
+    </item>
+</layer-list>

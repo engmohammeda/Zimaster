@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand gradient stops — shared by the adaptive icon and the monochrome
+         fallback. Terracotta -> sienna matches ZIndigo/ZPurple in the app theme. -->
+    <color name="ic_bg_start">#FF6F4A</color>
+    <color name="ic_bg_mid">#E2603C</color>
+    <color name="ic_bg_end">#B83C24</color>
+    <color name="ic_z">#FFF6EC</color>
+</resources>

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "567438543557",
+    "project_id": "apps-43872",
+    "storage_bucket": "apps-43872.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567438543557:android:177e940402384e2139feac",
+        "android_client_info": {
+          "package_name": "com.zmastery.english"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "567438543557-93ce76v8d4kiqcf9scl8qk04tsf90num.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGWIgz4gJ7eZ2unQZbaYaMbUa1Jdhgzxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "567438543557-93ce76v8d4kiqcf9scl8qk04tsf90num.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon FOREGROUND layer (108x108dp) — Z-Mastery.
+
+  Every coordinate below is solved, not eyeballed:
+
+  THE Z
+    • Bounding box 44x48 centred on (54,54) → half-diagonal 32.56dp, which sits
+      inside the 33dp guaranteed-visible circle, so no launcher mask can clip it.
+    • Horizontal bars are 11dp thick. The diagonal uses a 16.1dp horizontal run,
+      which yields a PERPENDICULAR thickness of 10.98dp — a 0.998 ratio to the
+      bars, so all three strokes read optically identical.
+    • The diagonal's long edges are exactly antiparallel, and its mid-height
+      band centres on x=54.00 — the glyph is perfectly balanced.
+
+  RISING BARS (in the Z's lower-right counter)
+    • Three 4.6dp bars on a shared 65.4dp baseline, heights 5/9/13 (+4 step) —
+      the mastery-progress motif from the app's own analytics.
+    • Solved against the diagonal's slope: minimum clearance is 1.22dp at bar 1's
+      top-left corner, so they never touch the letter at any size.
+    • Placed in real negative space, so the mark stays legible down to 48px.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Soft drop shadow: an offset, dark, low-alpha copy of the glyph so the
+         letter lifts off the gradient instead of sitting flat on it. -->
+    <group android:translateX="0.9" android:translateY="1.4">
+        <path
+            android:pathData="M32,30 L76,30 L76,41 L48.1,67 L76,67 L76,78 L32,78 L32,67 L59.9,41 L32,41 Z"
+            android:fillColor="#33000000"
+            android:fillType="nonZero" />
+    </group>
+
+    <!-- Rising mastery bars, drawn before the Z so the letter always wins any
+         overlap. Warm cream at 78% keeps them clearly secondary to the Z. -->
+    <path
+        android:pathData="M56.4,61.5 a1.1,1.1 0 0 1 1.1,-1.1 h2.4 a1.1,1.1 0 0 1 1.1,1.1 v2.8 a1.1,1.1 0 0 1 -1.1,1.1 h-2.4 a1.1,1.1 0 0 1 -1.1,-1.1 Z"
+        android:fillColor="#C7FFEBD2" />
+    <path
+        android:pathData="M63,57.5 a1.1,1.1 0 0 1 1.1,-1.1 h2.4 a1.1,1.1 0 0 1 1.1,1.1 v6.8 a1.1,1.1 0 0 1 -1.1,1.1 h-2.4 a1.1,1.1 0 0 1 -1.1,-1.1 Z"
+        android:fillColor="#DBFFEFDC" />
+    <path
+        android:pathData="M69.6,53.5 a1.1,1.1 0 0 1 1.1,-1.1 h2.4 a1.1,1.1 0 0 1 1.1,1.1 v10.8 a1.1,1.1 0 0 1 -1.1,1.1 h-2.4 a1.1,1.1 0 0 1 -1.1,-1.1 Z"
+        android:fillColor="#EFFFF6E8" />
+
+    <!-- The Z, with a top-light gradient so the strokes have real dimension -->
+    <path
+        android:pathData="M32,30 L76,30 L76,41 L48.1,67 L76,67 L76,78 L32,78 L32,67 L59.9,41 L32,41 Z"
+        android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="32"
+                android:startY="30"
+                android:endX="76"
+                android:endY="78">
+                <item android:offset="0.0" android:color="#FFFFFFFF" />
+                <item android:offset="0.52" android:color="#FFFFF7EC" />
+                <item android:offset="1.0" android:color="#FFFFE4C9" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Specular highlight along the top bar's upper edge -->
+    <path
+        android:pathData="M32,30 L76,30 L76,33.1 L32,33.1 Z"
+        android:fillColor="#59FFFFFF" />
+</vector>

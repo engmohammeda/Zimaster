@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    الجزء 3 · محرك الخوف من الفقد
+    FrameLayout خارجي يسمح بوضع طبقة "الدخان الأحمر" فوق محتوى الودجت
+    عندما تكون السلسلة على وشك الضياع (chestMood = CRACKING).
+    الطبقة مخفية تماماً (GONE) في الحالة الطبيعية فلا تكلّف شيئاً.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg">
+
+    <!-- طبقة الدخان الأحمر المتصاعد (تتبدّل صورتها لتوحي بالحركة) -->
+    <ImageView
+        android:id="@+id/widget_smoke"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="top"
+        android:scaleType="fitXY"
+        android:visibility="gone"
+        android:contentDescription="@null"
+        android:src="@drawable/widget_smoke_1" />
+
+    <LinearLayout
+        android:id="@+id/widget_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+    <!-- Top row: streak + XP -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/widget_pill"
+            android:paddingStart="10dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔥"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/widget_streak"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="0 يوم"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/widget_xp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡ 0 XP"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Quote card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:background="@drawable/widget_quote_card"
+        android:padding="14dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_quote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="كنتُ واثقاً أنني أصنع نفسي بنفسي."
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:lineSpacingExtra="2dp" />
+
+        <TextView
+            android:id="@+id/widget_author"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="— بنيامين فرانكلين"
+            android:textColor="#F5E4DC"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Progress -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_progress_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="هدف اليوم"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_progress_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 / 30"
+                android:textColor="#F5E4DC"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- RemoteViews-safe progress track (background + clipped fill) -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/widget_track">
+
+            <ProgressBar
+                android:id="@+id/widget_progressbar"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:progressDrawable="@drawable/widget_progress"
+                android:max="100"
+                android:progress="0" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- CTA -->
+    <TextView
+        android:id="@+id/widget_cta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/widget_cta"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="ابدأ الدراسة الآن"
+        android:textColor="#CB5F41"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+    </LinearLayout>
+</FrameLayout>
