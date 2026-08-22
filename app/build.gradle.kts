@@ -20,11 +20,28 @@ android {
     }
 
     signingConfigs {
+        // Debug signing: a project-local debug.keystore is used when present;
+        // otherwise the Android Gradle plugin's default (auto-generated) debug
+        // keystore is kept — so builds never fail on a missing keystore file.
         getByName("debug") {
-            storeFile = file("${rootProject.projectDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val localKeystore = rootProject.file("debug.keystore")
+            if (localKeystore.exists()) {
+                storeFile = localKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+        // Release signing is provided by CI from GitHub Secrets. When those env
+        // vars are absent, the release build falls back to the default debug
+        // signing config so CI still produces an installable (test-signed) APK/AAB.
+        if (System.getenv("RELEASE_STORE_FILE") != null) {
+            create("release") {
+                storeFile = file(System.getenv("RELEASE_STORE_FILE"))
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -34,7 +51,9 @@ android {
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                signingConfigs.findByName("release")
+                    ?: signingConfigs.getByName("debug")
         }
     }
 
