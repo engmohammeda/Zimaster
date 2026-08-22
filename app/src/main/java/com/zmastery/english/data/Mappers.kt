@@ -21,9 +21,19 @@ fun Lesson.toDto() = LessonDto(
     newWordIds = newWordIds,
     keySentences = keySentences.map { SentenceDto(it.en, it.ar) },
     notes = notes,
-    quiz = quiz.map { QuizDto(it.type.name, it.question, it.options, it.answer, it.explanationAr) },
+    quiz = quiz.map { QuizDto(it.type.name, it.question, it.options, it.answer, it.explanationAr, it.audioText) },
     reviewCount = reviewCount, lastMastery = lastMastery, dueInDays = dueInDays, intervalDays = intervalDays,
     rawJson = rawJson,
+    keyExpressions = keyExpressions.map { KeyExpressionDto(it.expressionEn, it.expressionAr, it.usageAr) },
+    explanationAr = explanationAr, logicAr = logicAr,
+    examples = examples.map { SentenceDto(it.en, it.ar) },
+    fullTextEn = fullTextEn, fullTextAr = fullTextAr,
+    segments = segments.map { SentenceDto(it.en, it.ar) },
+    topicEn = topicEn, topicAr = topicAr,
+    brainstorming = brainstorming.map { BrainstormDto(it.questionEn, it.questionAr, it.suggestedAnswerEn, it.suggestedAnswerAr) },
+    guidedSentences = guidedSentences.map { SentenceDto(it.en, it.ar) },
+    finalDraft = finalDraft?.let { SentenceDto(it.en, it.ar) },
+    audioReady = audioReady,
 )
 
 fun LessonDto.toDomain() = Lesson(
@@ -37,10 +47,21 @@ fun LessonDto.toDomain() = Lesson(
         QuizItem(
             type = runCatching { QuizType.valueOf(it.type) }.getOrDefault(QuizType.MULTIPLE_CHOICE),
             question = it.question, options = it.options, answer = it.answer, explanationAr = it.explanationAr,
+            audioText = it.audioText,
         )
     },
     reviewCount = reviewCount, lastMastery = lastMastery, dueInDays = dueInDays, intervalDays = intervalDays,
     rawJson = rawJson,
+    keyExpressions = keyExpressions.map { KeyExpression(it.expressionEn, it.expressionAr, it.usageAr) },
+    explanationAr = explanationAr, logicAr = logicAr,
+    examples = examples.map { Sentence(it.en, it.ar) },
+    fullTextEn = fullTextEn, fullTextAr = fullTextAr,
+    segments = segments.map { Sentence(it.en, it.ar) },
+    topicEn = topicEn, topicAr = topicAr,
+    brainstorming = brainstorming.map { BrainstormQ(it.questionEn, it.questionAr, it.suggestedAnswerEn, it.suggestedAnswerAr) },
+    guidedSentences = guidedSentences.map { Sentence(it.en, it.ar) },
+    finalDraft = finalDraft?.let { Sentence(it.en, it.ar) },
+    audioReady = audioReady,
 )
 
 fun VocabWord.toDto() = WordDto(
@@ -51,6 +72,8 @@ fun VocabWord.toDto() = WordDto(
     mastered = mastered, listenCount = listenCount, totalReviews = totalReviews, lapses = lapses,
     lastRecall = lastRecall.name, avgRecallStage = avgRecallStage, lastGrade = lastGrade,
     pendingApproval = pendingApproval, lessonId = lessonId,
+    totalTimeMs = totalTimeMs, lastRetrievability = lastRetrievability,
+    wordAudioReady = wordAudioReady, exampleAudioReady = exampleAudioReady,
 )
 
 fun WordDto.toDomain() = VocabWord(
@@ -64,6 +87,8 @@ fun WordDto.toDomain() = VocabWord(
     lastRecall = runCatching { RecallSource.valueOf(lastRecall) }.getOrDefault(RecallSource.NONE),
     avgRecallStage = avgRecallStage, lastGrade = lastGrade,
     pendingApproval = pendingApproval, lessonId = lessonId,
+    totalTimeMs = totalTimeMs, lastRetrievability = lastRetrievability,
+    wordAudioReady = wordAudioReady, exampleAudioReady = exampleAudioReady,
 )
 
 // ----- Exam records -----

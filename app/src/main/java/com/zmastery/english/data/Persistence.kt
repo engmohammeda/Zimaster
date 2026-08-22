@@ -125,6 +125,26 @@ data class LessonDto(
     // raw rich JSON preserved verbatim so specialized viewers (phonetics, etc.)
     // can render every field the author uploaded — nothing is dropped.
     val rawJson: String = "",
+    // ----- Rich lesson content (every field below is defaulted so backups -----
+    // ----- created before this fix still deserialize without data loss). -----
+    /** Conversation-course expressions. */
+    val keyExpressions: List<KeyExpressionDto> = emptyList(),
+    // ----- Grammar-course content -----
+    val explanationAr: String = "",
+    val logicAr: String = "",
+    val examples: List<SentenceDto> = emptyList(),
+    // ----- Reading-course content -----
+    val fullTextEn: String = "",
+    val fullTextAr: String = "",
+    val segments: List<SentenceDto> = emptyList(),
+    // ----- Writing-course content -----
+    val topicEn: String = "",
+    val topicAr: String = "",
+    val brainstorming: List<BrainstormDto> = emptyList(),
+    val guidedSentences: List<SentenceDto> = emptyList(),
+    val finalDraft: SentenceDto? = null,
+    // ----- AI audio generation state -----
+    val audioReady: Boolean = false,
 )
 
 @Serializable
@@ -134,9 +154,26 @@ data class DialogueDto(val speaker: String, val en: String, val ar: String)
 data class SentenceDto(val en: String, val ar: String)
 
 @Serializable
+data class KeyExpressionDto(
+    val expressionEn: String,
+    val expressionAr: String,
+    val usageAr: String = "",
+)
+
+@Serializable
+data class BrainstormDto(
+    val questionEn: String,
+    val questionAr: String = "",
+    val suggestedAnswerEn: String = "",
+    val suggestedAnswerAr: String = "",
+)
+
+@Serializable
 data class QuizDto(
     val type: String, val question: String, val options: List<String>,
     val answer: String, val explanationAr: String,
+    /** audio_quiz: word to speak aloud before answering (defaulted: old backups load). */
+    val audioText: String = "",
 )
 
 @Serializable
@@ -147,6 +184,11 @@ data class WordDto(
     val intervalDays: Int, val lastReviewedDay: Long, val repetitions: Int, val mastered: Boolean,
     val listenCount: Int, val totalReviews: Int, val lapses: Int, val lastRecall: String,
     val avgRecallStage: Float, val lastGrade: Int, val pendingApproval: Boolean, val lessonId: Int,
+    // ----- Rich analytics + AI audio state (defaulted: old backups still load) -----
+    val totalTimeMs: Long = 0L,
+    val lastRetrievability: Double = 0.0,
+    val wordAudioReady: Boolean = false,
+    val exampleAudioReady: Boolean = false,
 )
 
 @Serializable

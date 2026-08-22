@@ -50,6 +50,77 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Map a lesson-JSON quiz array to domain items (shared by import + self-heal). */
+    private fun mapJsonQuiz(items: List<JsonQuiz>): List<QuizItem> = items.map { q ->
+        QuizItem(
+            type = when (q.type.lowercase().trim()) {
+                "true_false", "true/false", "tf" -> QuizType.TRUE_FALSE
+                "written", "write", "translation" -> QuizType.WRITTEN
+                else -> QuizType.MULTIPLE_CHOICE
+            },
+            question = q.question,
+            options = q.options,
+            answer = q.answer,
+            explanationAr = q.explanationAr,
+            audioText = q.wordToSpeak?.trim().orEmpty(),
+        )
+    }
+
+    /**
+     * Self-healing migration — lessons imported BEFORE rich-field persistence was
+     * fixed had their grammar/reading/conversation/writing content silently
+     * dropped when saving (audio_quiz words were lost even at import time).
+     * The verbatim `rawJson` always survived, though, so we re-derive every
+     * missing field from it. Each field fills only when empty, so this
+     * converges after one pass and never clobbers anything.
+     * Runs on every restore (startup + backup import).
+     */
+    private fun repairLessonRichContent() {
+        var repaired = 0
+        for (i in lessons.indices) {
+            val l = lessons[i]
+            if (l.rawJson.isBlank()) continue
+            val pkg = runCatching {
+                ImportEngine.json.decodeFromString(LessonPackage.serializer(), l.rawJson)
+            }.getOrNull() ?: continue
+
+            // Heal audio_quiz spoken words (index-aligned with the JSON array).
+            val healedQuiz = l.quiz.mapIndexed { idx, qi ->
+                val spoken = pkg.quiz.getOrNull(idx)?.wordToSpeak?.trim().orEmpty()
+                if (qi.audioText.isBlank() && spoken.isNotBlank()) qi.copy(audioText = spoken) else qi
+            }
+
+            val refilled = l.copy(
+                keyExpressions = if (l.keyExpressions.isEmpty()) pkg.lessonContent.keyExpressions.map {
+                    KeyExpression(it.expressionEn, it.expressionAr, it.usageAr)
+                } else l.keyExpressions,
+                explanationAr = l.explanationAr.ifBlank { pkg.lessonContent.explanationAr },
+                logicAr = l.logicAr.ifBlank { pkg.lessonContent.logicAr },
+                examples = if (l.examples.isEmpty()) pkg.lessonContent.examples.map { Sentence(it.en, it.ar) } else l.examples,
+                fullTextEn = l.fullTextEn.ifBlank { pkg.lessonContent.fullTextEn },
+                fullTextAr = l.fullTextAr.ifBlank { pkg.lessonContent.fullTextAr },
+                segments = if (l.segments.isEmpty()) pkg.lessonContent.segments.map { Sentence(it.en, it.ar) } else l.segments,
+                topicEn = l.topicEn.ifBlank { pkg.lessonContent.topicEn },
+                topicAr = l.topicAr.ifBlank { pkg.lessonContent.topicAr },
+                brainstorming = if (l.brainstorming.isEmpty()) pkg.lessonContent.brainstormingQuestions.map {
+                    BrainstormQ(it.questionEn, it.questionAr, it.suggestedAnswerEn, it.suggestedAnswerAr)
+                } else l.brainstorming,
+                guidedSentences = if (l.guidedSentences.isEmpty()) pkg.lessonContent.guidedSentences.map { Sentence(it.en, it.ar) } else l.guidedSentences,
+                finalDraft = l.finalDraft ?: pkg.lessonContent.finalDraft.let {
+                    if (it.en.isNotBlank() || it.ar.isNotBlank()) Sentence(it.en, it.ar) else null
+                },
+                quiz = healedQuiz,
+            )
+            if (refilled != l) {
+                lessons[i] = refilled
+                repaired++
+            }
+        }
+        if (repaired > 0) {
+            android.util.Log.i("Zmastery", "استُشفي المحتوى الغني لـ $repaired درساً من rawJson")
+        }
+    }
+
     /** Rebuild in-memory state from a persisted snapshot. Curriculum courses are
      *  merged with any imported ones (imported course ids > built-in). */
     private fun restoreFrom(s: AppState) {
@@ -63,6 +134,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         lessons.clear(); lessons.addAll(s.lessons.map { it.toDomain() })
         vocab.clear(); vocab.addAll(s.vocab.map { it.toDomain() })
+        repairLessonRichContent()
 
         val p = s.profile
         streak = p.streak; xp = p.xp; totalReviewsToday = p.totalReviewsToday
@@ -373,6 +445,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     lessons.add(ldto.toDomain().copy(id = nextLessonId++, courseId = mappedCourse, newWordIds = newWordIds))
                     addedLessons++
                 }
+                // Heal rich content for lessons coming from backups made before
+                // the persistence fix — their rawJson still carries everything.
+                repairLessonRichContent()
                 persist()
                 RestoreResult(true, "تمت الإضافة: $addedCourses كورس · $addedLessons درس · $addedWords كلمة")
             },
@@ -3336,19 +3411,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-        val quiz = pkg.quiz.map { q ->
-            QuizItem(
-                type = when (q.type.lowercase().trim()) {
-                    "true_false", "true/false", "tf" -> QuizType.TRUE_FALSE
-                    "written", "write", "translation" -> QuizType.WRITTEN
-                    else -> QuizType.MULTIPLE_CHOICE
-                },
-                question = q.question,
-                options = q.options,
-                answer = q.answer,
-                explanationAr = q.explanationAr,
-            )
-        }
+        val quiz = mapJsonQuiz(pkg.quiz)
 
         val sentences = pkg.lessonContent.keySentences.map { Sentence(it.en, it.ar) }
         val segments = pkg.lessonContent.segments.map { Sentence(it.en, it.ar) }

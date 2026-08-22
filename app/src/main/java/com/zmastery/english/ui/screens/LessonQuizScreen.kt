@@ -102,6 +102,22 @@ private fun QuizCard(number: Int, q: QuizItem, accent: Color) {
                 Spacer(Modifier.width(10.dp))
                 Text(q.question, color = ZTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
             }
+            // audio_quiz: the learner must hear the word before choosing an answer.
+            if (q.audioText.isNotBlank()) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.08f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    com.zmastery.english.audio.AudioButton(
+                        text = q.audioText,
+                        audioKey = "quiz_audio_${q.audioText.hashCode()}",
+                        accent = accent, size = 40.dp, iconSize = 20.dp,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text("استمع أولاً ثم اختر ما سمعتَه", color = ZTextSecondary, fontSize = 13.sp)
+                }
+            }
             Spacer(Modifier.height(14.dp))
             when (q.type) {
                 QuizType.MULTIPLE_CHOICE -> ChoiceQuiz(q.options, q.answer, q.explanationAr)
