@@ -11,7 +11,7 @@ on:
   #   tags: ["v*"]     # اختياري: بناء تلقائي عند دفع وسم v*
 
 permissions:
-  contents: read
+  contents: write   # إنشاء GitHub Release + رفع الملفات (APK/AAB) إليه
 
 jobs:
   release:
@@ -102,6 +102,32 @@ jobs:
           path: dist/
           retention-days: 30
           if-no-files-found: error
+
+      # إنشاء إصدار GitHub حقيقي (يظهر في تبويب Releases) ورفع الملفات إليه.
+      # الوسم فريد لكل تشغيل حتى لا يتعارض إصداران معاً عند إعادة التشغيل.
+      - name: Publish GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          RUN="${{ github.run_number }}"
+          TAG="v${VERSION}-build.${RUN}"
+          if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
+            SUFFIX="signed"; SIGN="مفتاح Release 🔐"
+          else
+            SUFFIX="debug-test"; SIGN="مفتاح التصحيح (تجريبي) ⚠️"
+          fi
+          gh release create "$TAG" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "Zimaster v${VERSION} (build ${RUN})" \
+            --notes "إصدار تلقائي من سير عمل Android Release.
+
+- APK: Zimaster-v${VERSION}-release-${SUFFIX}.apk
+- AAB: Zimaster-v${VERSION}-release-${SUFFIX}.aab
+- التوقيع: ${SIGN}" \
+            --latest
 
       - name: Build summary
         if: success()
