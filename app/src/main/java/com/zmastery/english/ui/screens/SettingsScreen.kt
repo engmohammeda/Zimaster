@@ -840,7 +840,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = { vm.signInWithGoogle(ctx) },
-                    enabled = vm.googleWebClientId.isNotBlank() && vm.cloudIsAnonymous,
+                    enabled = vm.cloudIsAnonymous,
                     modifier = Modifier.fillMaxWidth().height(46.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ZEmerald, disabledContainerColor = ZBorder),
@@ -848,7 +848,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                     Icon(Icons.Filled.Login, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (vm.cloudIsAnonymous) "تسجيل الدخول بجوجل" else "متصل بحساب جوجل ✓",
+                        if (vm.cloudIsAnonymous) "تسجيل الدخول بحساب Google" else "متصل بحساب Google ✓",
                         fontWeight = FontWeight.Bold,
                     )
                 }

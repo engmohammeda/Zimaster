@@ -106,7 +106,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             error = null
                             vm.signInWithGoogle(ctx)
                         },
-                        enabled = !isSigningIn && vm.googleWebClientId.isNotBlank(),
+                        enabled = !isSigningIn,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -114,12 +114,12 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             disabledContainerColor = ZBorder,
                         ),
                     ) {
-                        if (isSigningIn) {
+                        if (isSigningIn && vm.isSyncingCloud) {
                             CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                         } else {
                             Icon(Icons.AutoMirrored.Filled.Login, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("تسجيل الدخول بجوجل", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("تسجيل الدخول بحساب Google", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
 

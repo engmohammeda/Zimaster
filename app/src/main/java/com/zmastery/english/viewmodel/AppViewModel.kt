@@ -3898,7 +3898,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var lastCloudLessonSyncMillis by mutableStateOf(0L)
     var cloudSyncEnabled by mutableStateOf(true)
     // Web Client ID from google-services.json (client_type: 3) — enables Google Sign-In
-    var googleWebClientId by mutableStateOf("567438543557-93ce76v8d4kiqcf9scl8qk04tsf90num.apps.googleusercontent.com")
+    var googleWebClientId by mutableStateOf("")
 
     var cloudUid by mutableStateOf<String?>(null)
         private set
@@ -4021,10 +4021,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId.trim()
             val result = com.zmastery.english.cloud.CloudAuth.signInWithGoogle(context)
-            result.onSuccess {
-                refreshCloudAuthState()
-                cloudSyncMessage = "تم ربط حساب جوجل بنجاح ✓"
-                pushProgressToCloud()
+            result.onSuccess { user ->
+                if (user != null) {
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم ربط حساب جوجل بنجاح ✓"
+                    pushProgressToCloud()
+                }
             }.onFailure { e ->
                 cloudSyncMessage = e.message ?: "تعذّر تسجيل الدخول بحساب جوجل"
             }

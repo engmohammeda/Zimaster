@@ -1,12 +1,14 @@
 package com.zmastery.english.cloud
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -19,35 +21,19 @@ import java.security.SecureRandom
 import java.util.Base64
 
 /**
- * Authentication for the learner's single personal account.
+ * Authentication for the learner's personal account.
  *
- * The app ALWAYS has a signed-in Firebase user, from the very first launch:
- *
- *  1. On first run (no user yet) we sign in ANONYMOUSLY. This alone is
- *     enough to sync progress + content to Firestore under a stable uid —
- *     no setup required, works immediately, completely free.
- *
- *  2. Whenever the learner wants a "real" account (so the same data can be
- *     restored on a new phone), they can link that anonymous account to
- *     Google Sign-In via [signInWithGoogle]. Linking (not replacing) means
- *     every document already written under the anonymous uid stays exactly
- *     where it is — nothing is lost or duplicated.
- *
- * Google Sign-In requires a Web Client ID that only exists once "Google" is
- * enabled as a Sign-in provider in the Firebase console (Authentication →
- * Sign-in method). Until that is configured, [googleSignInAvailable] is
- * false and the app quietly keeps using the anonymous account — the rest of
- * the app (Firestore sync) doesn't care which auth method backs the uid.
+ * 1. On first run, we sign in ANONYMOUSLY if not yet signed in.
+ * 2. When the user taps Google Sign-In, we launch CredentialManager to pick any Google account.
+ * 3. The account is linked to the existing UID so no progress or stats are lost.
  */
 object CloudAuth {
+    private const val TAG = "CloudAuth"
 
     private val auth get() = Firebase.auth
 
-    /** Currently signed-in user, or null before the very first auth call resolves. */
     val currentUser: FirebaseUser? get() = auth.currentUser
-
     val uid: String? get() = auth.currentUser?.uid
-
     val isAnonymous: Boolean get() = auth.currentUser?.isAnonymous ?: true
 
     val displayName: String? get() = auth.currentUser?.displayName
@@ -55,15 +41,24 @@ object CloudAuth {
     val photoUrl: String? get() = auth.currentUser?.photoUrl?.toString()
 
     /**
-     * Set from Settings or defaulted from google-services.json Web Client ID.
+     * Web Client ID from Firebase Console -> Authentication -> Sign-in method -> Google
      */
-    var webClientId: String = "567438543557-93ce76v8d4kiqcf9scl8qk04tsf90num.apps.googleusercontent.com"
+    var webClientId: String = ""
 
-    val googleSignInAvailable: Boolean get() = webClientId.isNotBlank()
+    fun resolveEffectiveWebClientId(context: Context): String {
+        if (webClientId.isNotBlank()) return webClientId.trim()
+        return try {
+            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+            if (resId != 0) context.getString(resId) else ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    val googleSignInAvailable: Boolean get() = true
 
     /**
-     * Ensure SOME Firebase user exists — call once at app startup. Anonymous
-     * sign-in is instant, free, and requires no configuration at all.
+     * Ensure SOME Firebase user exists — call once at app startup.
      */
     suspend fun ensureSignedIn(): FirebaseUser? {
         auth.currentUser?.let { return it }
@@ -72,34 +67,44 @@ object CloudAuth {
 
     /**
      * Launch Google Sign-In via Credential Manager and LINK it to the current
-     * (anonymous) Firebase user so existing synced data carries over. If the
-     * Google credential already belongs to another Firebase account, falls
-     * back to signing into THAT account instead (merge case).
+     * Firebase user so all local data carries over.
      */
-    suspend fun signInWithGoogle(context: Context): Result<FirebaseUser> = runCatching {
-        require(googleSignInAvailable) { "Google Sign-In غير مفعّل بعد — أضف Web Client ID من الإعدادات" }
+    suspend fun signInWithGoogle(context: Context): Result<FirebaseUser?> = runCatching {
+        val effectiveClientId = resolveEffectiveWebClientId(context)
+        if (effectiveClientId.isBlank()) {
+            throw IllegalStateException("يرجى إدخال Web Client ID من إعدادات الحساب أو لوحة Firebase")
+        }
+
         val nonce = randomNonce()
         val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(webClientId)
-            .setAutoSelectEnabled(true)
+            .setFilterByAuthorizedAccounts(false) // Show all Google accounts on device
+            .setServerClientId(effectiveClientId)
+            .setAutoSelectEnabled(false) // Prompt account chooser bottom sheet
             .setNonce(nonce)
             .build()
+
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(googleIdOption)
             .build()
+
         val credentialManager = CredentialManager.create(context)
         val result = try {
             credentialManager.getCredential(request = request, context = context)
+        } catch (e: GetCredentialCancellationException) {
+            Log.d(TAG, "User cancelled Google Sign-in")
+            return@runCatching null // Cancelled by user - not an error
         } catch (e: GetCredentialException) {
-            throw IllegalStateException("تعذّر فتح نافذة حسابات جوجل: ${e.message}", e)
+            Log.e(TAG, "Credential Manager error", e)
+            throw IllegalStateException("تعذّر فتح نافذة اختيار الحساب: ${e.message}", e)
         }
+
         val credential = result.credential
         if (credential !is CustomCredential ||
             credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
-            throw IllegalStateException("نوع بيانات اعتماد غير متوقع من جوجل")
+            throw IllegalStateException("نوع بيانات اعتماد غير متوقع من Google")
         }
+
         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
         val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
 
@@ -108,13 +113,13 @@ object CloudAuth {
             try {
                 current.linkWithCredential(firebaseCredential).await().user
             } catch (e: Exception) {
-                // Credential already belongs to another account -> sign into that one.
+                // If credential already linked to another user, sign into that user
                 auth.signInWithCredential(firebaseCredential).await().user
             }
         } else {
             auth.signInWithCredential(firebaseCredential).await().user
         }
-        user ?: throw IllegalStateException("فشل تسجيل الدخول بحساب جوجل")
+        user ?: throw IllegalStateException("فشل إتمام تسجيل الدخول بحساب Google")
     }
 
     /** Sign out of Google and drop back to a fresh anonymous session. */
@@ -130,7 +135,7 @@ object CloudAuth {
     }
 }
 
-/** Observable auth state for Compose UI (login banner, account row in Settings). */
+/** Observable auth state for Compose UI */
 class CloudAuthState {
     var uid by mutableStateOf<String?>(null)
         private set
