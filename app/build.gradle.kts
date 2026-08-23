@@ -21,12 +21,15 @@ android {
 
     signingConfigs {
         create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val dbgKeystore = file("${rootDir}/debug.keystore")
+            if (dbgKeystore.exists()) {
+                storeFile = dbgKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
-        if (System.getenv("RELEASE_STORE_FILE") != null) {
+        if (System.getenv("RELEASE_STORE_FILE") != null && file(System.getenv("RELEASE_STORE_FILE")).exists()) {
             create("release") {
                 storeFile = file(System.getenv("RELEASE_STORE_FILE"))
                 storePassword = System.getenv("RELEASE_STORE_PASSWORD")
@@ -38,19 +41,26 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debugConfig")
+            val dbg = signingConfigs.findByName("debugConfig")
+            if (dbg != null && dbg.storeFile != null) {
+                signingConfig = dbg
+            }
             isDebuggable = true
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig =
-                signingConfigs.findByName("release")
-                    ?: signingConfigs.getByName("debugConfig")
+            val rel = signingConfigs.findByName("release")
+            val dbg = signingConfigs.findByName("debugConfig")
+            if (rel != null && rel.storeFile != null) {
+                signingConfig = rel
+            } else if (dbg != null && dbg.storeFile != null) {
+                signingConfig = dbg
+            }
         }
     }
 
