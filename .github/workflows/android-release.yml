@@ -1,16 +1,13 @@
 name: Android Build & Release
 
-# Zimaster · Kotlin 2.2.21 + Compose · AGP 8.10.1 · JDK 17
-# compileSdk 36 · minSdk 24 · module: :app · applicationId: com.zmastery.english
-
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ "v*" ]
-  workflow_dispatch:   # تشغيل يدوي من تبويب Actions في أي وقت
+  workflow_dispatch:
 
 permissions:
-  contents: write   # لإنشاء الإصدارات في GitHub Releases ورفع الملفات إليها
+  contents: write
 
 jobs:
   build:
@@ -23,7 +20,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17 (Temurin)
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -32,7 +29,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install SDK components (platform 36 + build-tools 36.0.0)
+      - name: Install SDK components
         run: |
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
@@ -41,17 +38,16 @@ jobs:
         run: |
           set -e
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "::notice::gradle-wrapper.jar غير موجود — توليده من التوزيعة الرسمية Gradle 8.11.1"
             curl -sSL -o /tmp/gradle-dist.zip https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
             unzip -q /tmp/gradle-dist.zip -d /tmp
             /tmp/gradle-8.11.1/bin/gradle wrapper --gradle-version 8.11.1 --distribution-type bin --no-daemon
           fi
           test -f gradle/wrapper/gradle-wrapper.jar
 
-      - name: Setup Gradle (cached)
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Prepare release signing (from GitHub Secrets)
+      - name: Prepare release signing
         id: signing
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] \
@@ -66,10 +62,9 @@ jobs:
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::لا أسرار توقيع مخصصة — سيتم استخدام التوقيع الافتراضي."
           fi
 
-      - name: Build Debug and Release (APK + AAB)
+      - name: Build Debug and Release
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease --stacktrace --build-cache
@@ -79,7 +74,6 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts || echo "1.1.0")
-          
           mkdir -p dist
           
           # Debug APK
@@ -94,14 +88,14 @@ jobs:
             cp "$RELEASE_APK" "dist/Zimaster-v${VERSION}-release-${SUFFIX}.apk"
           fi
           
-          # Release AAB (Google Play Bundle)
+          # Release AAB
           RELEASE_AAB=$(ls app/build/outputs/bundle/release/*.aab 2>/dev/null | head -1 || true)
           if [ -n "$RELEASE_AAB" ]; then
             if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then SUFFIX="signed"; else SUFFIX="unsigned"; fi
             cp "$RELEASE_AAB" "dist/Zimaster-v${VERSION}-release-${SUFFIX}.aab"
           fi
 
-      - name: Upload Artifacts (Debug & Release)
+      - name: Upload Artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -120,20 +114,21 @@ jobs:
           RUN="${{ github.run_number }}"
           TAG="v${VERSION}-build.${RUN}"
           
-          # إنشاء وتحديث الـ Release في تبويب الإصدارات
+          cat << 'EOF' > release_notes.md
+          ### 🚀 Zimaster Build Artifacts:
+          - **Debug APK**: Ready to install directly on any device for testing.
+          - **Release APK**: Optimized and minified release build.
+          - **AAB Bundle**: Ready for publishing to Google Play Store.
+          EOF
+          
           gh release create "$TAG" dist/* \
             --repo "${{ github.repository }}" \
             --title "Zimaster v${VERSION} (Build #${RUN})" \
-            --notes "### 🚀 ملفات التثبيت والبناء:
-- **نسخة التجربة والتطوير (Debug APK)**: قابلة للتثبيت المباشر على أي هاتف فوراً دون قيود توقيع.
-- **نسخة الإصدار المستقر (Release APK)**: نسخة محسنة ومضغوطة بالكامل.
-- **حزمة المتجر (AAB Bundle)**: جاهزة للنشر على Google Play.
-
-تم البناء تلقائياً عبر GitHub Actions بنجاح." \
+            --notes-file release_notes.md \
             --latest
 
       - name: Job Summary
         if: success()
         run: |
-          echo "## ✅ تم بناء حزم Zimaster بنجاح" >> "$GITHUB_STEP_SUMMARY"
-          echo "- يمكنك تنزيل ملفات **Debug APK** و **Release APK** و **AAB** مباشرة من قسم **Releases** أو من قسم **Artifacts** في هذه الصفحة." >> "$GITHUB_STEP_SUMMARY"
+          echo "## ✅ Zimaster Build Succeeded" >> "$GITHUB_STEP_SUMMARY"
+          echo "- You can download Debug APK, Release APK, and AAB from Releases or Artifacts." >> "$GITHUB_STEP_SUMMARY"
