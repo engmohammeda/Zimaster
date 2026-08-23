@@ -1,28 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- الجزء 3 · دخان أحمر متصاعد — الإطار 3 (كثيف/حرج) -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:gravity="top|left" android:left="4dp" android:top="2dp">
-        <shape android:shape="oval">
-            <size android:width="40dp" android:height="40dp" />
-            <solid android:color="#22DC2626" />
-        </shape>
-    </item>
-    <item android:gravity="top|left" android:left="38dp" android:top="10dp">
-        <shape android:shape="oval">
-            <size android:width="26dp" android:height="26dp" />
-            <solid android:color="#2AEF4444" />
-        </shape>
-    </item>
-    <item android:gravity="top|center" android:top="6dp">
-        <shape android:shape="oval">
-            <size android:width="32dp" android:height="32dp" />
-            <solid android:color="#20F87171" />
-        </shape>
-    </item>
-    <item android:gravity="top|right" android:right="8dp" android:top="4dp">
-        <shape android:shape="oval">
-            <size android:width="34dp" android:height="34dp" />
-            <solid android:color="#26DC2626" />
-        </shape>
-    </item>
-</layer-list>
+<!-- دخان أحمر متصاعد — المستوى 3 (عالي) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:startColor="#10DC2626"
+        android:centerColor="#40DC2626"
+        android:endColor="#70EF4444"
+        android:angle="270" />
+</shape>

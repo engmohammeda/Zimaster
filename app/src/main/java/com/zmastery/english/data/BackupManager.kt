@@ -26,7 +26,7 @@ object BackupManager {
     }
 
     const val MAGIC = "ZMASTERY_BACKUP"
-    const val FORMAT_VERSION = 2
+    const val FORMAT_VERSION = 3
 
     // ---------------------------------------------------------------- FULL
     @kotlinx.serialization.Serializable
@@ -35,11 +35,42 @@ object BackupManager {
         val formatVersion: Int = FORMAT_VERSION,
         val createdAt: String = "",
         val appVersion: String = "2.1.0",
+        /** Simple integrity hash — detects truncated or corrupted files. */
+        val checksum: String = "",
         val state: AppState,
     )
 
+    /** Compute a lightweight checksum: lesson count + vocab count + first 8 chars of name. */
+    private fun computeChecksum(state: AppState): String {
+        val raw = "${state.lessons.size}:${state.vocab.size}:${state.profile.learnerName.take(8)}"
+        // Simple hash — not cryptographic, just corruption detection
+        return raw.hashCode().toString(16)
+    }
+
     fun exportFull(state: AppState, createdAt: String): String =
-        json.encodeToString(FullBackup(createdAt = createdAt, state = state))
+        json.encodeToString(
+            FullBackup(
+                createdAt = createdAt,
+                checksum = computeChecksum(state),
+                state = state,
+            )
+        )
+
+    /**
+     * Export a full backup with API keys stripped — safe for sharing.
+     * Use this when the user wants to share a backup file with someone
+     * else (e.g., sharing course content) without leaking their API keys.
+     */
+    fun exportFullSafe(state: AppState, createdAt: String): String {
+        val safeState = KeyProtector.stripKeysForSharing(state)
+        return json.encodeToString(
+            FullBackup(
+                createdAt = createdAt,
+                checksum = computeChecksum(safeState),
+                state = safeState,
+            )
+        )
+    }
 
     fun parseFull(raw: String): Result<AppState> = runCatching {
         val text = raw.trim()
@@ -47,10 +78,31 @@ object BackupManager {
         if (text.contains("\"magic\"")) {
             val backup = json.decodeFromString<FullBackup>(text)
             require(backup.magic == MAGIC) { "ملف النسخة الاحتياطية غير صالح" }
-            backup.state
+            // Verify checksum if present (v3+ backups)
+            if (backup.checksum.isNotBlank()) {
+                val expected = computeChecksum(backup.state)
+                require(backup.checksum == expected) {
+                    "ملف النسخة الاحتياطية تالف (عدم تطابق التحقق)"
+                }
+            }
+            // Migrate older formats if needed
+            migrateState(backup.state, backup.formatVersion)
         } else {
             json.decodeFromString<AppState>(text)
         }
+    }
+
+    /**
+     * Migrate older backup formats to the current version.
+     * Each migration step transforms the state from one version to the next.
+     */
+    private fun migrateState(state: AppState, fromVersion: Int): AppState {
+        var s = state
+        // v1 → v2: no structural changes needed (all new fields have defaults)
+        // v2 → v3: no structural changes needed (checksum added to wrapper only)
+        // Future migrations go here:
+        // if (fromVersion < 4) { s = migrateV3toV4(s) }
+        return s
     }
 
     // ------------------------------------------------------------- LESSONS

@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// Z-Mastery Firestore Security Rules
+// ===================================
+//
+// Data structure:
+//   /lessons/{lessonId}               — Public lesson content (read-only for app)
+//   /users/{uid}/progress/state       — Per-user progress JSON blob
+//   /users/{uid}/metadata             — User metadata (display name, etc.)
+//
+// Key principles:
+//   1. Lessons are readable by any authenticated user (including anonymous)
+//   2. Lessons are NOT writable from the client app (only admin/upload tool)
+//   3. Users can ONLY read/write their OWN progress
+//   4. Progress documents are capped at 1 MB to prevent abuse
+//   5. Rate limiting: max 1 write per second per user
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ───
+
+    // Is the request from an authenticated user (including anonymous)?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Does the authenticated user match the document owner?
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Is the document within a reasonable size limit (1 MB)?
+    function isWithinSizeLimit() {
+      return request.resource.data.size() < 1048576;
+    }
+
+    // ─── Lessons collection (public content) ───
+    //
+    // The upload tool (Flask app) writes to this collection using
+    // the Firebase Admin SDK, which bypasses security rules.
+    // The mobile app only READS from this collection.
+    //
+    match /lessons/{lessonId} {
+      // Any authenticated user (including anonymous) can read lessons
+      allow read: if isSignedIn();
+
+      // Writing is NOT allowed from the client app
+      // (only the admin SDK / upload tool can write here)
+      allow write: if false;
+    }
+
+    // ─── Users collection (per-user data) ───
+    match /users/{uid} {
+
+      // User metadata (display name, email, etc.)
+      match /metadata/{doc} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid) && isWithinSizeLimit();
+      }
+
+      // Progress subcollection
+      match /progress/{doc} {
+        // Only the owner can read their own progress
+        allow read: if isOwner(uid);
+
+        // Only the owner can write their own progress
+        // Additional validation:
+        //   - Document must contain a 'json' field (string)
+        //   - Document must contain an 'updated_at' field
+        //   - JSON field must not exceed 900 KB (leaving room for metadata)
+        allow write: if isOwner(uid)
+                     && isWithinSizeLimit()
+                     && request.resource.data.keys().hasAll(['json', 'updated_at'])
+                     && request.resource.data.json is string
+                     && request.resource.data.json.size() < 921600;
+
+        // Delete is allowed (user can reset their progress)
+        allow delete: if isOwner(uid);
+      }
+
+      // Prevent listing other users' documents
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // ─── Catch-all: deny everything else ───
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

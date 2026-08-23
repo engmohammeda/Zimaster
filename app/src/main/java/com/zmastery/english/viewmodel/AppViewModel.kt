@@ -9,6 +9,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zmastery.english.data.*
+import com.zmastery.english.domain.usecases.AiService
+import com.zmastery.english.domain.usecases.BackupCoordinator
+import com.zmastery.english.domain.usecases.CloudSyncService
+import com.zmastery.english.domain.usecases.PerformanceUtils
+import com.zmastery.english.domain.usecases.ReviewScheduler
+import com.zmastery.english.domain.usecases.StoryService
+import com.zmastery.english.domain.usecases.StreakManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -23,6 +30,18 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+
+    // ── Use Cases (extracted logic — independently testable) ──
+    val reviewScheduler = ReviewScheduler()
+    val streakManager = StreakManager()
+    val backupCoordinator = BackupCoordinator()
+    val aiService = AiService()
+    val cloudSyncService = CloudSyncService()
+    val storyService = StoryService()
+
+    // ── Performance (throttle widget refresh + cache expensive computations) ──
+    private val widgetThrottle = PerformanceUtils.Throttle(5 * 60_000L)  // 5 min
+    private val statsCache = PerformanceUtils.TimedCache<Any>(30_000L)   // 30 sec
 
     // ----- Courses (mutable so imports can add) -----
     val courses = mutableStateListOf<Course>().apply { addAll(SampleData.courses) }
@@ -41,8 +60,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            val state = Persistence.load(getApplication())
-            if (state != null) restoreFrom(state)
+            // Safe load with automatic backup recovery — if the primary data
+            // is corrupted or empty, DataGuard tries the last good backup.
+            val result = DataGuard.safeLoad(getApplication())
+            if (result.source != LoadSource.EMPTY) {
+                restoreFrom(result.state)
+                if (result.recovered) {
+                    android.util.Log.w("AppViewModel",
+                        "Data recovered from backup: ${result.health.lessonCount} lessons, " +
+                            "${result.health.vocabCount} vocab")
+                }
+            }
             isLoaded = true
             // مزامنة صامتة عند الإقلاع: تبني الصناديق الناقصة دون إشعارات.
             syncMysteryRewards(notify = false)
@@ -261,18 +289,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         streakBeforeBreak = s.streakBeforeBreak
     }
 
-    /** Debounced save — batches rapid mutations into one write. */
+    /** Debounced save — batches rapid mutations into one write with backup. */
     fun persist() {
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(400)
             val state = buildAppState()
-            Persistence.save(getApplication(), state)
+            // Safe save: creates a backup of the previous state before overwriting,
+            // and logs errors clearly instead of silently swallowing them.
+            val result = DataGuard.safeSave(getApplication(), state)
+            if (!result.success) {
+                android.util.Log.e("AppViewModel", "Save FAILED: ${result.error}")
+            }
             syncWidget()
         }
     }
 
     /** Push current stats to the shared store and refresh home-screen widgets. */
+    /** Push current stats to the shared store and refresh home-screen widgets.
+     *  Widget refresh is throttled to 5 minutes to avoid excessive broadcasts. */
     fun syncWidget() {
         val ctx = getApplication<Application>()
         ProgressStore.save(
@@ -288,8 +323,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             decaySeverity = decayState.severity,
             minimumDone = microHabitDone || tasksDone >= dailyTasks.size,
         )
-        com.zmastery.english.widget.ZMasteryWidget.refreshAll(ctx)
+        // Throttle widget refresh to avoid excessive broadcasts
+        if (widgetThrottle.allow()) {
+            com.zmastery.english.widget.ZMasteryWidget.refreshAll(ctx)
+        }
         syncNotifState()
+    }
+
+    /** Force an immediate widget refresh (bypasses throttle).
+     *  Use for explicit user actions like completing a lesson. */
+    fun forceWidgetRefresh() {
+        widgetThrottle.reset()
+        val ctx = getApplication<Application>()
+        com.zmastery.english.widget.ZMasteryWidget.refreshAll(ctx)
     }
 
     /** Keep the notification receiver's state fresh (runs even when app is closed). */
@@ -3952,13 +3998,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Push the CURRENT local state to Firestore under this learner's uid. */
+    /** Push the CURRENT local state to Firestore under this learner's uid.
+     *  API keys are stripped before pushing — they must NEVER leave the device. */
     fun pushProgressToCloud() {
         if (!cloudSyncEnabled) return
         val uid = cloudUid ?: return
         viewModelScope.launch {
             val state = buildAppState()
-            val raw = Persistence.encode(state)
+            // Strip API keys before cloud sync — keys stay on device only
+            val safeState = KeyProtector.stripKeysForSharing(state)
+            val raw = Persistence.encode(safeState)
             com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
         }
     }

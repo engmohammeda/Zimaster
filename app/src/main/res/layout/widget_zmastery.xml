@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    الجزء 3 · محرك الخوف من الفقد
-    FrameLayout خارجي يسمح بوضع طبقة "الدخان الأحمر" فوق محتوى الودجت
-    عندما تكون السلسلة على وشك الضياع (chestMood = CRACKING).
-    الطبقة مخفية تماماً (GONE) في الحالة الطبيعية فلا تكلّف شيئاً.
+    Z-Mastery Widget — تصميم متوافق مع RemoteViews على كل المشغّلات.
+
+    ملاحظات التوافق:
+    1) لا نضع android:src في ImageView الافتراضي — المشغّل يحمّله أثناء
+       inflation وأي فشل في Drawable يعني "لا يمكن تحميل التطبيق المصغر".
+       بدلاً من ذلك نضع الصورة برمجياً بعد التأكد من نجاح الإنشاء.
+    2) نستخدم LinearLayout كجذر (أكثر توافقاً من FrameLayout على MIUI/EMUI).
+    3) طبقة الدخان مُضمّنة داخل LinearLayout كـ ImageView منفصل.
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@drawable/widget_bg">
 
-    <!-- طبقة الدخان الأحمر المتصاعد (تتبدّل صورتها لتوحي بالحركة) -->
+    <!-- طبقة الدخان الأحمر (بدون src افتراضي — يُعيَّن برمجياً) -->
     <ImageView
         android:id="@+id/widget_smoke"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_gravity="top"
+        android:layout_height="40dp"
         android:scaleType="fitXY"
         android:visibility="gone"
-        android:contentDescription="@null"
-        android:src="@drawable/widget_smoke_1" />
+        android:contentDescription="@null" />
 
     <LinearLayout
         android:id="@+id/widget_content"
@@ -144,22 +147,16 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- RemoteViews-safe progress track (background + clipped fill) -->
-        <FrameLayout
+        <!-- RemoteViews-safe progress bar — بدون FrameLayout داخلي -->
+        <ProgressBar
+            android:id="@+id/widget_progressbar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
             android:layout_width="match_parent"
             android:layout_height="10dp"
             android:layout_marginTop="6dp"
-            android:background="@drawable/widget_track">
-
-            <ProgressBar
-                android:id="@+id/widget_progressbar"
-                style="@android:style/Widget.ProgressBar.Horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="10dp"
-                android:progressDrawable="@drawable/widget_progress"
-                android:max="100"
-                android:progress="0" />
-        </FrameLayout>
+            android:progressDrawable="@drawable/widget_progress"
+            android:max="100"
+            android:progress="0" />
     </LinearLayout>
 
     <!-- CTA -->
@@ -177,4 +174,4 @@
         android:textStyle="bold"
         android:gravity="center" />
     </LinearLayout>
-</FrameLayout>
+</LinearLayout>
