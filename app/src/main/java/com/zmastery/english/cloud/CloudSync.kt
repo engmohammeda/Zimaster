@@ -1,48 +1,160 @@
 package com.zmastery.english.cloud
 
+import android.os.Build
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.zmastery.english.data.ImportEngine
 import com.zmastery.english.data.LessonPackage
 import kotlinx.coroutines.tasks.await
 
 /**
- * Cloud content + progress sync, built on Cloud Firestore (free Spark plan is
- * more than enough for one learner's whole curriculum).
- *
- * Two independent things live in Firestore:
- *
- *  1. CONTENT — collection "lessons": every document is one lesson, added
- *     entirely OUTSIDE the app (a small upload script the learner runs on
- *     their computer — see tools/upload_lessons.py). Each document stores
- *     the exact same per-lesson JSON the in-app importer already understands
- *     (field "json"), so pulling it into the app reuses the same battle
- *     tested [ImportEngine] parsing — zero duplicate logic, zero risk of the
- *     cloud format drifting from the local one.
- *
- *  2. PROGRESS — document "users/{uid}/progress/state": a mirror of the
- *     local on-device [com.zmastery.english.data.AppState] blob, so the
- *     learner's streak / XP / SRS memory state / everything survives a
- *     reinstall or a new device. DataStore stays the fast local cache;
- *     Firestore is the backup + cross-device sync layer.
+ * Cloud content + user provisioning + progress sync built on Cloud Firestore.
  */
 object CloudSync {
 
     private val db get() = Firebase.firestore
 
     private const val LESSONS_COLLECTION = "lessons"
+    private const val USERS_COLLECTION = "users"
+    private const val ANNOUNCEMENTS_COLLECTION = "announcements"
     private const val UPDATED_AT = "updated_at"
+
+    /** Known super-admin emails */
+    private val SUPER_ADMIN_EMAILS = setOf(
+        "mohammedalbkhyty@gmail.com",
+    )
+
+    data class Announcement(
+        val id: String = "",
+        val title: String = "",
+        val message: String = "",
+        val type: String = "info", // "info", "update", "challenge", "alert"
+        val createdAtMillis: Long = 0L,
+        val isActive: Boolean = true,
+    )
+
+    data class UserProfileSnapshot(
+        val uid: String,
+        val email: String? = null,
+        val displayName: String? = null,
+        val photoUrl: String? = null,
+        val isAnonymous: Boolean = false,
+        val streak: Int = 0,
+        val xp: Int = 0,
+        val completedLessonsCount: Int = 0,
+        val wordsLearnedCount: Int = 0,
+        val accuracy: Double = 0.0,
+    )
+
+    data class UserRecord(
+        val uid: String,
+        val email: String? = null,
+        val displayName: String? = null,
+        val photoUrl: String? = null,
+        val role: String = "student",
+        val streak: Int = 0,
+        val xp: Int = 0,
+        val completedLessonsCount: Int = 0,
+        val wordsLearnedCount: Int = 0,
+        val accuracy: Double = 0.0,
+        val lastActiveMillis: Long = 0L,
+        val deviceModel: String? = null,
+    )
+
+    /**
+     * Auto-provision or update the user document in `/users/{uid}` in Firestore.
+     */
+    suspend fun provisionOrUpdateUser(
+        user: FirebaseUser,
+        profile: UserProfileSnapshot,
+    ): Result<String> = runCatching {
+        val userRef = db.collection(USERS_COLLECTION).document(user.uid)
+        val existingDoc = userRef.get().await()
+
+        val isSuperAdmin = user.email?.lowercase()?.trim() in SUPER_ADMIN_EMAILS
+        val existingRole = existingDoc.getString("role")
+        val finalRole = when {
+            isSuperAdmin -> "admin"
+            existingRole != null -> existingRole
+            else -> "student"
+        }
+
+        val userData = mutableMapOf<String, Any?>(
+            "uid" to user.uid,
+            "email" to user.email,
+            "displayName" to (user.displayName ?: profile.displayName ?: "Learner"),
+            "photoUrl" to (user.photoUrl?.toString() ?: profile.photoUrl),
+            "isAnonymous" to user.isAnonymous,
+            "role" to finalRole,
+            "streak" to profile.streak,
+            "xp" to profile.xp,
+            "completedLessonsCount" to profile.completedLessonsCount,
+            "wordsLearnedCount" to profile.wordsLearnedCount,
+            "accuracy" to profile.accuracy,
+            "lastActive" to FieldValue.serverTimestamp(),
+            "lastActiveMillis" to System.currentTimeMillis(),
+            "deviceModel" to "${Build.MANUFACTURER} ${Build.MODEL}",
+            "androidVersion" to Build.VERSION.RELEASE,
+            "appVersion" to "1.1.0",
+            "platform" to "android",
+        )
+
+        if (!existingDoc.exists()) {
+            userData["createdAt"] = FieldValue.serverTimestamp()
+            userData["createdAtMillis"] = System.currentTimeMillis()
+        }
+
+        userRef.set(userData, SetOptions.merge()).await()
+        finalRole
+    }
+
+    /**
+     * Fetch the user's role from Firestore ("admin" or "student")
+     */
+    suspend fun fetchUserRole(uid: String): String = runCatching {
+        val doc = db.collection(USERS_COLLECTION).document(uid).get().await()
+        doc.getString("role") ?: "student"
+    }.getOrDefault("student")
+
+    /**
+     * Fetch all registered users (for admin dashboard)
+     */
+    suspend fun fetchAllUsers(): Result<List<UserRecord>> = runCatching {
+        val snap = db.collection(USERS_COLLECTION)
+            .orderBy("lastActiveMillis", Query.Direction.DESCENDING)
+            .limit(100)
+            .get()
+            .await()
+
+        snap.documents.mapNotNull { doc ->
+            UserRecord(
+                uid = doc.getString("uid") ?: doc.id,
+                email = doc.getString("email"),
+                displayName = doc.getString("displayName") ?: "مستخدم",
+                photoUrl = doc.getString("photoUrl"),
+                role = doc.getString("role") ?: "student",
+                streak = (doc.getLong("streak") ?: 0L).toInt(),
+                xp = (doc.getLong("xp") ?: 0L).toInt(),
+                completedLessonsCount = (doc.getLong("completedLessonsCount") ?: 0L).toInt(),
+                wordsLearnedCount = (doc.getLong("wordsLearnedCount") ?: 0L).toInt(),
+                accuracy = doc.getDouble("accuracy") ?: 0.0,
+                lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
+                deviceModel = doc.getString("deviceModel"),
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------- LESSONS
 
     /** One lesson document pulled from Firestore. */
     data class RemoteLesson(val docId: String, val json: String, val updatedAtMillis: Long)
 
     /**
-     * Fetch every lesson document added/changed since [sinceMillis] (0 = every
-     * lesson ever uploaded — used for the very first sync). Ordered oldest
-     * first so a partial/interrupted sync can safely resume from the last
-     * timestamp it actually saw.
+     * Fetch every lesson document added/changed since [sinceMillis]
      */
     suspend fun fetchLessonsSince(sinceMillis: Long): Result<List<RemoteLesson>> = runCatching {
         val snap = db.collection(LESSONS_COLLECTION)
@@ -57,14 +169,8 @@ object CloudSync {
         }
     }
 
-    /** Every lesson document, regardless of timestamp (used by "إعادة مزامنة كاملة"). */
     suspend fun fetchAllLessons(): Result<List<RemoteLesson>> = fetchLessonsSince(0L)
 
-    /**
-     * Parse the raw JSON of every remote lesson into the same [LessonPackage]
-     * model the manual importer produces. Invalid documents are skipped
-     * (reported in [SyncResult.skipped]) rather than failing the whole sync.
-     */
     data class SyncResult(
         val packages: List<LessonPackage>,
         val latestUpdatedAtMillis: Long,
@@ -91,12 +197,56 @@ object CloudSync {
         return Result.success(SyncResult(packages, latest, skipped))
     }
 
+    // ---------------------------------------------------------------- PUBLISH / ADMIN (LESSONS)
+
+    /**
+     * Publish or update a single lesson package to Firestore under `/lessons/{docId}`.
+     */
+    suspend fun publishLessonToCloud(pkg: LessonPackage): Result<String> = runCatching {
+        val courseKey = pkg.metadata.courseId.ifBlank { "l1_scratch" }
+        val docId = "${courseKey}_lesson_${pkg.metadata.lessonNo}"
+        val json = ImportEngine.json.encodeToString(LessonPackage.serializer(), pkg)
+
+        val docData = mapOf(
+            "docId" to docId,
+            "courseId" to courseKey,
+            "lessonNo" to pkg.metadata.lessonNo,
+            "title" to pkg.metadata.title,
+            "level" to pkg.metadata.level,
+            "json" to json,
+            UPDATED_AT to System.currentTimeMillis(),
+            "updatedAtServer" to FieldValue.serverTimestamp(),
+        )
+
+        db.collection(LESSONS_COLLECTION).document(docId).set(docData, SetOptions.merge()).await()
+        docId
+    }
+
+    /**
+     * Publish a batch of lesson packages to Firestore.
+     */
+    suspend fun publishLessonsBatchToCloud(packages: List<LessonPackage>): Result<Int> = runCatching {
+        var count = 0
+        packages.forEach { pkg ->
+            publishLessonToCloud(pkg).getOrThrow()
+            count++
+        }
+        count
+    }
+
+    /**
+     * Delete a lesson from Firestore by docId.
+     */
+    suspend fun deleteLessonFromCloud(docId: String): Result<Unit> = runCatching {
+        db.collection(LESSONS_COLLECTION).document(docId).delete().await()
+        Unit
+    }
+
     // ---------------------------------------------------------------- PROGRESS
 
     private fun progressDoc(uid: String) =
         db.collection("users").document(uid).collection("progress").document("state")
 
-    /** Push the full local AppState JSON blob to the cloud (overwrite). */
     suspend fun pushProgress(uid: String, stateJson: String): Result<Unit> = runCatching {
         progressDoc(uid).set(
             mapOf(
@@ -108,15 +258,91 @@ object CloudSync {
         Unit
     }
 
-    /** Pull the cloud progress blob, or null if nothing has been synced yet. */
     suspend fun pullProgress(uid: String): Result<String?> = runCatching {
         val doc = progressDoc(uid).get().await()
         doc.getString("json")
     }
 
-    /** Epoch millis the cloud copy was last written (0 = never synced). */
     suspend fun pullProgressTimestamp(uid: String): Result<Long> = runCatching {
         val doc = progressDoc(uid).get().await()
         doc.getLong("client_updated_at") ?: 0L
+    }
+
+    // ---------------------------------------------------------------- ANNOUNCEMENTS & LEADERBOARD
+
+    /**
+     * Fetch the latest active announcement to show to students.
+     */
+    suspend fun fetchActiveAnnouncement(): Result<Announcement?> = runCatching {
+        val snap = db.collection(ANNOUNCEMENTS_COLLECTION)
+            .whereEqualTo("isActive", true)
+            .orderBy("createdAtMillis", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+
+        val doc = snap.documents.firstOrNull() ?: return@runCatching null
+        Announcement(
+            id = doc.id,
+            title = doc.getString("title") ?: "",
+            message = doc.getString("message") ?: "",
+            type = doc.getString("type") ?: "info",
+            createdAtMillis = doc.getLong("createdAtMillis") ?: 0L,
+            isActive = doc.getBoolean("isActive") ?: true,
+        )
+    }
+
+    /**
+     * Post a new announcement across all devices (Admin only).
+     */
+    suspend fun postAnnouncement(title: String, message: String, type: String = "info"): Result<String> = runCatching {
+        val docRef = db.collection(ANNOUNCEMENTS_COLLECTION).document()
+        val data = mapOf(
+            "id" to docRef.id,
+            "title" to title,
+            "message" to message,
+            "type" to type,
+            "createdAtMillis" to System.currentTimeMillis(),
+            "createdAt" to FieldValue.serverTimestamp(),
+            "isActive" to true,
+        )
+        docRef.set(data).await()
+        docRef.id
+    }
+
+    /**
+     * Deactivate or delete an announcement (Admin only).
+     */
+    suspend fun deactivateAnnouncement(id: String): Result<Unit> = runCatching {
+        db.collection(ANNOUNCEMENTS_COLLECTION).document(id).update("isActive", false).await()
+        Unit
+    }
+
+    /**
+     * Fetch global leaderboard sorted by XP or streak.
+     */
+    suspend fun fetchLeaderboard(limit: Int = 30): Result<List<UserRecord>> = runCatching {
+        val snap = db.collection(USERS_COLLECTION)
+            .orderBy("xp", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+
+        snap.documents.mapNotNull { doc ->
+            UserRecord(
+                uid = doc.getString("uid") ?: doc.id,
+                email = doc.getString("email"),
+                displayName = doc.getString("displayName") ?: "متعلم",
+                photoUrl = doc.getString("photoUrl"),
+                role = doc.getString("role") ?: "student",
+                streak = (doc.getLong("streak") ?: 0L).toInt(),
+                xp = (doc.getLong("xp") ?: 0L).toInt(),
+                completedLessonsCount = (doc.getLong("completedLessonsCount") ?: 0L).toInt(),
+                wordsLearnedCount = (doc.getLong("wordsLearnedCount") ?: 0L).toInt(),
+                accuracy = doc.getDouble("accuracy") ?: 0.0,
+                lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
+                deviceModel = doc.getString("deviceModel"),
+            )
+        }
     }
 }

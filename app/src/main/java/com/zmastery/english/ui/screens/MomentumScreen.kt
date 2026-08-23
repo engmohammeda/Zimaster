@@ -15,6 +15,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -61,6 +62,10 @@ fun MomentumScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
     var rescueWin by remember { mutableStateOf(0) }
     var breakTarget by remember { mutableStateOf<com.zmastery.english.data.MysteryReward?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        vm.loadGlobalLeaderboard()
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -142,6 +147,10 @@ fun MomentumScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
         // ── The Seven Seals ladder ──
         SectionTitle("الأختام السبعة", "صناديق مجهولة تُفتح بالاستمرارية")
         SealsLadder(vm) { tier -> openTier = tier }
+
+        // ── 🏆 لوحة المتصدرين السحابية المباشرة ──
+        SectionTitle("لوحة المتصدرين السحابية 🏆", "أقوى الطلاب التزاماً في مجتمع Zimaster")
+        GlobalLeaderboardCard(vm)
 
         Spacer(Modifier.height(80.dp))
     }
@@ -1153,3 +1162,148 @@ private fun ChestMirrorPanel(vm: AppViewModel, tierId: String) {
         }
     }
 }
+
+@Composable
+private fun GlobalLeaderboardCard(vm: AppViewModel) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = ZCard,
+        shadowElevation = 3.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Leaderboard, null, tint = ZAmber, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("المتصدرون هذا الأسبوع", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+                IconButton(onClick = { vm.loadGlobalLeaderboard() }, modifier = Modifier.size(32.dp)) {
+                    if (vm.isLoadingLeaderboard) {
+                        CircularProgressIndicator(color = ZCyan, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                    } else {
+                        Icon(Icons.Filled.Refresh, "تحديث", tint = ZCyan, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (vm.globalLeaderboard.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("لا توجد بيانات متصدرين حالياً", color = ZTextMuted, fontSize = 12.sp)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    vm.globalLeaderboard.forEachIndexed { index, user ->
+                        val isCurrentUser = user.uid == vm.cloudUid
+                        val rank = index + 1
+                        val rankBadge = when (rank) {
+                            1 -> "🥇"
+                            2 -> "🥈"
+                            3 -> "🥉"
+                            else -> "$rank"
+                        }
+                        val itemBg = if (isCurrentUser) ZIndigo.copy(alpha = 0.18f) else ZSurfaceVariant
+                        val itemBorder = if (isCurrentUser) androidx.compose.foundation.BorderStroke(1.5.dp, ZIndigo) else null
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = itemBg,
+                            border = itemBorder,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Rank
+                                Box(
+                                    modifier = Modifier.width(32.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        rankBadge,
+                                        fontSize = if (rank <= 3) 16.sp else 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (rank <= 3) ZAmber else ZTextSecondary,
+                                    )
+                                }
+
+                                Spacer(Modifier.width(8.dp))
+
+                                // Avatar
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isCurrentUser) ZIndigo else ZBorder),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        (user.displayName?.take(1) ?: "U").uppercase(),
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                    )
+                                }
+
+                                Spacer(Modifier.width(10.dp))
+
+                                // Name & details
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            user.displayName ?: "متعلم",
+                                            color = ZTextPrimary,
+                                            fontWeight = if (isCurrentUser) FontWeight.Black else FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                        )
+                                        if (isCurrentUser) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("(أنت)", color = ZIndigo, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "🔥 ${user.streak} يوم  ·  📚 ${user.completedLessonsCount} درس",
+                                        color = ZTextMuted,
+                                        fontSize = 10.sp,
+                                    )
+                                }
+
+                                // XP Badge
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = ZAmber.copy(alpha = 0.15f),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(Icons.Filled.Bolt, null, tint = ZAmber, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(2.dp))
+                                        Text(
+                                            "${user.xp}",
+                                            color = ZAmber,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -179,7 +179,29 @@ fun ImportScreen(vm: AppViewModel) {
                             colors = ButtonDefaults.buttonColors(containerColor = ZEmerald),
                         ) {
                             Icon(Icons.Filled.LibraryAdd, null); Spacer(Modifier.width(8.dp))
-                            Text("إضافة ${r.packages.size} درس إلى المكتبة", fontWeight = FontWeight.Bold)
+                            Text("إضافة ${r.packages.size} درس إلى المكتبة المحلية", fontWeight = FontWeight.Bold)
+                        }
+
+                        // Admin Only: Publish directly to Firebase Cloud for all students
+                        if (vm.isAdmin) {
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    vm.publishLessonsBatchToCloud(r.packages) { success, msg ->
+                                        imported = msg
+                                        if (success) {
+                                            text = ""; clearResults()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                            ) {
+                                Icon(Icons.Filled.CloudUpload, null, tint = Color.Black)
+                                Spacer(Modifier.width(8.dp))
+                                Text("👑 نشر ${r.packages.size} درس سحابياً لجميع الطلاب 🚀", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -206,7 +228,29 @@ fun ImportScreen(vm: AppViewModel) {
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = ZEmerald),
                         ) {
-                            Icon(Icons.Filled.LibraryAdd, null); Spacer(Modifier.width(8.dp)); Text("إضافة الدرس إلى المكتبة", fontWeight = FontWeight.Bold)
+                            Icon(Icons.Filled.LibraryAdd, null); Spacer(Modifier.width(8.dp)); Text("إضافة الدرس إلى المكتبة المحلية", fontWeight = FontWeight.Bold)
+                        }
+
+                        // Admin Only: Publish directly to Firebase Cloud for all students
+                        if (vm.isAdmin) {
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    vm.publishLessonToCloud(r.pkg) { success, msg ->
+                                        imported = msg
+                                        if (success) {
+                                            text = ""; clearResults()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                            ) {
+                                Icon(Icons.Filled.CloudUpload, null, tint = Color.Black)
+                                Spacer(Modifier.width(8.dp))
+                                Text("👑 نشر الدرس سحابياً لجميع الطلاب 🚀", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

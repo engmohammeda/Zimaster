@@ -1,9 +1,14 @@
 package com.zmastery.english.ui.screens
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,9 +26,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import com.zmastery.english.cloud.CloudAuth
 import com.zmastery.english.ui.theme.*
 import com.zmastery.english.viewmodel.AppViewModel
 
@@ -744,9 +753,35 @@ private fun AudioGenStatusRow(vm: AppViewModel) {
 
 @Composable
 private fun CloudSyncGroup(vm: AppViewModel) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     var webIdField by remember { mutableStateOf(vm.googleWebClientId) }
     var showWebIdField by remember { mutableStateOf(false) }
+    var isSigningIn by remember { mutableStateOf(false) }
+    var showAdminDialog by remember { mutableStateOf(false) }
+    var adminCodeInput by remember { mutableStateOf("") }
+    var adminError by remember { mutableStateOf<String?>(null) }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isSigningIn = false
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (!idToken.isNullOrBlank()) {
+                    vm.signInWithGoogleIdToken(idToken, account.displayName, account.email)
+                } else {
+                    Toast.makeText(ctx, "تعذّر استلام رمز مصادقة Google", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: ApiException) {
+                if (e.statusCode != 12501) {
+                    Toast.makeText(ctx, "خطأ في تسجيل الدخول (${e.statusCode})", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -757,7 +792,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                         .background(Brush.linearGradient(listOf(ZEmerald, ZCyanDeep))),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (vm.isSyncingCloud) CircularProgressIndicator(color = Color.White, strokeWidth = 2.5.dp, modifier = Modifier.size(20.dp))
+                    if (vm.isSyncingCloud || isSigningIn) CircularProgressIndicator(color = Color.White, strokeWidth = 2.5.dp, modifier = Modifier.size(20.dp))
                     else Icon(Icons.Filled.CloudSync, null, tint = Color.White, modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
@@ -796,65 +831,384 @@ private fun CloudSyncGroup(vm: AppViewModel) {
 
             Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
 
-            // ---- Google Sign-In (optional — needs Web Client ID once configured) ----
+            // ---- Google Sign-In & Authentication ----
             Column(Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.AccountCircle, null, tint = ZIndigo)
+                    Icon(Icons.Filled.AccountCircle, null, tint = ZIndigo, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("حساب جوجل", color = ZTextPrimary, fontWeight = FontWeight.SemiBold)
-                        Text("اربط حسابك لاستعادة تقدمك على أي جهاز آخر", color = ZTextSecondary, fontSize = 11.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("حساب Google السحابي", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            if (vm.isAdmin) {
+                                Spacer(Modifier.width(8.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = ZAmber.copy(alpha = 0.2f),
+                                ) {
+                                    Text(
+                                        "👑 مدير ومطور",
+                                        color = ZAmber,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            if (vm.cloudIsAnonymous) "حسابك غير مربوط بجوجل حالياً (جلسة ضيف)" else "متصل: ${vm.cloudDisplayName ?: vm.cloudEmail ?: "حساب Google"}",
+                            color = if (vm.cloudIsAnonymous) ZTextSecondary else ZEmerald,
+                            fontSize = 11.sp,
+                        )
                     }
-                    TextButton(onClick = { showWebIdField = !showWebIdField }) {
-                        Text(if (showWebIdField) "إخفاء" else "إعداد", color = ZCyan, fontSize = 12.sp)
+                    TextButton(onClick = { showAdminDialog = true }) {
+                        Text(if (vm.isAdmin) "👑 صلاحياتك" else "🔑 وضع المطور", color = ZAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+
                 if (showWebIdField) {
+                    Spacer(Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = ZSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                "🔑 معرف العميل (Web Client ID):",
+                                color = ZTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "معرّف المشروع جاهز افتراضياً، ويمكنك تعديله يدوياً إذا رغبت.",
+                                color = ZTextMuted,
+                                fontSize = 10.sp,
+                                lineHeight = 15.sp,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = webIdField,
+                                onValueChange = { webIdField = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("xxxx.apps.googleusercontent.com", color = ZTextMuted, fontSize = 12.sp) },
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = ZIndigo,
+                                    unfocusedBorderColor = ZBorder,
+                                    focusedTextColor = ZTextPrimary,
+                                    unfocusedTextColor = ZTextPrimary,
+                                ),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    vm.updateGoogleWebClientId(webIdField)
+                                    showWebIdField = false
+                                },
+                                modifier = Modifier.fillMaxWidth().height(40.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
+                            ) {
+                                Icon(Icons.Filled.Save, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("حفظ المعرّف واستخدامه", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (vm.cloudIsAnonymous) {
+                    Button(
+                        onClick = {
+                            isSigningIn = true
+                            try {
+                                val intent = CloudAuth.getGoogleSignInIntent(ctx)
+                                googleSignInLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                vm.signInWithGoogle(ctx)
+                                isSigningIn = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
+                    ) {
+                        if (isSigningIn) {
+                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            Icon(Icons.Filled.Login, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "تسجيل الدخول واختيار حساب Google",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = ZEmerald.copy(alpha = 0.15f),
+                            modifier = Modifier.weight(1f).height(46.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("متصل سحابياً", color = ZEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { vm.signOutFromGoogle(ctx) },
+                            modifier = Modifier.height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ZRose),
+                        ) {
+                            Icon(Icons.Filled.Logout, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("تسجيل خروج", fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                // Admin dialog
+                if (showAdminDialog) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            showAdminDialog = false
+                            adminError = null
+                        },
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Security, null, tint = ZAmber, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("صلاحيات المطور والمسؤول 👑", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            }
+                        },
+                        text = {
+                            Column {
+                                if (vm.isAdmin) {
+                                    Text(
+                                        "أنت معرّف حالياً كمسؤول ومطور للتطبيق! لديك الصلاحيات الكاملة لرؤية قائمة المستخدمين وبث الإعلانات وإدارة المحتوى.",
+                                        fontSize = 13.sp,
+                                        color = ZEmerald,
+                                    )
+                                } else {
+                                    Text(
+                                        "لتفعيل وضع المطور يدوياً، أدخل الرمز السري:",
+                                        fontSize = 12.sp,
+                                        color = ZTextSecondary,
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    OutlinedTextField(
+                                        value = adminCodeInput,
+                                        onValueChange = {
+                                            adminCodeInput = it
+                                            adminError = null
+                                        },
+                                        placeholder = { Text("ADMIN2026") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp),
+                                    )
+                                    adminError?.let {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(it, color = ZRose, fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            if (!vm.isAdmin) {
+                                Button(
+                                    onClick = {
+                                        if (vm.unlockDeveloperAdmin(adminCodeInput)) {
+                                            showAdminDialog = false
+                                            Toast.makeText(ctx, "تم تفعيل صلاحيات المطور والمسؤول بنجاح! 👑", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            adminError = "الرمز غير صحيح. الرمز الافتراضي: ADMIN2026"
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                                ) {
+                                    Text("تفعيل", fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                TextButton(onClick = { showAdminDialog = false }) {
+                                    Text("إغلاق")
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            if (!vm.isAdmin) {
+                                TextButton(onClick = { showAdminDialog = false }) {
+                                    Text("إلغاء")
+                                }
+                            }
+                        },
+                    )
+                }
+
+                // ---- Admin Section: View Registered Users ----
+                if (vm.isAdmin) {
+                    Spacer(Modifier.height(16.dp))
+                    Divider(color = ZBorder)
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Group, null, tint = ZAmber, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("قائمة الطلاب المسجلين سحابياً", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        TextButton(onClick = { vm.loadRegisteredUsers() }) {
+                            Text(if (vm.isLoadingUsers) "جارٍ الجلب…" else "تحديث القائمة 🔄", color = ZCyan, fontSize = 11.sp)
+                        }
+                    }
+
+                    if (vm.registeredUsersList.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            vm.registeredUsersList.forEach { user ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = ZSurfaceVariant,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
+                                        Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Box(
+                                            Modifier.size(36.dp).clip(CircleShape).background(ZBorder),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                (user.displayName?.take(1) ?: "U").uppercase(),
+                                                color = ZTextPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        }
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(user.displayName ?: "مستخدم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                if (user.role == "admin") {
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text("👑", fontSize = 10.sp)
+                                                }
+                                            }
+                                            Text(user.email ?: "حساب مجهول", color = ZTextSecondary, fontSize = 10.sp)
+                                            Text(
+                                                "🔥 ${user.streak} يوم  ·  ⚡ ${user.xp} XP  ·  📚 ${user.completedLessonsCount} درس",
+                                                color = ZTextMuted,
+                                                fontSize = 9.sp,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ---- Admin: Broadcast Announcement to Students ----
+                    Spacer(Modifier.height(16.dp))
+                    Divider(color = ZBorder)
+                    Spacer(Modifier.height(12.dp))
+
+                    var broadcastTitle by remember { mutableStateOf("") }
+                    var broadcastMessage by remember { mutableStateOf("") }
+                    var broadcastType by remember { mutableStateOf("info") }
+                    var broadcastStatus by remember { mutableStateOf<String?>(null) }
+                    var isBroadcasting by remember { mutableStateOf(false) }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Campaign, null, tint = ZAmber, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("بث إشعار عام للطلاب", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "الصق Web Client ID من Firebase Console → Authentication → Sign-in method → Google (بعد تفعيله)",
-                        color = ZTextMuted, fontSize = 10.sp,
+
+                    OutlinedTextField(
+                        value = broadcastTitle,
+                        onValueChange = { broadcastTitle = it },
+                        label = { Text("عنوان الإشعار (مثال: تحديث هام / تحدي الأسبوع)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                     )
                     Spacer(Modifier.height(6.dp))
+
                     OutlinedTextField(
-                        value = webIdField,
-                        onValueChange = { webIdField = it },
+                        value = broadcastMessage,
+                        onValueChange = { broadcastMessage = it },
+                        label = { Text("نص الرسالة المنشورة للجميع") },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("xxxx.apps.googleusercontent.com", color = ZTextMuted) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = ZSurfaceVariant, unfocusedContainerColor = ZSurfaceVariant,
-                            focusedBorderColor = ZIndigo, unfocusedBorderColor = ZBorder,
-                            focusedTextColor = ZTextPrimary, unfocusedTextColor = ZTextPrimary,
-                        ),
+                        minLines = 2,
                     )
                     Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        listOf(
+                            "info" to "معلومة 💡",
+                            "update" to "تحديث 🚀",
+                            "challenge" to "تحدي 🏆",
+                            "alert" to "تنبيه ⚠️",
+                        ).forEach { (typeKey, typeLabel) ->
+                            FilterChip(
+                                selected = broadcastType == typeKey,
+                                onClick = { broadcastType = typeKey },
+                                label = { Text(typeLabel, fontSize = 11.sp) },
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
                     Button(
-                        onClick = { vm.updateGoogleWebClientId(webIdField) },
+                        onClick = {
+                            if (broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank()) {
+                                isBroadcasting = true
+                                vm.postAnnouncement(broadcastTitle, broadcastMessage, broadcastType) { success, msg ->
+                                    isBroadcasting = false
+                                    broadcastStatus = msg
+                                    if (success) {
+                                        broadcastTitle = ""
+                                        broadcastMessage = ""
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isBroadcasting && broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(44.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
-                    ) { Text("حفظ المعرّف", fontWeight = FontWeight.Bold) }
-                }
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = { vm.signInWithGoogle(ctx) },
-                    enabled = vm.cloudIsAnonymous,
-                    modifier = Modifier.fillMaxWidth().height(46.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ZEmerald, disabledContainerColor = ZBorder),
-                ) {
-                    Icon(Icons.Filled.Login, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (vm.cloudIsAnonymous) "تسجيل الدخول بحساب Google" else "متصل بحساب Google ✓",
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                if (vm.googleWebClientId.isBlank()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text("أضف Web Client ID أعلاه لتفعيل تسجيل الدخول بجوجل", color = ZTextMuted, fontSize = 10.sp)
+                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                    ) {
+                        Icon(Icons.Filled.Send, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (isBroadcasting) "جارٍ البث..." else "👑 إرسال الإشعار لجميع الطلاب", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+
+                    broadcastStatus?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

@@ -94,6 +94,19 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
+            // ── 0 · إعلانات وتنبيهات الإدارة السحابية ──
+            val ann = vm.activeAnnouncement
+            if (ann != null) {
+                item {
+                    AnnouncementCard(
+                        announcement = ann,
+                        isAdmin = vm.isAdmin,
+                        onDismiss = { vm.dismissActiveAnnouncement() },
+                        onDeactivate = { vm.deactivateAnnouncement(ann.id) },
+                    )
+                }
+            }
+
             // ── 1 · حالات عاجلة فقط (إنقاذ السلسلة) ──
             if (vm.showRescueGate) {
                 item {
@@ -809,3 +822,82 @@ private fun DailyPhraseCard() {
         }
     }
 }
+
+@Composable
+private fun AnnouncementCard(
+    announcement: com.zmastery.english.cloud.CloudSync.Announcement,
+    isAdmin: Boolean,
+    onDismiss: () -> Unit,
+    onDeactivate: () -> Unit,
+) {
+    val (bgColor, accentColor, icon) = when (announcement.type) {
+        "alert" -> Triple(ZRose.copy(alpha = 0.15f), ZRose, Icons.Filled.Warning)
+        "update" -> Triple(ZEmerald.copy(alpha = 0.15f), ZEmerald, Icons.Filled.Celebration)
+        "challenge" -> Triple(ZAmber.copy(alpha = 0.15f), ZAmber, Icons.Filled.EmojiEvents)
+        else -> Triple(ZCyan.copy(alpha = 0.15f), ZCyan, Icons.Filled.Campaign)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = ZSurface,
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, accentColor.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            Modifier
+                .background(bgColor)
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(accentColor.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(icon, null, tint = accentColor, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        announcement.title.ifBlank { "إشعار عام" },
+                        color = ZTextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                    )
+                }
+                IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.Close, "إغلاق", tint = ZTextMuted, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                announcement.message,
+                color = ZTextSecondary,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+            )
+
+            if (isAdmin) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDeactivate) {
+                        Icon(Icons.Filled.Delete, null, tint = ZRose, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("إلغاء وتثبيط الإشعار للجميع (مدير)", color = ZRose, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+

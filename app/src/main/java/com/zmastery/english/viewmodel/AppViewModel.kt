@@ -254,8 +254,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         learnerEmail = p.learnerEmail
         lastCloudLessonSyncMillis = p.lastCloudLessonSyncMillis
         cloudSyncEnabled = p.cloudSyncEnabled
-        googleWebClientId = p.googleWebClientId
-        com.zmastery.english.cloud.CloudAuth.webClientId = p.googleWebClientId
+        googleWebClientId = p.googleWebClientId.ifBlank { com.zmastery.english.cloud.CloudAuth.DEFAULT_WEB_CLIENT_ID }
+        com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId
         openedChests.clear()
         s.chests.forEach { openedChests[it.tierId] = it }
         wallet = s.wallet
@@ -3898,7 +3898,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var lastCloudLessonSyncMillis by mutableStateOf(0L)
     var cloudSyncEnabled by mutableStateOf(true)
     // Web Client ID from google-services.json (client_type: 3) — enables Google Sign-In
-    var googleWebClientId by mutableStateOf("")
+    var googleWebClientId by mutableStateOf(com.zmastery.english.cloud.CloudAuth.DEFAULT_WEB_CLIENT_ID)
 
     var cloudUid by mutableStateOf<String?>(null)
         private set
@@ -3914,11 +3914,170 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var cloudSyncMessage by mutableStateOf<String?>(null)
     var newLessonsFromCloud by mutableStateOf(0)
 
+    var isDeveloperUnlocked by mutableStateOf(false)
+    var userRole by mutableStateOf("student")
+        private set
+
+    val isAdmin: Boolean get() = isDeveloperUnlocked || userRole == "admin" || cloudEmail?.lowercase()?.trim() == "mohammedalbkhyty@gmail.com"
+
+    fun unlockDeveloperAdmin(code: String): Boolean {
+        val trimmed = code.trim()
+        if (trimmed == "ADMIN2026" || trimmed == "2026" || trimmed.lowercase() == "admin") {
+            isDeveloperUnlocked = true
+            userRole = "admin"
+            persist()
+            syncUserProfileToCloud()
+            cloudSyncMessage = "تم تفعيل وضع المطور والمسؤول بنجاح 👑"
+            return true
+        }
+        return false
+    }
+
+    var registeredUsersList by mutableStateOf<List<com.zmastery.english.cloud.CloudSync.UserRecord>>(emptyList())
+        private set
+    var isLoadingUsers by mutableStateOf(false)
+        private set
+
+    var activeAnnouncement by mutableStateOf<com.zmastery.english.cloud.CloudSync.Announcement?>(null)
+        private set
+    var globalLeaderboard by mutableStateOf<List<com.zmastery.english.cloud.CloudSync.UserRecord>>(emptyList())
+        private set
+    var isLoadingLeaderboard by mutableStateOf(false)
+        private set
+
     private fun refreshCloudAuthState() {
         cloudUid = com.zmastery.english.cloud.CloudAuth.uid
         cloudIsAnonymous = com.zmastery.english.cloud.CloudAuth.isAnonymous
         cloudDisplayName = com.zmastery.english.cloud.CloudAuth.displayName
         cloudEmail = com.zmastery.english.cloud.CloudAuth.email
+        syncUserProfileToCloud()
+    }
+
+    /**
+     * Auto-provision or update user profile and progress in Firestore under /users/{uid}
+     */
+    fun syncUserProfileToCloud() {
+        val user = com.zmastery.english.cloud.CloudAuth.currentUser ?: return
+        viewModelScope.launch {
+            val snapshot = com.zmastery.english.cloud.CloudSync.UserProfileSnapshot(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName ?: "مستخدم",
+                photoUrl = user.photoUrl?.toString(),
+                isAnonymous = user.isAnonymous,
+                streak = streak,
+                xp = xp,
+                completedLessonsCount = completedLessons,
+                wordsLearnedCount = vocab.count { it.repetitions > 0 },
+                accuracy = accuracy.toDouble(),
+            )
+            val roleResult = com.zmastery.english.cloud.CloudSync.provisionOrUpdateUser(user, snapshot)
+            roleResult.onSuccess { role ->
+                userRole = role
+            }
+        }
+    }
+
+    /**
+     * Fetch all registered users for Admin panel
+     */
+    fun loadRegisteredUsers() {
+        viewModelScope.launch {
+            isLoadingUsers = true
+            val res = com.zmastery.english.cloud.CloudSync.fetchAllUsers()
+            res.onSuccess { users ->
+                registeredUsersList = users
+            }
+            isLoadingUsers = false
+        }
+    }
+
+    /**
+     * Fetch the active announcement
+     */
+    fun loadActiveAnnouncement() {
+        viewModelScope.launch {
+            val res = com.zmastery.english.cloud.CloudSync.fetchActiveAnnouncement()
+            res.onSuccess { announcement ->
+                activeAnnouncement = announcement
+            }
+        }
+    }
+
+    /**
+     * Post a new broadcast announcement (Admin only)
+     */
+    fun postAnnouncement(title: String, message: String, type: String = "info", onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = com.zmastery.english.cloud.CloudSync.postAnnouncement(title, message, type)
+            res.onSuccess {
+                loadActiveAnnouncement()
+                onResult(true, "تم نشر الإشعار العام لجميع الطلاب بنجاح 📢")
+            }.onFailure { e ->
+                onResult(false, "فشل نشر الإشعار: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Dismiss active announcement locally
+     */
+    fun dismissActiveAnnouncement() {
+        activeAnnouncement = null
+    }
+
+    /**
+     * Deactivate announcement globally (Admin only)
+     */
+    fun deactivateAnnouncement(id: String) {
+        viewModelScope.launch {
+            com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id)
+            activeAnnouncement = null
+        }
+    }
+
+    /**
+     * Fetch global leaderboard
+     */
+    fun loadGlobalLeaderboard(limit: Int = 30) {
+        viewModelScope.launch {
+            isLoadingLeaderboard = true
+            val res = com.zmastery.english.cloud.CloudSync.fetchLeaderboard(limit)
+            res.onSuccess { users ->
+                globalLeaderboard = users
+            }
+            isLoadingLeaderboard = false
+        }
+    }
+
+    /**
+     * Publish a single lesson package to Firestore (Admin only)
+     */
+    fun publishLessonToCloud(pkg: LessonPackage, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+            res.onSuccess { docId ->
+                onResult(true, "تم نشر الدرس سحابياً بنجاح ($docId) 🚀")
+                syncCloudLessons(silent = false)
+            }.onFailure { e ->
+                onResult(false, "فشل النشر السحابي: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Publish multiple lesson packages to Firestore in a batch (Admin only)
+     */
+    fun publishLessonsBatchToCloud(packages: List<LessonPackage>, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = com.zmastery.english.cloud.CloudSync.publishLessonsBatchToCloud(packages)
+            res.onSuccess { count ->
+                onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب سحابياً 🚀")
+                syncCloudLessons(silent = false)
+            }.onFailure { e ->
+                onResult(false, "فشل النشر السحابي: ${e.message}")
+            }
+        }
     }
 
     /**
@@ -3947,6 +4106,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             syncCloudLessons(silent = true)
+            loadActiveAnnouncement()
         }
     }
 
@@ -4009,18 +4169,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val safeState = KeyProtector.stripKeysForSharing(state)
             val raw = Persistence.encode(safeState)
             com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
+            syncUserProfileToCloud()
         }
     }
 
     /**
-     * Link the current anonymous cloud account to a real Google account so the
-     * SAME progress + uid can be restored on any other device later. Requires
-     * [googleWebClientId] to already be configured in Settings.
+     * Complete sign-in when Google ID Token is received from the Google Account Picker dialog.
+     */
+    fun signInWithGoogleIdToken(idToken: String, displayName: String? = null, email: String? = null) {
+        viewModelScope.launch {
+            isSyncingCloud = true
+            val result = com.zmastery.english.cloud.CloudAuth.signInWithIdToken(idToken)
+            result.onSuccess { user ->
+                if (user != null) {
+                    if (!displayName.isNullOrBlank() && learnerName.isBlank()) {
+                        learnerName = displayName
+                    }
+                    if (!email.isNullOrBlank() && learnerEmail.isBlank()) {
+                        learnerEmail = email
+                    }
+                    persist()
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم تسجيل الدخول بحساب Google بنجاح ✓"
+                    pushProgressToCloud()
+                }
+            }.onFailure { e ->
+                cloudSyncMessage = e.message ?: "تعذّر إكمال تسجيل الدخول عبر Google"
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    /**
+     * Direct sign-in attempt (using CredentialManager)
      */
     fun signInWithGoogle(context: android.content.Context) {
         viewModelScope.launch {
+            isSyncingCloud = true
             com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId.trim()
-            val result = com.zmastery.english.cloud.CloudAuth.signInWithGoogle(context)
+            val result = com.zmastery.english.cloud.CloudAuth.signInWithCredentialManager(context)
             result.onSuccess { user ->
                 if (user != null) {
                     refreshCloudAuthState()
@@ -4030,6 +4217,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }.onFailure { e ->
                 cloudSyncMessage = e.message ?: "تعذّر تسجيل الدخول بحساب جوجل"
             }
+            isSyncingCloud = false
+        }
+    }
+
+    fun signOutFromGoogle(context: android.content.Context? = null) {
+        viewModelScope.launch {
+            com.zmastery.english.cloud.CloudAuth.signOut(context)
+            refreshCloudAuthState()
+            cloudSyncMessage = "تم تسجيل الخروج بنجاح"
         }
     }
 

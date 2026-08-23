@@ -68,6 +68,10 @@ def create_source_zip(zip_name="/tmp/Zimaster_Source_Backup.zip"):
     return zip_name
 
 def find_or_build_apk():
+    release_apk = "app/build/outputs/apk/release/app-release.apk"
+    if os.path.exists(release_apk):
+        print(f"Found Release APK: {release_apk}")
+        return release_apk
     apk_candidates = []
     for root, dirs, files in os.walk('.'):
         for f in files:
@@ -84,38 +88,45 @@ def main():
     # 1. Zip the source code
     zip_path = create_source_zip()
     
-    # 2. Check for APK
+    # 2. Check for Release APK
     apk_path = find_or_build_apk()
     
     # 3. ChangeLog
-    change_log = """🚀 *تقرير مزامنة مشروع Zimaster (Z-Mastery)*
+    change_log = """🚀 *إصدار Zimaster المحدّث (نسخة الإنتاج Release + السورس كود)*
 
-📅 *التاريخ:* 2026-08-23
-📦 *الحزمة:* `com.zmastery.english` (v1.1.0)
+📦 *الحزمة:* `com.zmastery.english` (v1.1.0 - Release)
 
-*✨ أبرز التعديلات والإصلاحات:*
-1. 🔐 *تكامل Firebase*: ربط مشروع `zmastery` (ID: 836170376747) وتوليد `google-services.json` تلقائياً.
-2. 📱 *إصلاح App Widget*: حل مشكلة "لا يمكن تحميل التطبيق المصغر" وتجهيز Layout متوافق مع كافة المشغلات و HyperOS / Samsung / Pixel.
-3. ⚙️ *GitHub Actions CI/CD*: تحديث سير العمل لإجراء Build كامل وتوليد Debug APK + Release APK + AAB ونشرها تلقائياً في Releases.
-4. 📝 *توثيق شامل*: إنشاء ملف `README.md` احترافي للمستودع يشرح البنية المعمارية ومميزات FSRS والذكاء الاصطناعي.
-5. 🛡️ *استقرار الكود*: معالجة فروع `AiService` وتحديث الاعتمادات.
+*✨ أهم التحديثات والإصلاحات:*
+1. 🔐 *إصلاح شاشة الملف الشخصي والحسابات:*
+   - إزالة كافة النصوص القديمة (مثل "قريباً Firebase").
+   - عرض حالة المزامنة السحابية المباشرة (Firestore) والتخزين المحلي الذكي (Room DB).
+   - عرض حالة الارتباط بحساب Google ونوع الحساب (مدير نظام 👑 / طالب 🎓).
+2. 🔑 *تسجيل الدخول المباشر بجوجل (Google Sign-In):*
+   - دعم كامل لـ Credential Manager و Google Identity Services.
+   - ربط الحسابات السحابية بالـ UID تلقائياً بدون فقدان أي نقاط أو تقدم.
+   - إمكانية تسجيل الخروج والتبديل بين الحسابات بسلاسة.
+3. 🏆 *لوحة المتصدرين السحابية المباشرة:*
+   - عرض ترتيب الطلاب ونقاط الـ XP والسلاسل عالمياً.
+4. 📢 *نظام بث الإعلانات والإشعارات الجماعية:*
+   - إمكانية بث إشعارات وتحديثات وتحديات لكافة مستخدمي التطبيق من لوحة تحكم المدير.
 """
 
     send_message(change_log)
     
     # Upload Zip
-    zip_ok = send_document(zip_path, caption="📦 سورس كود مشروع Zimaster كاملاً (Source Code Backup)")
+    zip_ok = send_document(zip_path, caption="📦 سورس كود مشروع Zimaster المحدّث كاملاً (Source Code)")
     
+    # Upload Release APK
     apk_ok = False
     if apk_path and os.path.exists(apk_path):
-        apk_ok = send_document(apk_path, caption="📱 نسخة التطبيق APK")
+        apk_ok = send_document(apk_path, caption="📱 إصدار الإنتاج الرسمي (Release APK) - Z-Mastery v1.1.0")
     
-    summary = f"""✅ *تمت المزامنة بنجاح!*
+    summary = f"""✅ *تم إرسال الملفات بنجاح إلى تيليجرام!*
 
-- 📦 *ملف السورس:* `{os.path.basename(zip_path)}` ({os.path.getsize(zip_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if zip_ok else 'فشل ❌'}
+- 📦 *سورس كود التطبيق:* `{os.path.basename(zip_path)}` ({os.path.getsize(zip_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if zip_ok else 'فشل ❌'}
 """
     if apk_path:
-        summary += f"- 📱 *ملف APK:* `{os.path.basename(apk_path)}` ({os.path.getsize(apk_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if apk_ok else 'فشل ❌'}\n"
+        summary += f"- 📱 *إصدار Release APK:* `{os.path.basename(apk_path)}` ({os.path.getsize(apk_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if apk_ok else 'فشل ❌'}\n"
     
     send_message(summary)
     print("Bridge execution completed.")

@@ -227,16 +227,57 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "معلومات الحساب",
-                        color = ZTextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "معلومات الحساب والمزامنة",
+                            color = ZTextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                        )
+                        if (vm.isAdmin) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = ZAmber.copy(alpha = 0.2f),
+                            ) {
+                                Text(
+                                    "👑 مدير النظام",
+                                    color = ZAmber,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
-                    InfoRow(Icons.Filled.Storage, "التخزين", "محلي (DataStore)")
-                    InfoRow(Icons.Filled.Cloud, "المزامنة", "قريبًا — Firebase")
-                    InfoRow(Icons.Filled.Security, "المصادقة", "محلي حاليًا")
+                    InfoRow(Icons.Filled.Storage, "التخزين المحلي", "محلي دائم (Room DB + DataStore)")
+                    InfoRow(
+                        Icons.Filled.CloudSync,
+                        "المزامنة السحابية",
+                        if (vm.cloudSyncEnabled) "مفعّلة (Firebase Firestore) ✓" else "معطلة",
+                    )
+                    InfoRow(
+                        Icons.Filled.Security,
+                        "المصادقة وحالة الحساب",
+                        if (!vm.cloudIsAnonymous && vm.cloudUid != null) {
+                            "حساب Google (${vm.cloudEmail ?: vm.learnerEmail})"
+                        } else {
+                            "حساب ضيف (غير مربوط بجوجل)"
+                        },
+                    )
+                    if (vm.cloudIsAnonymous) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "💡 يمكنك ربط حسابك بجوجل من الإعدادات لمزامنة تقدمك والظهور في لوحة الشرف.",
+                            color = ZTextMuted,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
+                        )
+                    }
                 }
             }
 

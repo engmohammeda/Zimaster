@@ -1,6 +1,7 @@
 package com.zmastery.english.cloud
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,6 +11,9 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
@@ -17,15 +21,12 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.tasks.await
-import java.security.SecureRandom
-import java.util.Base64
 
 /**
  * Authentication for the learner's personal account.
  *
- * 1. On first run, we sign in ANONYMOUSLY if not yet signed in.
- * 2. When the user taps Google Sign-In, we launch CredentialManager to pick any Google account.
- * 3. The account is linked to the existing UID so no progress or stats are lost.
+ * Supports both Google Play Services GoogleSignInClient (Native Universal Account Picker)
+ * and Jetpack CredentialManager.
  */
 object CloudAuth {
     private const val TAG = "CloudAuth"
@@ -40,22 +41,40 @@ object CloudAuth {
     val email: String? get() = auth.currentUser?.email
     val photoUrl: String? get() = auth.currentUser?.photoUrl?.toString()
 
-    /**
-     * Web Client ID from Firebase Console -> Authentication -> Sign-in method -> Google
-     */
-    var webClientId: String = ""
+    const val DEFAULT_WEB_CLIENT_ID = "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com"
+
+    var webClientId: String = DEFAULT_WEB_CLIENT_ID
 
     fun resolveEffectiveWebClientId(context: Context): String {
         if (webClientId.isNotBlank()) return webClientId.trim()
-        return try {
-            val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
-            if (resId != 0) context.getString(resId) else ""
-        } catch (e: Exception) {
-            ""
-        }
+        val resId = try {
+            context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        } catch (e: Exception) { 0 }
+        val fromRes = if (resId != 0) runCatching { context.getString(resId) }.getOrNull() else null
+        return fromRes?.takeIf { it.isNotBlank() } ?: DEFAULT_WEB_CLIENT_ID
     }
 
     val googleSignInAvailable: Boolean get() = true
+
+    /**
+     * Build the standard GoogleSignInClient used by all Android apps to show the native account picker.
+     */
+    fun getGoogleSignInClient(context: Context): GoogleSignInClient {
+        val effectiveClientId = resolveEffectiveWebClientId(context)
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(effectiveClientId)
+            .requestEmail()
+            .requestProfile()
+            .build()
+        return GoogleSignIn.getClient(context, gso)
+    }
+
+    fun getGoogleSignInIntent(context: Context): Intent {
+        val client = getGoogleSignInClient(context)
+        // Sign out first so the user can choose from all accounts every time
+        runCatching { client.signOut() }
+        return client.signInIntent
+    }
 
     /**
      * Ensure SOME Firebase user exists — call once at app startup.
@@ -66,21 +85,37 @@ object CloudAuth {
     }
 
     /**
-     * Launch Google Sign-In via Credential Manager and LINK it to the current
-     * Firebase user so all local data carries over.
+     * Authenticate or link with Google ID Token in Firebase Auth.
      */
-    suspend fun signInWithGoogle(context: Context): Result<FirebaseUser?> = runCatching {
+    suspend fun signInWithIdToken(idToken: String): Result<FirebaseUser?> = runCatching {
+        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+        val current = auth.currentUser
+        val user = if (current != null && current.isAnonymous) {
+            try {
+                current.linkWithCredential(firebaseCredential).await().user
+            } catch (e: Exception) {
+                // If already linked to another account, sign in directly with that account
+                auth.signInWithCredential(firebaseCredential).await().user
+            }
+        } else {
+            auth.signInWithCredential(firebaseCredential).await().user
+        }
+        user ?: throw IllegalStateException("فشل التحقق من هوية Google لدى Firebase")
+    }
+
+    /**
+     * Fallback or direct Credential Manager sign in
+     */
+    suspend fun signInWithCredentialManager(context: Context): Result<FirebaseUser?> = runCatching {
         val effectiveClientId = resolveEffectiveWebClientId(context)
         if (effectiveClientId.isBlank()) {
-            throw IllegalStateException("يرجى إدخال Web Client ID من إعدادات الحساب أو لوحة Firebase")
+            throw IllegalStateException("يرجى إدخال Web Client ID")
         }
 
-        val nonce = randomNonce()
         val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false) // Show all Google accounts on device
+            .setFilterByAuthorizedAccounts(false)
             .setServerClientId(effectiveClientId)
-            .setAutoSelectEnabled(false) // Prompt account chooser bottom sheet
-            .setNonce(nonce)
+            .setAutoSelectEnabled(false)
             .build()
 
         val request = GetCredentialRequest.Builder()
@@ -92,46 +127,30 @@ object CloudAuth {
             credentialManager.getCredential(request = request, context = context)
         } catch (e: GetCredentialCancellationException) {
             Log.d(TAG, "User cancelled Google Sign-in")
-            return@runCatching null // Cancelled by user - not an error
+            return@runCatching null
         } catch (e: GetCredentialException) {
             Log.e(TAG, "Credential Manager error", e)
-            throw IllegalStateException("تعذّر فتح نافذة اختيار الحساب: ${e.message}", e)
+            throw IllegalStateException("تعذّر فتح نافذة الحسابات: ${e.message}", e)
         }
 
         val credential = result.credential
         if (credential !is CustomCredential ||
             credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
-            throw IllegalStateException("نوع بيانات اعتماد غير متوقع من Google")
+            throw IllegalStateException("نوع بيانات اعتماد غير متوقع")
         }
 
         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-
-        val current = auth.currentUser
-        val user = if (current != null && current.isAnonymous) {
-            try {
-                current.linkWithCredential(firebaseCredential).await().user
-            } catch (e: Exception) {
-                // If credential already linked to another user, sign into that user
-                auth.signInWithCredential(firebaseCredential).await().user
-            }
-        } else {
-            auth.signInWithCredential(firebaseCredential).await().user
-        }
-        user ?: throw IllegalStateException("فشل إتمام تسجيل الدخول بحساب Google")
+        signInWithIdToken(googleIdTokenCredential.idToken).getOrThrow()
     }
 
     /** Sign out of Google and drop back to a fresh anonymous session. */
-    suspend fun signOut() {
+    suspend fun signOut(context: Context? = null) {
+        if (context != null) {
+            runCatching { getGoogleSignInClient(context).signOut().await() }
+        }
         auth.signOut()
         ensureSignedIn()
-    }
-
-    private fun randomNonce(): String {
-        val bytes = ByteArray(16)
-        SecureRandom().nextBytes(bytes)
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 }
 
