@@ -100,7 +100,7 @@ class ZMasteryWidget : AppWidgetProvider() {
                     broken -> R.drawable.widget_bg_rescue
                     else -> R.drawable.widget_bg
                 }
-                views.setInt(R.id.widget_root, "setBackgroundResource", bgRes)
+                views.setImageViewResource(R.id.widget_bg_image, bgRes)
                 WidgetDiagnostics.logStage("set_background", widgetId, "mood=$mood")
             } catch (e: Exception) {
                 WidgetDiagnostics.logError("set_background", widgetId, e)

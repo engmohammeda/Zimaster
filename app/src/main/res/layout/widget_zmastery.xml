@@ -1,26 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Z-Mastery Widget — تصميم متوافق مع RemoteViews على كل المشغّلات.
-
-    ملاحظات التوافق:
-    1) لا نضع android:src في ImageView الافتراضي — المشغّل يحمّله أثناء
-       inflation وأي فشل في Drawable يعني "لا يمكن تحميل التطبيق المصغر".
-       بدلاً من ذلك نضع الصورة برمجياً بعد التأكد من نجاح الإنشاء.
-    2) نستخدم LinearLayout كجذر (أكثر توافقاً من FrameLayout على MIUI/EMUI).
-    3) طبقة الدخان مُضمّنة داخل LinearLayout كـ ImageView منفصل.
--->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/widget_bg">
+    android:layout_height="match_parent">
 
-    <!-- طبقة الدخان الأحمر (بدون src افتراضي — يُعيَّن برمجياً) -->
+    <!-- الخلفية الرسمية عبر ImageView لضمان التوافق مع RemoteViews ومحرّكات MIUI/HyperOS/Pixel -->
+    <ImageView
+        android:id="@+id/widget_bg_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg"
+        android:contentDescription="@null" />
+
+    <!-- طبقة الدخان الأحمر (تظهر برمجياً عند تصدع السلسلة فقط) -->
     <ImageView
         android:id="@+id/widget_smoke"
         android:layout_width="match_parent"
         android:layout_height="40dp"
+        android:layout_gravity="top"
         android:scaleType="fitXY"
         android:visibility="gone"
         android:contentDescription="@null" />
@@ -99,7 +97,7 @@
             android:layout_height="wrap_content"
             android:text="كنتُ واثقاً أنني أصنع نفسي بنفسي."
             android:textColor="#FFFFFF"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:maxLines="3"
             android:ellipsize="end"
@@ -147,7 +145,7 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- RemoteViews-safe progress bar — بدون FrameLayout داخلي -->
+        <!-- RemoteViews-safe progress bar -->
         <ProgressBar
             android:id="@+id/widget_progressbar"
             style="@android:style/Widget.ProgressBar.Horizontal"
@@ -174,4 +172,5 @@
         android:textStyle="bold"
         android:gravity="center" />
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>
+
