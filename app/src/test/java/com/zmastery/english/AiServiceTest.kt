@@ -14,7 +14,7 @@ class AiServiceTest {
 
     @Test
     fun `valid Gemini key passes`() {
-        val result = service.validateKeyFormat("AIzaSyA1234567890abcdefghijklmnopqrstu", AiProvider.GEMINI)
+        val result = service.validateKeyFormat("AIzaSyA1234567890abcdefghijklmnopqrstuv", AiProvider.GEMINI)
         assertTrue(result.valid)
     }
 
@@ -68,7 +68,7 @@ class AiServiceTest {
 
     @Test
     fun `detect compatible for unknown prefix`() {
-        assertEquals(AiProvider.OPENAI_COMPATIBLE, service.detectProvider("my-custom-key"))
+        assertEquals(AiProvider.CUSTOM, service.detectProvider("my-custom-key"))
     }
 
     // ─── Model classification ───

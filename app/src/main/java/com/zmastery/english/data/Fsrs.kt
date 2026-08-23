@@ -145,6 +145,24 @@ object Fsrs {
         return Sched(newS, newD, ivl, Phase.REVIEW, r)
     }
 
+    /** Convenience overload for tests and simple invocations. */
+    fun schedule(
+        stability: Double,
+        difficulty: Double,
+        elapsedDays: Double,
+        rating: Int,
+        desiredRetention: Double = 0.9,
+    ): Sched = schedule(
+        DEFAULT_W,
+        rating,
+        if (stability <= 0.0) Phase.NEW else Phase.REVIEW,
+        stability,
+        difficulty,
+        elapsedDays,
+        desiredRetention,
+        365,
+    )
+
     /** Human-readable memory strength 0..1 from stability (log scale, ~180d = full). */
     fun strengthFromStability(stability: Double): Float {
         if (stability <= 0.0) return 0f

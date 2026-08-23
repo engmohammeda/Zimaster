@@ -20,14 +20,11 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            val localKeystore = rootProject.file("debug.keystore")
-            if (localKeystore.exists()) {
-                storeFile = localKeystore
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
         if (System.getenv("RELEASE_STORE_FILE") != null) {
             create("release") {
@@ -41,8 +38,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debugConfig")
             isDebuggable = true
         }
         release {
@@ -54,7 +50,7 @@ android {
             )
             signingConfig =
                 signingConfigs.findByName("release")
-                    ?: signingConfigs.getByName("debug")
+                    ?: signingConfigs.getByName("debugConfig")
         }
     }
 

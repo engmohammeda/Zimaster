@@ -1,0 +1,6 @@
+{
+  "name": "Z-Mastery",
+  "description": "Z-Mastery English learning application with adaptive tasks, courses, reviews, and progress tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

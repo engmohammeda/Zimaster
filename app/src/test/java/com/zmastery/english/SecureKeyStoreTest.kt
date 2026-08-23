@@ -60,7 +60,7 @@ class SecureKeyStoreTest {
 
     @Test
     fun `detects Gemini key in text`() {
-        assertTrue(KeyProtector.containsApiKey("prefix AIzaSyA1234567890abcdefghijklmnopqrstu suffix"))
+        assertTrue(KeyProtector.containsApiKey("prefix AIzaSyA1234567890abcdefghijklmnopqrstuv suffix"))
     }
 
     @Test
@@ -110,7 +110,7 @@ class SecureKeyStoreTest {
 
     @Test
     fun `valid Gemini key format`() {
-        assertTrue(KeyProtector.isValidGeminiKey("AIzaSyA1234567890abcdefghijklmnopqrstu"))
+        assertTrue(KeyProtector.isValidGeminiKey("AIzaSyA1234567890abcdefghijklmnopqrstuv"))
     }
 
     @Test

@@ -20,7 +20,7 @@ class ReviewSchedulerTest {
         phase = FsrsPhase.REVIEW, dueInDays = 3, intervalDays = 7,
         lastReviewedDay = 100L, repetitions = 5, mastered = false,
         listenCount = 10, totalReviews = 20, lapses = 2,
-        lastRecall = "good", avgRecallStage = 3.0f, lastGrade = 3,
+        lastRecall = RecallSource.NONE, avgRecallStage = 3.0f, lastGrade = 3,
         pendingApproval = false, lessonId = 1,
     )
 

@@ -105,9 +105,9 @@ object KeyProtector {
      */
     fun detectProvider(key: String): String = when {
         key.startsWith("AIzaSy") -> "Gemini"
+        key.startsWith("sk-ant-") || key.startsWith("anthropic") -> "Anthropic"
         key.startsWith("sk-") -> "OpenAI"
         key.startsWith("xai-") -> "xAI"
-        key.startsWith("anthropic") || key.startsWith("sk-ant-") -> "Anthropic"
         key.isBlank() -> "بدون مفتاح"
         else -> "مخصص"
     }

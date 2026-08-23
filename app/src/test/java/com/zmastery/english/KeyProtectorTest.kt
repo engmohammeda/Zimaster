@@ -57,7 +57,7 @@ class KeyProtectorTest {
 
     @Test
     fun `detect Gemini key`() {
-        assertTrue(KeyProtector.containsApiKey("key=AIzaSyA1234567890abcdefghijklmnopqrstu"))
+        assertTrue(KeyProtector.containsApiKey("key=AIzaSyA1234567890abcdefghijklmnopqrstuv"))
     }
 
     @Test
@@ -69,7 +69,7 @@ class KeyProtectorTest {
 
     @Test
     fun `valid Gemini key`() {
-        assertTrue(KeyProtector.isValidGeminiKey("AIzaSyA1234567890abcdefghijklmnopqrstu"))
+        assertTrue(KeyProtector.isValidGeminiKey("AIzaSyA1234567890abcdefghijklmnopqrstuv"))
     }
 
     @Test

@@ -153,7 +153,7 @@ class ZMasteryWidget : AppWidgetProvider() {
             try {
                 views.setTextViewText(
                     R.id.widget_quote,
-                    ""${quote?.text ?: "ابدأ رحلتك في تعلم الإنجليزية"}""
+                    "\"${quote?.text ?: "ابدأ رحلتك في تعلم الإنجليزية"}\""
                 )
                 views.setTextViewText(
                     R.id.widget_author,

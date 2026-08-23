@@ -22,7 +22,7 @@ class AiService {
         if (key.isBlank()) return KeyValidation(false, "المفتاح فارغ")
 
         return when (provider) {
-            AiProvider.GEMINI -> {
+            AiProvider.GEMINI, AiProvider.GEMINI_OPENAI -> {
                 if (key.startsWith("AIzaSy") && key.length == 39) {
                     KeyValidation(true, "مفتاح Gemini صالح ✓")
                 } else {
@@ -36,11 +36,25 @@ class AiService {
                     KeyValidation(false, "مفتاح OpenAI يجب أن يبدأ بـ sk-")
                 }
             }
-            AiProvider.OPENAI_COMPATIBLE -> {
-                if (key.isNotBlank()) {
-                    KeyValidation(true, "مفتاح متوافق ✓")
+            AiProvider.OPENROUTER -> {
+                if (key.startsWith("sk-or-")) {
+                    KeyValidation(true, "مفتاح OpenRouter صالح ✓")
                 } else {
-                    KeyValidation(false, "المفتاح فارغ")
+                    KeyValidation(false, "مفتاح OpenRouter يجب أن يبدأ بـ sk-or-")
+                }
+            }
+            AiProvider.GROQ -> {
+                if (key.startsWith("gsk_")) {
+                    KeyValidation(true, "مفتاح Groq صالح ✓")
+                } else {
+                    KeyValidation(false, "مفتاح Groq يجب أن يبدأ بـ gsk_")
+                }
+            }
+            AiProvider.CEREBRAS -> {
+                if (key.startsWith("csk-")) {
+                    KeyValidation(true, "مفتاح Cerebras صالح ✓")
+                } else {
+                    KeyValidation(false, "مفتاح Cerebras يجب أن يبدأ بـ csk-")
                 }
             }
             AiProvider.XAI -> {
@@ -48,6 +62,13 @@ class AiService {
                     KeyValidation(true, "مفتاح xAI صالح ✓")
                 } else {
                     KeyValidation(false, "مفتاح xAI يجب أن يبدأ بـ xai-")
+                }
+            }
+            AiProvider.MISTRAL, AiProvider.DEEPSEEK, AiProvider.TOGETHER, AiProvider.CUSTOM -> {
+                if (key.isNotBlank()) {
+                    KeyValidation(true, "مفتاح متوافق ✓")
+                } else {
+                    KeyValidation(false, "المفتاح فارغ")
                 }
             }
         }
@@ -61,10 +82,13 @@ class AiService {
     fun detectProvider(rawKey: String): AiProvider {
         val key = rawKey.trim()
         return when {
-            key.startsWith("AIzaSy") -> AiProvider.GEMINI
-            key.startsWith("sk-") -> AiProvider.OPENAI
+            key.startsWith("AIzaSy") || key.startsWith("AIza") -> AiProvider.GEMINI
+            key.startsWith("sk-or-") -> AiProvider.OPENROUTER
+            key.startsWith("gsk_") -> AiProvider.GROQ
+            key.startsWith("csk-") -> AiProvider.CEREBRAS
             key.startsWith("xai-") -> AiProvider.XAI
-            else -> AiProvider.OPENAI_COMPATIBLE
+            key.startsWith("sk-") -> AiProvider.OPENAI
+            else -> AiProvider.CUSTOM
         }
     }
 
