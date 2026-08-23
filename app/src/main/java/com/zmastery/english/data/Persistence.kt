@@ -270,6 +270,8 @@ object Persistence {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val KEY = stringPreferencesKey("app_state_json")
 
+    private val TAG = "ZMasteryPersistence"
+
     /** Serialize [state] to the same JSON shape used for local storage — also
      *  used as the cloud sync payload so both copies are always compatible. */
     fun encode(state: AppState): String = json.encodeToString(state)
@@ -280,18 +282,23 @@ object Persistence {
     suspend fun load(context: Context): AppState? {
         return try {
             val raw = context.dataStore.data.first()[KEY] ?: return null
-            if (raw.isBlank()) null else json.decodeFromString<AppState>(raw)
+            if (raw.isBlank()) {
+                android.util.Log.w(TAG, "Stored data is blank")
+                null
+            } else {
+                json.decodeFromString<AppState>(raw)
+            }
         } catch (e: Exception) {
+            android.util.Log.e(TAG, "Load failed: ${e.javaClass.simpleName}: ${e.message}", e)
             null
         }
     }
 
     suspend fun save(context: Context, state: AppState) {
-        try {
-            val raw = json.encodeToString(state)
-            context.dataStore.edit { it[KEY] = raw }
-        } catch (_: Exception) {
-        }
+        val raw = json.encodeToString(state)
+        // Let exceptions propagate — the caller (DataGuard.safeSave) handles
+        // them properly instead of silently losing data.
+        context.dataStore.edit { it[KEY] = raw }
     }
 
     suspend fun clear(context: Context) {

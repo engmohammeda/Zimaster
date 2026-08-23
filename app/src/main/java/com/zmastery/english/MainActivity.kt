@@ -66,6 +66,9 @@ class MainActivity : ComponentActivity() {
         com.zmastery.english.notify.NotifScheduler.rescheduleAll(this)
         // Long-press-the-icon shortcuts (مراجعة / القاموس / استيراد).
         com.zmastery.english.widget.HomeShortcuts.installDynamic(this)
+        // Refresh widget every time the app is opened — ensures it never shows
+        // stale data or a "can't load" state after the app is launched.
+        com.zmastery.english.widget.ZMasteryWidget.refreshAll(this)
         setContent {
             val vm: AppViewModel = viewModel()
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -199,13 +202,18 @@ fun ZMasteryApp(
         tts.voice = vm.ttsVoice
     }
 
-    // Flush unsaved state whenever the app goes to the background.
+    // Flush unsaved state whenever the app goes to the background, and refresh
+    // the widget when the app comes back to the foreground.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val appContext = androidx.compose.ui.platform.LocalContext.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP ||
                 event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE
             ) vm.flush()
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                com.zmastery.english.widget.ZMasteryWidget.refreshAll(appContext)
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

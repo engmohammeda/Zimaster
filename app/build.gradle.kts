@@ -15,14 +15,11 @@ android {
         applicationId = "com.zmastery.english"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     signingConfigs {
-        // Debug signing: a project-local debug.keystore is used when present;
-        // otherwise the Android Gradle plugin's default (auto-generated) debug
-        // keystore is kept — so builds never fail on a missing keystore file.
         getByName("debug") {
             val localKeystore = rootProject.file("debug.keystore")
             if (localKeystore.exists()) {
@@ -32,9 +29,6 @@ android {
                 keyPassword = "android"
             }
         }
-        // Release signing is provided by CI from GitHub Secrets. When those env
-        // vars are absent, the release build falls back to the default debug
-        // signing config so CI still produces an installable (test-signed) APK/AAB.
         if (System.getenv("RELEASE_STORE_FILE") != null) {
             create("release") {
                 storeFile = file(System.getenv("RELEASE_STORE_FILE"))
@@ -48,9 +42,16 @@ android {
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".debug"
+            isDebuggable = true
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             signingConfig =
                 signingConfigs.findByName("release")
                     ?: signingConfigs.getByName("debug")
@@ -69,6 +70,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -95,13 +97,13 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.2.0")
 
-    // ----- Firebase (Firestore sync + Google Sign-In auth) -----
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 
-    // Google Sign-In (Credential Manager — the modern, non-deprecated API)
+    // Google Sign-In
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
@@ -109,4 +111,9 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 }

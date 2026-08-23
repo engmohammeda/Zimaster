@@ -49,7 +49,10 @@ class NotificationReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            // Re-schedule notification alarms
             NotifScheduler.rescheduleAll(context.applicationContext)
+            // Refresh widget so it doesn't show stale "can't load" state
+            com.zmastery.english.widget.ZMasteryWidget.refreshAll(context.applicationContext)
         }
     }
 }
