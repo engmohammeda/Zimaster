@@ -1521,7 +1521,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val reviewHours = mutableStateListOf<Int>()
 
     /** Mutate today's row. All counters are additive. */
-    private fun track(mutate: (DayStat) -> Unit) {
+    internal fun track(mutate: (DayStat) -> Unit) {
         val d = Telemetry.today()
         val row = dayStats[d] ?: DayStat(d)
         mutate(row)

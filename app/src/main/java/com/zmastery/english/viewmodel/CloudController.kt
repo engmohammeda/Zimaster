@@ -407,7 +407,6 @@ internal class CloudController(internal val vm: AppViewModel) {
     private var isAddingQuote
         get() = vm.isAddingQuote
         set(v) { vm.isAddingQuote = v }
-    private val isAdmin get() = vm.isAdmin
 
     /** يسحب عبارات السحابة ويخزّنها محلياً (للودجت والشاشة الرئيسية). */
     fun syncQuotes(onResult: ((Boolean, Int) -> Unit)? = null) {
@@ -438,17 +437,18 @@ internal class CloudController(internal val vm: AppViewModel) {
             onResult(false, "نص العبارة فارغ")
             return
         }
-        val uid = cloudUid ?: run {
-            runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
-            refreshCloudAuthState()
-            cloudUid
-        }
-        if (uid == null) {
-            onResult(false, "تعذّر الاتصال بالسحابة الآن")
-            return
-        }
         isAddingQuote = true
         launch {
+            val uid = cloudUid ?: run {
+                runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+                refreshCloudAuthState()
+                cloudUid
+            }
+            if (uid == null) {
+                isAddingQuote = false
+                onResult(false, "تعذّر الاتصال بالسحابة الآن")
+                return@launch
+            }
             val res = com.zmastery.english.cloud.CloudSync.addQuote(text, author, uid)
             isAddingQuote = false
             res.onSuccess {
