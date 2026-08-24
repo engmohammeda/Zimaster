@@ -56,96 +56,145 @@ fun StreakTopBar(
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = conditionProgress.coerceIn(0f, 1f),
-        animationSpec = tween(700),
+        animationSpec = tween(600),
         label = "cond",
     )
 
-    // نبض خفيف على اللهب حين تكون السلسلة نشطة — إشارة حياة، لا إزعاج.
     val infinite = androidx.compose.animation.core.rememberInfiniteTransition(label = "flame")
     val flamePulse by infinite.animateFloat(
         initialValue = 1f,
-        targetValue = if (streak > 0 && !dayEarned) 1.12f else 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        targetValue = if (streak > 0 && !dayEarned) 1.15f else 1f,
+        animationSpec = infiniteRepeatable(tween(850), RepeatMode.Reverse),
         label = "fp",
     )
 
-    Surface(color = ZSurface, shadowElevation = 1.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.statusBarsPadding().padding(horizontal = 14.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // ── هوية مصغّرة: نقطة العلامة ──
-                Box(
-                    Modifier.size(9.dp).clip(RoundedCornerShape(50))
-                        .background(if (dayEarned) ZEmerald else ZAmber),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (dayEarned) "يومك مؤمَّن" else conditionLabel,
-                    color = ZTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 1, modifier = Modifier.weight(1f),
-                )
+    Surface(
+        color = ZSurface.copy(alpha = 0.95f),
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .statusBarsPadding()
+                .fillMaxWidth(),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                // ── Status Indicator & Label ──
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onOpen),
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(if (dayEarned) ZEmerald else ZAmber),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (dayEarned) "يومك مؤمَّن ✓" else conditionLabel,
+                        color = if (dayEarned) ZEmerald else ZTextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                }
 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
 
-                // ── الكبسولة الموحّدة: 🔥 ⚡ 🛡️ 💎 في عنصر واحد ──
+                // ── Compact Action Capsule ──
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = ZSurfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                     onClick = onOpen,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
+                        // Flame & Streak
                         Text(
-                            "\uD83D\uDD25", fontSize = 15.sp,
-                            modifier = Modifier.alpha(if (streak == 0) 0.4f else 1f).scale(flamePulse),
+                            "🔥",
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .alpha(if (streak == 0) 0.35f else 1f)
+                                .scale(flamePulse),
                         )
                         Spacer(Modifier.width(3.dp))
                         Text(
-                            "$streak", color = if (streak > 0) ZAmber else ZTextMuted,
-                            fontSize = 13.sp, fontWeight = FontWeight.Black,
+                            "$streak",
+                            color = if (streak > 0) ZAmber else ZTextMuted,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Black,
                         )
 
-                        Spacer(Modifier.width(9.dp))
-                        Box(Modifier.width(1.dp).height(14.dp).background(ZBorder))
-                        Spacer(Modifier.width(9.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.width(1.dp).height(12.dp).background(ZBorder))
+                        Spacer(Modifier.width(8.dp))
 
-                        Icon(Icons.Filled.Bolt, null, tint = ZIndigo, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(3.dp))
-                        Text(compact(xp), color = ZIndigo, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        // XP Bolt
+                        Icon(Icons.Filled.Bolt, null, tint = ZIndigo, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            compact(xp),
+                            color = ZIndigo,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Black,
+                        )
 
                         if (shields > 0) {
-                            Spacer(Modifier.width(9.dp))
-                            Box(Modifier.width(1.dp).height(14.dp).background(ZBorder))
-                            Spacer(Modifier.width(9.dp))
-                            Icon(Icons.Filled.Shield, null, tint = ZCyanDeep, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(3.dp))
-                            Text("$shields", color = ZCyanDeep, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.width(8.dp))
+                            Box(Modifier.width(1.dp).height(12.dp).background(ZBorder))
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Filled.Shield, null, tint = ZCyanDeep, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                "$shields",
+                                color = ZCyanDeep,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Black,
+                            )
                         }
 
-                        Spacer(Modifier.width(9.dp))
+                        Spacer(Modifier.width(8.dp))
                         Box(
-                            Modifier.clip(RoundedCornerShape(50))
+                            Modifier
+                                .clip(RoundedCornerShape(50))
                                 .background(
                                     androidx.compose.ui.graphics.Brush.linearGradient(listOf(ZIndigo, ZPurple))
                                 )
-                                .padding(horizontal = 9.dp, vertical = 4.dp),
+                                .padding(horizontal = 7.dp, vertical = 2.dp),
                         ) {
-                            Text(cefr, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                cefr,
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Black,
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(6.dp))
-
-            // ── خيط شرط اليوم — رفيع جداً، بلا ثِقَل بصري ──
+            // ── Thin 2dp Progress Line anchored directly at bottom ──
             Box(
-                Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(ZBorder),
+                Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(ZBorder.copy(alpha = 0.5f)),
             ) {
                 Box(
-                    Modifier.fillMaxWidth(animatedProgress).fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp))
+                    Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .fillMaxHeight()
                         .background(if (dayEarned) ZEmerald else ZAmber),
                 )
             }

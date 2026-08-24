@@ -1837,8 +1837,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun pushProgressToCloud() = cloud.pushProgressToCloud()
 
     /** Complete sign-in when a Google ID Token is received from the account picker. */
-    fun signInWithGoogleIdToken(idToken: String, displayName: String? = null, email: String? = null) =
-        cloud.signInWithGoogleIdToken(idToken, displayName, email)
+    fun signInWithGoogleIdToken(
+        idToken: String,
+        displayName: String? = null,
+        email: String? = null,
+        onResult: ((Boolean, String?) -> Unit)? = null,
+    ) = cloud.signInWithGoogleIdToken(idToken, displayName, email, onResult)
+
+    /** Sign in with email and password */
+    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit) =
+        cloud.signInWithEmail(email, pass, onResult)
+
+    /** Sign up with email and password */
+    fun signUpWithEmail(email: String, pass: String, displayName: String, onResult: (Boolean, String?) -> Unit) =
+        cloud.signUpWithEmail(email, pass, displayName, onResult)
+
+    /** Send password reset email */
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean, String?) -> Unit) =
+        cloud.sendPasswordResetEmail(email, onResult)
 
     /** Direct sign-in attempt (using CredentialManager) */
     fun signInWithGoogle(context: android.content.Context) = cloud.signInWithGoogle(context)

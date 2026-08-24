@@ -104,6 +104,49 @@ object CloudAuth {
     }
 
     /**
+     * Sign in with Email and Password
+     */
+    suspend fun signInWithEmail(email: String, pass: String): Result<FirebaseUser?> = runCatching {
+        val trimmedEmail = email.trim()
+        if (trimmedEmail.isBlank() || pass.isBlank()) {
+            throw IllegalArgumentException("يرجى إدخال البريد الإلكتروني وكلمة المرور")
+        }
+        val res = auth.signInWithEmailAndPassword(trimmedEmail, pass).await()
+        res.user ?: throw IllegalStateException("تعذّر تسجيل الدخول بالبريد الإلكتروني")
+    }
+
+    /**
+     * Sign up (Create new account) with Email, Password and Display Name
+     */
+    suspend fun signUpWithEmail(email: String, pass: String, name: String): Result<FirebaseUser?> = runCatching {
+        val trimmedEmail = email.trim()
+        val trimmedName = name.trim()
+        if (trimmedEmail.isBlank() || pass.length < 6) {
+            throw IllegalArgumentException("كلمة المرور يجب ألا تقل عن 6 أحرف")
+        }
+        val res = auth.createUserWithEmailAndPassword(trimmedEmail, pass).await()
+        val user = res.user ?: throw IllegalStateException("تعذّر إنشاء الحساب")
+        if (trimmedName.isNotBlank()) {
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(trimmedName)
+                .build()
+            user.updateProfile(profileUpdates).await()
+        }
+        user
+    }
+
+    /**
+     * Send Password Reset Email
+     */
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit> = runCatching {
+        val trimmedEmail = email.trim()
+        if (trimmedEmail.isBlank()) {
+            throw IllegalArgumentException("يرجى كتابة البريد الإلكتروني")
+        }
+        auth.sendPasswordResetEmail(trimmedEmail).await()
+    }
+
+    /**
      * Fallback or direct Credential Manager sign in
      */
     suspend fun signInWithCredentialManager(context: Context): Result<FirebaseUser?> = runCatching {

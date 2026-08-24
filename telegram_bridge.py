@@ -47,9 +47,9 @@ def send_document(file_path, caption=""):
             time.sleep(2)
     return False
 
-def create_source_zip(zip_name="/tmp/Zimaster_Source_Backup.zip"):
+def create_source_zip(zip_name="/tmp/Zmastery_Source_Code.zip"):
     print("Creating source zip archive...")
-    exclude_dirs = {'.gradle', '.build-outputs', 'build', '.git', '.idea', '.cxx', 'bin', 'obj'}
+    exclude_dirs = {'.gradle', '.build-outputs', 'build', '.git', '.idea', '.cxx', 'bin', 'obj', '__pycache__'}
     exclude_extensions = {'.apk', '.aab', '.zip'}
     
     with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
@@ -68,10 +68,17 @@ def create_source_zip(zip_name="/tmp/Zimaster_Source_Backup.zip"):
     return zip_name
 
 def find_or_build_apk():
-    release_apk = "app/build/outputs/apk/release/app-release.apk"
-    if os.path.exists(release_apk):
-        print(f"Found Release APK: {release_apk}")
-        return release_apk
+    # Check possible APK locations
+    candidates = [
+        "app/build/outputs/apk/debug/app-debug.apk",
+        "app/build/outputs/apk/release/app-release.apk",
+        "app/build/outputs/apk/release/app-release-unsigned.apk"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            print(f"Found APK: {c}")
+            return c
+    
     apk_candidates = []
     for root, dirs, files in os.walk('.'):
         for f in files:
@@ -88,49 +95,44 @@ def main():
     # 1. Zip the source code
     zip_path = create_source_zip()
     
-    # 2. Check for Release APK
+    # 2. Check for APK
     apk_path = find_or_build_apk()
     
     # 3. ChangeLog
-    change_log = """🚀 *إصدار Zimaster المحدّث (نسخة الإنتاج Release + السورس كود)*
+    change_log = """🚀 *مشروع Z-Mastery English المحدّث (المعمارية النظيفة Clean Architecture + السورس كود)*
 
-📦 *الحزمة:* `com.zmastery.english` (v1.1.0 - Release)
+📦 *الحزمة:* `com.zmastery.english` (v1.1.0)
 
-*✨ أهم التحديثات والإصلاحات:*
-1. 🔐 *إصلاح شاشة الملف الشخصي والحسابات:*
-   - إزالة كافة النصوص القديمة (مثل "قريباً Firebase").
-   - عرض حالة المزامنة السحابية المباشرة (Firestore) والتخزين المحلي الذكي (Room DB).
-   - عرض حالة الارتباط بحساب Google ونوع الحساب (مدير نظام 👑 / طالب 🎓).
-2. 🔑 *تسجيل الدخول المباشر بجوجل (Google Sign-In):*
-   - دعم كامل لـ Credential Manager و Google Identity Services.
-   - ربط الحسابات السحابية بالـ UID تلقائياً بدون فقدان أي نقاط أو تقدم.
-   - إمكانية تسجيل الخروج والتبديل بين الحسابات بسلاسة.
-3. 🏆 *لوحة المتصدرين السحابية المباشرة:*
-   - عرض ترتيب الطلاب ونقاط الـ XP والسلاسل عالمياً.
-4. 📢 *نظام بث الإعلانات والإشعارات الجماعية:*
-   - إمكانية بث إشعارات وتحديثات وتحديات لكافة مستخدمي التطبيق من لوحة تحكم المدير.
+*✨ أهم التحديثات بعد إعادة الهيكلة والتقسيم:*
+1. 🧩 *معمارية نظيفة (Clean Architecture & Modular Controllers):*
+   - تقسيم الـ ViewModel إلى وحدات تحكم مستقلة (`CloudController`, `AiConfigController`, `CurriculumController`, `WordReviewController`, إلخ).
+   - طبقة Domain كاملة بـ Use Cases و FSRS v5 و StreakManager بدون أي تبعيات لمنصة أندرويد.
+2. 🔄 *تكامل محلي وسحابي متين:*
+   - مصادقة كاملة مع Firebase و Google Sign-In.
+   - حماية متقدمة للبيانات عبر `DataGuard` و `KeyProtector`.
+3. 📱 *ودجت شاشة رئيسية تفاعلي وثابت:*
+   - دعم كامل لـ API 24+ مع 11 مرحلة للسلسلة ونظام تعافي ذاتي ضد الانهيار.
 """
 
     send_message(change_log)
     
     # Upload Zip
-    zip_ok = send_document(zip_path, caption="📦 سورس كود مشروع Zimaster المحدّث كاملاً (Source Code)")
+    zip_ok = send_document(zip_path, caption="📦 سورس كود مشروع Z-Mastery المحدّث كاملاً (Source Code)")
     
-    # Upload Release APK
+    # Upload APK if found
     apk_ok = False
     if apk_path and os.path.exists(apk_path):
-        apk_ok = send_document(apk_path, caption="📱 إصدار الإنتاج الرسمي (Release APK) - Z-Mastery v1.1.0")
+        apk_ok = send_document(apk_path, caption=f"📱 تطبيق Z-Mastery APK ({os.path.basename(apk_path)})")
     
     summary = f"""✅ *تم إرسال الملفات بنجاح إلى تيليجرام!*
 
 - 📦 *سورس كود التطبيق:* `{os.path.basename(zip_path)}` ({os.path.getsize(zip_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if zip_ok else 'فشل ❌'}
 """
     if apk_path:
-        summary += f"- 📱 *إصدار Release APK:* `{os.path.basename(apk_path)}` ({os.path.getsize(apk_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if apk_ok else 'فشل ❌'}\n"
+        summary += f"- 📱 *ملف APK:* `{os.path.basename(apk_path)}` ({os.path.getsize(apk_path)/(1024*1024):.2f} MB) -> {'نجح ✅' if apk_ok else 'فشل ❌'}\n"
     
     send_message(summary)
     print("Bridge execution completed.")
 
 if __name__ == "__main__":
     main()
-

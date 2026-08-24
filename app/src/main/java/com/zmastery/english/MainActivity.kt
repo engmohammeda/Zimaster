@@ -287,6 +287,7 @@ fun ZMasteryApp(
     AppBackground {
         Scaffold(
             containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 if (showBars) TopBar(currentRoute, onImport = { goTopLevel("import") })
             },
@@ -299,7 +300,10 @@ fun ZMasteryApp(
             NavHost(
                 navController = nav,
                 startDestination = "dashboard",
-                modifier = Modifier.padding(padding),
+                modifier = Modifier.padding(
+                    top = if (showBars) padding.calculateTopPadding() else 0.dp,
+                    bottom = padding.calculateBottomPadding(),
+                ),
                 enterTransition = { fadeIn(tween(200)) },
                 exitTransition = { fadeOut(tween(200)) },
             ) {

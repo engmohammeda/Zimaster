@@ -333,7 +333,12 @@ internal class CloudController(internal val vm: AppViewModel) {
     /**
      * Complete sign-in when Google ID Token is received from the Google Account Picker dialog.
      */
-    fun signInWithGoogleIdToken(idToken: String, displayName: String? = null, email: String? = null) {
+    fun signInWithGoogleIdToken(
+        idToken: String,
+        displayName: String? = null,
+        email: String? = null,
+        onResult: ((Boolean, String?) -> Unit)? = null,
+    ) {
         launch {
             isSyncingCloud = true
             val result = com.zmastery.english.cloud.CloudAuth.signInWithIdToken(idToken)
@@ -349,11 +354,105 @@ internal class CloudController(internal val vm: AppViewModel) {
                     refreshCloudAuthState()
                     cloudSyncMessage = "تم تسجيل الدخول بحساب Google بنجاح ✓"
                     pushProgressToCloud()
+                    onResult?.invoke(true, null)
+                } else {
+                    onResult?.invoke(false, "تعذّر تسجيل الدخول بحساب Google")
                 }
             }.onFailure { e ->
-                cloudSyncMessage = e.message ?: "تعذّر إكمال تسجيل الدخول عبر Google"
+                val errorMsg = e.message ?: "تعذّر إكمال تسجيل الدخول عبر Google"
+                cloudSyncMessage = errorMsg
+                onResult?.invoke(false, errorMsg)
             }
             isSyncingCloud = false
+        }
+    }
+
+    /**
+     * Sign in with Email and Password
+     */
+    fun signInWithEmail(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+        launch {
+            isSyncingCloud = true
+            val result = com.zmastery.english.cloud.CloudAuth.signInWithEmail(email, pass)
+            result.onSuccess { user ->
+                if (user != null) {
+                    if (!user.displayName.isNullOrBlank() && learnerName.isBlank()) {
+                        learnerName = user.displayName!!
+                    }
+                    if (!user.email.isNullOrBlank() && learnerEmail.isBlank()) {
+                        learnerEmail = user.email!!
+                    }
+                    vm.persist()
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم تسجيل الدخول بالبريد الإلكتروني بنجاح ✓"
+                    pushProgressToCloud()
+                    onResult(true, null)
+                } else {
+                    onResult(false, "تعذّر تسجيل الدخول")
+                }
+            }.onFailure { e ->
+                val errorMsg = when {
+                    e.message?.contains("password", ignoreCase = true) == true -> "كلمة المرور غير صحيحة"
+                    e.message?.contains("user-not-found", ignoreCase = true) == true -> "لا يوجد حساب بهذا البريد الإلكتروني"
+                    e.message?.contains("network", ignoreCase = true) == true -> "تحقق من الاتصال بالإنترنت"
+                    else -> e.message ?: "فشل تسجيل الدخول"
+                }
+                cloudSyncMessage = errorMsg
+                onResult(false, errorMsg)
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    /**
+     * Sign up (Create new account) with Email and Password
+     */
+    fun signUpWithEmail(email: String, pass: String, displayName: String, onResult: (Boolean, String?) -> Unit) {
+        launch {
+            isSyncingCloud = true
+            val result = com.zmastery.english.cloud.CloudAuth.signUpWithEmail(email, pass, displayName)
+            result.onSuccess { user ->
+                if (user != null) {
+                    if (displayName.isNotBlank()) {
+                        learnerName = displayName.trim()
+                    }
+                    if (!user.email.isNullOrBlank()) {
+                        learnerEmail = user.email!!
+                    }
+                    vm.persist()
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم إنشاء الحساب بنجاح ✓"
+                    pushProgressToCloud()
+                    onResult(true, null)
+                } else {
+                    onResult(false, "تعذّر إنشاء الحساب")
+                }
+            }.onFailure { e ->
+                val errorMsg = when {
+                    e.message?.contains("email-already-in-use", ignoreCase = true) == true -> "هذا البريد مسجل مسبقاً، يرجى تسجيل الدخول"
+                    e.message?.contains("weak-password", ignoreCase = true) == true -> "كلمة المرور ضعيفة جداً"
+                    e.message?.contains("invalid-email", ignoreCase = true) == true -> "البريد الإلكتروني غير صالح"
+                    else -> e.message ?: "فشل إنشاء الحساب"
+                }
+                cloudSyncMessage = errorMsg
+                onResult(false, errorMsg)
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    /**
+     * Reset Password
+     */
+    fun sendPasswordResetEmail(email: String, onResult: (Boolean, String?) -> Unit) {
+        launch {
+            val result = com.zmastery.english.cloud.CloudAuth.sendPasswordResetEmail(email)
+            result.onSuccess {
+                onResult(true, "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني ✉️")
+            }.onFailure { e ->
+                val errorMsg = e.message ?: "تعذّر إرسال رابط الاستعادة"
+                onResult(false, errorMsg)
+            }
         }
     }
 
