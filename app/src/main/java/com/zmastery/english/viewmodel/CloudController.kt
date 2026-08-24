@@ -330,6 +330,29 @@ internal class CloudController(internal val vm: AppViewModel) {
         }
     }
 
+    private fun formatAuthError(e: Throwable): String {
+        val msg = e.message.orEmpty()
+        return when {
+            msg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) ||
+                msg.contains("wrong-password", ignoreCase = true) ||
+                msg.contains("invalid-credential", ignoreCase = true) ->
+                "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            msg.contains("user-not-found", ignoreCase = true) || msg.contains("USER_NOT_FOUND", ignoreCase = true) ->
+                "لا يوجد حساب مسجل بهذا البريد الإلكتروني"
+            msg.contains("email-already-in-use", ignoreCase = true) || msg.contains("EMAIL_EXISTS", ignoreCase = true) ->
+                "هذا البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك"
+            msg.contains("weak-password", ignoreCase = true) || msg.contains("WEAK_PASSWORD", ignoreCase = true) ->
+                "كلمة المرور يجب ألا تقل عن 6 أحرف"
+            msg.contains("invalid-email", ignoreCase = true) || msg.contains("INVALID_EMAIL", ignoreCase = true) ->
+                "صيغة البريد الإلكتروني غير صحيحة"
+            msg.contains("network", ignoreCase = true) || msg.contains("NETWORK", ignoreCase = true) ->
+                "تعذّر الاتصال بالإنترنت، يرجى التحقق من الشبكة والمحاولة مجدداً"
+            msg.contains("too-many-requests", ignoreCase = true) ->
+                "تم تعطيل المحاولات مؤقتاً لكثرة المحاولات، يرجى المحاولة لاحقاً"
+            else -> msg.ifBlank { "حدث خطأ أثناء المصادقة، يرجى المحاولة مجدداً" }
+        }
+    }
+
     /**
      * Complete sign-in when Google ID Token is received from the Google Account Picker dialog.
      */
@@ -344,22 +367,31 @@ internal class CloudController(internal val vm: AppViewModel) {
             val result = com.zmastery.english.cloud.CloudAuth.signInWithIdToken(idToken)
             result.onSuccess { user ->
                 if (user != null) {
-                    if (!displayName.isNullOrBlank() && learnerName.isBlank()) {
+                    if (!displayName.isNullOrBlank() && (learnerName.isBlank() || learnerName == "ضيف")) {
                         learnerName = displayName
                     }
-                    if (!email.isNullOrBlank() && learnerEmail.isBlank()) {
+                    if (!email.isNullOrBlank()) {
                         learnerEmail = email
                     }
-                    vm.persist()
                     refreshCloudAuthState()
+                    // Restore progress from cloud if present
+                    runCatching {
+                        com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
+                    }.getOrNull()?.let { cloudJson ->
+                        if (!cloudJson.isNullOrBlank()) {
+                            Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
+                        }
+                    }
+                    vm.persist()
                     cloudSyncMessage = "تم تسجيل الدخول بحساب Google بنجاح ✓"
                     pushProgressToCloud()
+                    syncCloudLessons(silent = true)
                     onResult?.invoke(true, null)
                 } else {
                     onResult?.invoke(false, "تعذّر تسجيل الدخول بحساب Google")
                 }
             }.onFailure { e ->
-                val errorMsg = e.message ?: "تعذّر إكمال تسجيل الدخول عبر Google"
+                val errorMsg = formatAuthError(e)
                 cloudSyncMessage = errorMsg
                 onResult?.invoke(false, errorMsg)
             }
@@ -376,27 +408,31 @@ internal class CloudController(internal val vm: AppViewModel) {
             val result = com.zmastery.english.cloud.CloudAuth.signInWithEmail(email, pass)
             result.onSuccess { user ->
                 if (user != null) {
-                    if (!user.displayName.isNullOrBlank() && learnerName.isBlank()) {
+                    if (!user.displayName.isNullOrBlank() && (learnerName.isBlank() || learnerName == "ضيف")) {
                         learnerName = user.displayName!!
                     }
-                    if (!user.email.isNullOrBlank() && learnerEmail.isBlank()) {
+                    if (!user.email.isNullOrBlank()) {
                         learnerEmail = user.email!!
                     }
-                    vm.persist()
                     refreshCloudAuthState()
+                    // Restore progress from cloud if present
+                    runCatching {
+                        com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
+                    }.getOrNull()?.let { cloudJson ->
+                        if (!cloudJson.isNullOrBlank()) {
+                            Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
+                        }
+                    }
+                    vm.persist()
                     cloudSyncMessage = "تم تسجيل الدخول بالبريد الإلكتروني بنجاح ✓"
                     pushProgressToCloud()
+                    syncCloudLessons(silent = true)
                     onResult(true, null)
                 } else {
                     onResult(false, "تعذّر تسجيل الدخول")
                 }
             }.onFailure { e ->
-                val errorMsg = when {
-                    e.message?.contains("password", ignoreCase = true) == true -> "كلمة المرور غير صحيحة"
-                    e.message?.contains("user-not-found", ignoreCase = true) == true -> "لا يوجد حساب بهذا البريد الإلكتروني"
-                    e.message?.contains("network", ignoreCase = true) == true -> "تحقق من الاتصال بالإنترنت"
-                    else -> e.message ?: "فشل تسجيل الدخول"
-                }
+                val errorMsg = formatAuthError(e)
                 cloudSyncMessage = errorMsg
                 onResult(false, errorMsg)
             }
@@ -419,21 +455,17 @@ internal class CloudController(internal val vm: AppViewModel) {
                     if (!user.email.isNullOrBlank()) {
                         learnerEmail = user.email!!
                     }
-                    vm.persist()
                     refreshCloudAuthState()
+                    vm.persist()
                     cloudSyncMessage = "تم إنشاء الحساب بنجاح ✓"
                     pushProgressToCloud()
+                    syncCloudLessons(silent = true)
                     onResult(true, null)
                 } else {
                     onResult(false, "تعذّر إنشاء الحساب")
                 }
             }.onFailure { e ->
-                val errorMsg = when {
-                    e.message?.contains("email-already-in-use", ignoreCase = true) == true -> "هذا البريد مسجل مسبقاً، يرجى تسجيل الدخول"
-                    e.message?.contains("weak-password", ignoreCase = true) == true -> "كلمة المرور ضعيفة جداً"
-                    e.message?.contains("invalid-email", ignoreCase = true) == true -> "البريد الإلكتروني غير صالح"
-                    else -> e.message ?: "فشل إنشاء الحساب"
-                }
+                val errorMsg = formatAuthError(e)
                 cloudSyncMessage = errorMsg
                 onResult(false, errorMsg)
             }

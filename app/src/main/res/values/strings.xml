@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Z-Mastery</string>
     <string name="widget_description">تذكير الدراسة اليومي مع عبارة تحفيزية وتتبع تقدمك وسلسلة أيامك</string>
+    <string name="default_web_client_id" translatable="false">836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">836170376747</string>
+    <string name="google_api_key" translatable="false">AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM</string>
+    <string name="google_app_id" translatable="false">1:836170376747:android:9372331a395944a2792c6e</string>
+    <string name="project_id" translatable="false">zmastery</string>
+    <string name="google_storage_bucket" translatable="false">zmastery.firebasestorage.app</string>
 </resources>

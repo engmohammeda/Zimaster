@@ -92,8 +92,18 @@ jobs:
       - name: Setup debug keystore if missing
         run: |
           if [ ! -f debug.keystore ]; then
-            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            if [ -f debug.keystore.base64 ]; then
+              echo "Restoring debug.keystore from embedded base64..."
+              base64 -d debug.keystore.base64 > debug.keystore
+            elif [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+              echo "Restoring debug.keystore from secret..."
+              echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
+            else
+              echo "Generating fallback debug keystore..."
+              keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            fi
           fi
+          test -f debug.keystore
 
       - name: Prepare release signing
         id: signing

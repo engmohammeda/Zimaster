@@ -126,11 +126,19 @@ object CloudSync {
      * Fetch all registered users (for admin dashboard)
      */
     suspend fun fetchAllUsers(): Result<List<UserRecord>> = runCatching {
-        val snap = db.collection(USERS_COLLECTION)
-            .orderBy("lastActiveMillis", Query.Direction.DESCENDING)
-            .limit(100)
-            .get()
-            .await()
+        val snap = try {
+            db.collection(USERS_COLLECTION)
+                .orderBy("lastActiveMillis", Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .await()
+        } catch (e: Exception) {
+            // Fallback without ordering in case index or field is not indexed yet
+            db.collection(USERS_COLLECTION)
+                .limit(100)
+                .get()
+                .await()
+        }
 
         snap.documents.mapNotNull { doc ->
             UserRecord(
@@ -147,7 +155,7 @@ object CloudSync {
                 lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
                 deviceModel = doc.getString("deviceModel"),
             )
-        }
+        }.sortedByDescending { it.lastActiveMillis }
     }
 
     // ---------------------------------------------------------------- LESSONS
@@ -159,16 +167,31 @@ object CloudSync {
      * Fetch every lesson document added/changed since [sinceMillis]
      */
     suspend fun fetchLessonsSince(sinceMillis: Long): Result<List<RemoteLesson>> = runCatching {
-        val snap = db.collection(LESSONS_COLLECTION)
-            .whereGreaterThan(UPDATED_AT, sinceMillis)
-            .orderBy(UPDATED_AT, Query.Direction.ASCENDING)
-            .get()
-            .await()
+        val snap = try {
+            if (sinceMillis > 0L) {
+                db.collection(LESSONS_COLLECTION)
+                    .whereGreaterThan(UPDATED_AT, sinceMillis)
+                    .orderBy(UPDATED_AT, Query.Direction.ASCENDING)
+                    .get()
+                    .await()
+            } else {
+                db.collection(LESSONS_COLLECTION)
+                    .get()
+                    .await()
+            }
+        } catch (e: Exception) {
+            // Fallback to plain collection fetch
+            db.collection(LESSONS_COLLECTION)
+                .get()
+                .await()
+        }
+
         snap.documents.mapNotNull { doc ->
             val json = doc.getString("json") ?: return@mapNotNull null
             val updatedAt = doc.getLong(UPDATED_AT) ?: 0L
-            RemoteLesson(doc.id, json, updatedAt)
-        }
+            if (sinceMillis > 0L && updatedAt <= sinceMillis) null
+            else RemoteLesson(doc.id, json, updatedAt)
+        }.sortedBy { it.updatedAtMillis }
     }
 
     suspend fun fetchAllLessons(): Result<List<RemoteLesson>> = fetchLessonsSince(0L)
@@ -322,14 +345,26 @@ object CloudSync {
      * Fetch the latest active announcement to show to students.
      */
     suspend fun fetchActiveAnnouncement(): Result<Announcement?> = runCatching {
-        val snap = db.collection(ANNOUNCEMENTS_COLLECTION)
-            .whereEqualTo("isActive", true)
-            .orderBy("createdAtMillis", Query.Direction.DESCENDING)
-            .limit(1)
-            .get()
-            .await()
+        val snap = try {
+            db.collection(ANNOUNCEMENTS_COLLECTION)
+                .whereEqualTo("isActive", true)
+                .orderBy("createdAtMillis", Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .await()
+        } catch (e: Exception) {
+            // Fallback without ordering in case compound index is building
+            db.collection(ANNOUNCEMENTS_COLLECTION)
+                .whereEqualTo("isActive", true)
+                .limit(10)
+                .get()
+                .await()
+        }
 
-        val doc = snap.documents.firstOrNull() ?: return@runCatching null
+        val doc = snap.documents
+            .sortedByDescending { it.getLong("createdAtMillis") ?: 0L }
+            .firstOrNull() ?: return@runCatching null
+
         Announcement(
             id = doc.id,
             title = doc.getString("title") ?: "",
@@ -370,11 +405,18 @@ object CloudSync {
      * Fetch global leaderboard sorted by XP or streak.
      */
     suspend fun fetchLeaderboard(limit: Int = 30): Result<List<UserRecord>> = runCatching {
-        val snap = db.collection(USERS_COLLECTION)
-            .orderBy("xp", Query.Direction.DESCENDING)
-            .limit(limit.toLong())
-            .get()
-            .await()
+        val snap = try {
+            db.collection(USERS_COLLECTION)
+                .orderBy("xp", Query.Direction.DESCENDING)
+                .limit(limit.toLong())
+                .get()
+                .await()
+        } catch (e: Exception) {
+            db.collection(USERS_COLLECTION)
+                .limit(limit.toLong() * 2)
+                .get()
+                .await()
+        }
 
         snap.documents.mapNotNull { doc ->
             UserRecord(
@@ -391,6 +433,6 @@ object CloudSync {
                 lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
                 deviceModel = doc.getString("deviceModel"),
             )
-        }
+        }.sortedByDescending { it.xp }
     }
 }

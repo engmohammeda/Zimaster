@@ -761,6 +761,14 @@ private fun CloudSyncGroup(vm: AppViewModel) {
     var adminCodeInput by remember { mutableStateOf("") }
     var adminError by remember { mutableStateOf<String?>(null) }
 
+    var showEmailAuthDialog by remember { mutableStateOf(false) }
+    var isEmailSignUp by remember { mutableStateOf(false) }
+    var emailInput by remember { mutableStateOf("") }
+    var passInput by remember { mutableStateOf("") }
+    var nameInput by remember { mutableStateOf("") }
+    var emailAuthError by remember { mutableStateOf<String?>(null) }
+    var isEmailProcessing by remember { mutableStateOf(false) }
+
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -950,6 +958,22 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                             )
                         }
                     }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            emailAuthError = null
+                            showEmailAuthDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ZIndigo),
+                    ) {
+                        Icon(Icons.Filled.Email, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("تسجيل الدخول / إنشاء حساب بالبريد", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -984,11 +1008,13 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 }
 
                 // Admin dialog
+                var showAdminPassword by remember { mutableStateOf(false) }
                 if (showAdminDialog) {
                     AlertDialog(
                         onDismissRequest = {
                             showAdminDialog = false
                             adminError = null
+                            adminCodeInput = ""
                         },
                         title = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1007,7 +1033,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                     )
                                 } else {
                                     Text(
-                                        "لتفعيل وضع المطور يدوياً، أدخل الرمز السري:",
+                                        "لتفعيل وضع المطور، أدخل الرمز السري:",
                                         fontSize = 12.sp,
                                         color = ZTextSecondary,
                                     )
@@ -1018,8 +1044,23 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                             adminCodeInput = it
                                             adminError = null
                                         },
-                                        placeholder = { Text("ADMIN2026") },
+                                        label = { Text("رمز المطور السري") },
+                                        placeholder = { Text("••••••••") },
                                         singleLine = true,
+                                        visualTransformation = if (showAdminPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                                            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                                        ),
+                                        trailingIcon = {
+                                            IconButton(onClick = { showAdminPassword = !showAdminPassword }) {
+                                                Icon(
+                                                    if (showAdminPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                                    contentDescription = if (showAdminPassword) "إخفاء الرمز" else "إظهار الرمز",
+                                                    tint = Color(0xFF94A3B8),
+                                                )
+                                            }
+                                        },
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(10.dp),
                                     )
@@ -1038,7 +1079,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                             showAdminDialog = false
                                             Toast.makeText(ctx, "تم تفعيل صلاحيات المطور والمسؤول بنجاح! 👑", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            adminError = "الرمز غير صحيح. الرمز الافتراضي: ADMIN2026"
+                                            adminError = "الرمز السري غير صحيح، يرجى التحقق والمحاولة مجدداً"
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
@@ -1056,6 +1097,136 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 TextButton(onClick = { showAdminDialog = false }) {
                                     Text("إلغاء")
                                 }
+                            }
+                        },
+                    )
+                }
+
+                // Email Auth Dialog (Login / Register)
+                if (showEmailAuthDialog) {
+                    var showPassText by remember { mutableStateOf(false) }
+                    AlertDialog(
+                        onDismissRequest = {
+                            if (!isEmailProcessing) {
+                                showEmailAuthDialog = false
+                                emailAuthError = null
+                            }
+                        },
+                        title = {
+                            Text(
+                                if (isEmailSignUp) "إنشاء حساب جديد بالبريد" else "تسجيل الدخول بالبريد",
+                                color = ZTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        },
+                        text = {
+                            Column {
+                                if (isEmailSignUp) {
+                                    OutlinedTextField(
+                                        value = nameInput,
+                                        onValueChange = { nameInput = it; emailAuthError = null },
+                                        label = { Text("الاسم") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp),
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                                OutlinedTextField(
+                                    value = emailInput,
+                                    onValueChange = { emailInput = it; emailAuthError = null },
+                                    label = { Text("البريد الإلكتروني") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = passInput,
+                                    onValueChange = { passInput = it; emailAuthError = null },
+                                    label = { Text("كلمة المرور") },
+                                    singleLine = true,
+                                    visualTransformation = if (showPassText) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showPassText = !showPassText }) {
+                                            Icon(
+                                                if (showPassText) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                                null,
+                                                tint = Color(0xFF94A3B8),
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                )
+                                emailAuthError?.let {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(it, color = ZRose, fontSize = 11.sp)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = {
+                                        isEmailSignUp = !isEmailSignUp
+                                        emailAuthError = null
+                                    },
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                ) {
+                                    Text(
+                                        if (isEmailSignUp) "لديك حساب بالفعل؟ تسجيل الدخول" else "ليس لديك حساب؟ إنشاء حساب جديد",
+                                        color = ZIndigo,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (emailInput.isBlank() || passInput.isBlank()) {
+                                        emailAuthError = "يرجى إدخال البريد الإلكتروني وكلمة المرور"
+                                        return@Button
+                                    }
+                                    isEmailProcessing = true
+                                    emailAuthError = null
+                                    if (isEmailSignUp) {
+                                        vm.signUpWithEmail(emailInput, passInput, nameInput) { ok, err ->
+                                            isEmailProcessing = false
+                                            if (ok) {
+                                                showEmailAuthDialog = false
+                                                Toast.makeText(ctx, "تم إنشاء الحساب بنجاح 🎉", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                emailAuthError = err ?: "فشل إنشاء الحساب"
+                                            }
+                                        }
+                                    } else {
+                                        vm.signInWithEmail(emailInput, passInput) { ok, err ->
+                                            isEmailProcessing = false
+                                            if (ok) {
+                                                showEmailAuthDialog = false
+                                                Toast.makeText(ctx, "تم تسجيل الدخول بنجاح 🎉", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                emailAuthError = err ?: "فشل تسجيل الدخول"
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = !isEmailProcessing,
+                                colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
+                            ) {
+                                if (isEmailProcessing) {
+                                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                                } else {
+                                    Text(if (isEmailSignUp) "إنشاء حساب" else "دخول", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showEmailAuthDialog = false },
+                                enabled = !isEmailProcessing,
+                            ) {
+                                Text("إلغاء")
                             }
                         },
                     )

@@ -593,11 +593,13 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
     }
 
     // Developer Admin Code Dialog
+    var showAdminPassword by remember { mutableStateOf(false) }
     if (showAdminDialog) {
         AlertDialog(
             onDismissRequest = {
                 showAdminDialog = false
                 adminError = null
+                adminCodeInput = ""
             },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -609,7 +611,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             text = {
                 Column {
                     Text(
-                        "إذا كنت مطور التطبيق، يتم التعرف عليك تلقائياً بمجرد تسجيل الدخول بإيميلك (mohammedalbkhyty@gmail.com)، أو يمكنك تفعيل الصلاحيات مباشرة بإدخال الرمز السري أدناه:",
+                        "أدخل الرمز السري الخاص بإدارة المنصة والمطور لتفعيل كافة الصلاحيات المتقدمة:",
                         fontSize = 12.sp,
                         color = ZTextSecondary,
                         lineHeight = 18.sp,
@@ -621,8 +623,20 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             adminCodeInput = it
                             adminError = null
                         },
-                        label = { Text("رمز المطور السري (مثال: ADMIN2026)") },
+                        label = { Text("رمز المطور السري") },
+                        placeholder = { Text("••••••••") },
                         singleLine = true,
+                        visualTransformation = if (showAdminPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        trailingIcon = {
+                            IconButton(onClick = { showAdminPassword = !showAdminPassword }) {
+                                Icon(
+                                    if (showAdminPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                    contentDescription = if (showAdminPassword) "إخفاء الرمز" else "إظهار الرمز",
+                                    tint = Color(0xFF94A3B8),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                     )
@@ -640,7 +654,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             Toast.makeText(ctx, "مرحباً بك يا مطور التطبيق! 👑", Toast.LENGTH_SHORT).show()
                             onFinish()
                         } else {
-                            adminError = "الرمز السري غير صحيح. يمكنك استخدام ADMIN2026"
+                            adminError = "الرمز السري غير صحيح، يرجى التحقق والمحاولة مجدداً"
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),

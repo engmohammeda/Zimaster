@@ -46,12 +46,19 @@ object CloudAuth {
     var webClientId: String = DEFAULT_WEB_CLIENT_ID
 
     fun resolveEffectiveWebClientId(context: Context): String {
-        if (webClientId.isNotBlank()) return webClientId.trim()
+        val current = webClientId.trim()
+        if (current.isNotBlank() && !current.contains("567438543557")) {
+            return current
+        }
         val resId = try {
             context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
         } catch (e: Exception) { 0 }
         val fromRes = if (resId != 0) runCatching { context.getString(resId) }.getOrNull() else null
-        return fromRes?.takeIf { it.isNotBlank() } ?: DEFAULT_WEB_CLIENT_ID
+        return if (fromRes != null && fromRes.isNotBlank() && !fromRes.contains("567438543557")) {
+            fromRes
+        } else {
+            DEFAULT_WEB_CLIENT_ID
+        }
     }
 
     val googleSignInAvailable: Boolean get() = true

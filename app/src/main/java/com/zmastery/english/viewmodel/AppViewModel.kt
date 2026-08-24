@@ -250,7 +250,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         learnerEmail = p.learnerEmail
         lastCloudLessonSyncMillis = p.lastCloudLessonSyncMillis
         cloudSyncEnabled = p.cloudSyncEnabled
-        googleWebClientId = p.googleWebClientId.ifBlank { com.zmastery.english.cloud.CloudAuth.DEFAULT_WEB_CLIENT_ID }
+        val rawWebClientId = p.googleWebClientId
+        googleWebClientId = if (rawWebClientId.isBlank() || rawWebClientId.contains("567438543557")) {
+            com.zmastery.english.cloud.CloudAuth.DEFAULT_WEB_CLIENT_ID
+        } else {
+            rawWebClientId
+        }
         com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId
         openedChests.clear()
         s.chests.forEach { openedChests[it.tierId] = it }
