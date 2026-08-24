@@ -9,6 +9,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestore
 import com.zmastery.english.data.ImportEngine
 import com.zmastery.english.data.LessonPackage
+import com.zmastery.english.data.QuoteStore
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -21,6 +22,7 @@ object CloudSync {
     private const val LESSONS_COLLECTION = "lessons"
     private const val USERS_COLLECTION = "users"
     private const val ANNOUNCEMENTS_COLLECTION = "announcements"
+    private const val QUOTES_COLLECTION = "quotes"
     private const val UPDATED_AT = "updated_at"
 
     /** Known super-admin emails */
@@ -239,6 +241,52 @@ object CloudSync {
      */
     suspend fun deleteLessonFromCloud(docId: String): Result<Unit> = runCatching {
         db.collection(LESSONS_COLLECTION).document(docId).delete().await()
+        Unit
+    }
+
+    // ---------------------------------------------------------------- QUOTES
+
+    /**
+     * يسحب كل العبارات النشطة من `/quotes` (يضيفها المسؤول وتتزامن عبر الأجهزة).
+     */
+    suspend fun pullQuotes(): Result<List<QuoteStore.CloudQuote>> = runCatching {
+        val snap = db.collection(QUOTES_COLLECTION)
+            .whereEqualTo("active", true)
+            .get()
+            .await()
+        snap.documents.mapNotNull { doc ->
+            val text = doc.getString("text") ?: return@mapNotNull null
+            QuoteStore.CloudQuote(
+                id = doc.id,
+                text = text,
+                author = doc.getString("author") ?: "",
+                active = doc.getBoolean("active") ?: true,
+            )
+        }
+    }
+
+    /**
+     * يضيف المسؤول عبارة جديدة إلى `/quotes` فتظهر لكل الأجهزة عند مزامنتها.
+     */
+    suspend fun addQuote(text: String, author: String, uid: String): Result<String> = runCatching {
+        require(text.isNotBlank()) { "نص العبارة فارغ" }
+        val ref = db.collection(QUOTES_COLLECTION).document()
+        ref.set(
+            mapOf(
+                "text" to text.trim(),
+                "author" to author.trim(),
+                "active" to true,
+                "createdAt" to FieldValue.serverTimestamp(),
+                "createdAtMillis" to System.currentTimeMillis(),
+                "createdByUid" to uid,
+            )
+        ).await()
+        ref.id
+    }
+
+    /** يحذف المسؤول عبارة (إلغاء تفعيلها بالكامل). */
+    suspend fun deleteQuote(quoteId: String): Result<Unit> = runCatching {
+        db.collection(QUOTES_COLLECTION).document(quoteId).delete().await()
         Unit
     }
 

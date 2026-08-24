@@ -4,7 +4,7 @@
 
 # ─── Kotlin Serialization ───
 # Keep @Serializable classes and their companions
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*, InnerClasses, Signature, EnclosingMethod
 -dontnote kotlinx.serialization.AnnotationsKt
 
 -keepclassmembers class kotlinx.serialization.json.** {
@@ -51,6 +51,17 @@
 # ─── Widget (RemoteViews — accessed by launcher process) ───
 -keep class com.zmastery.english.widget.ZMasteryWidget { *; }
 -keep class com.zmastery.english.widget.WidgetBootReceiver { *; }
+
+# ─── ViewModels ───
+# Compose's viewModel() / ViewModelProvider reflect on the AndroidViewModel
+# (Application) constructor, so the view-model package must be kept intact.
+# This also keeps the 15 feature controllers referenced by AppViewModel.
+-keep class com.zmastery.english.viewmodel.** { *; }
+
+# ─── Cloud (Firestore data records built from maps) ───
+# These are plain data classes read/written via doc.getString()/getLong();
+# keep them so R8 can't strip fields used by the admin/leaderboard flows.
+-keep class com.zmastery.english.cloud.** { *; }
 
 # ─── Firebase ───
 -keep class com.google.firebase.** { *; }

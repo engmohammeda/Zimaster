@@ -2,6 +2,7 @@ package com.zmastery.english.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,6 +20,17 @@ import com.zmastery.english.data.VocabWord
 import com.zmastery.english.ui.screens.lessons.blocks.*
 import com.zmastery.english.ui.theme.*
 import com.zmastery.english.viewmodel.AppViewModel
+
+/** شريط تقدّم رفيع أعلى الدرس يعكس موضع التمرير (أي بلوك أنت فيه). */
+@Composable
+private fun LessonProgressBar(progress: Float, accent: Color) {
+    LinearProgressIndicator(
+        progress = { progress },
+        modifier = Modifier.fillMaxWidth().height(4.dp),
+        color = accent,
+        trackColor = accent.copy(alpha = 0.15f),
+    )
+}
 
 /**
  * شاشة الدرس الموحّدة — THE one lesson screen for every course.
@@ -72,11 +84,23 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
         LessonBlocks.visibleBlocks(lesson, style, words.size, hasPhonetics)
     }
 
+    // ----- In-lesson scroll progress (أي بلوك أنت فيه) -----
+    val listState = rememberLazyListState()
+    val lessonProgress by remember {
+        derivedStateOf {
+            val total = listState.layoutInfo.totalItemsCount.coerceAtLeast(1)
+            (listState.firstVisibleItemIndex.toFloat() / total).coerceIn(0f, 1f)
+        }
+    }
+    val vocabNumber = (blocks.indexOf(LessonBlockKind.VOCAB_WORDS) + 1).coerceAtLeast(1)
+
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        item { LessonProgressBar(lessonProgress, accent) }
         blocks.forEach { kind ->
             when (kind) {
                 LessonBlockKind.HERO -> item {
@@ -88,7 +112,7 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
                 }
 
                 LessonBlockKind.VOCAB_WORDS ->
-                    vocabBlock(words, accent, revealMode) { revealMode = it }
+                    vocabBlock(words, accent, revealMode, vocabNumber) { revealMode = it }
 
                 LessonBlockKind.KEY_SENTENCES ->
                     keySentencesBlock(lesson.keySentences, accent)

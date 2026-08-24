@@ -1,0 +1,464 @@
+package com.zmastery.english.viewmodel
+
+import com.zmastery.english.data.*
+import kotlinx.coroutines.launch
+
+/**
+ * Controller for Cloud sync (Firebase): pulling new lessons, backing up &
+ * restoring the learner's own progress, admin features, announcements and the
+ * leaderboard.
+ *
+ * All persisted/UI state remains on [AppViewModel]; this class holds the logic
+ * and reaches shared state via aliases. See [ExamsController] for the
+ * ownership/delegation conventions.
+ */
+internal class CloudController(internal val vm: AppViewModel) {
+
+    // ── Cloud state owned by the view model (written here) ──
+    private var lastCloudLessonSyncMillis
+        get() = vm.lastCloudLessonSyncMillis
+        set(v) { vm.lastCloudLessonSyncMillis = v }
+    private var cloudSyncEnabled
+        get() = vm.cloudSyncEnabled
+        set(v) { vm.cloudSyncEnabled = v }
+    private var googleWebClientId
+        get() = vm.googleWebClientId
+        set(v) { vm.googleWebClientId = v }
+    private var cloudUid
+        get() = vm.cloudUid
+        set(v) { vm.cloudUid = v }
+    private var cloudIsAnonymous
+        get() = vm.cloudIsAnonymous
+        set(v) { vm.cloudIsAnonymous = v }
+    private var cloudDisplayName
+        get() = vm.cloudDisplayName
+        set(v) { vm.cloudDisplayName = v }
+    private var cloudEmail
+        get() = vm.cloudEmail
+        set(v) { vm.cloudEmail = v }
+    private var isSyncingCloud
+        get() = vm.isSyncingCloud
+        set(v) { vm.isSyncingCloud = v }
+    private var cloudSyncMessage
+        get() = vm.cloudSyncMessage
+        set(v) { vm.cloudSyncMessage = v }
+    private var newLessonsFromCloud
+        get() = vm.newLessonsFromCloud
+        set(v) { vm.newLessonsFromCloud = v }
+    private var isDeveloperUnlocked
+        get() = vm.isDeveloperUnlocked
+        set(v) { vm.isDeveloperUnlocked = v }
+    private var userRole
+        get() = vm.userRole
+        set(v) { vm.userRole = v }
+    private var registeredUsersList
+        get() = vm.registeredUsersList
+        set(v) { vm.registeredUsersList = v }
+    private var isLoadingUsers
+        get() = vm.isLoadingUsers
+        set(v) { vm.isLoadingUsers = v }
+    private var activeAnnouncement
+        get() = vm.activeAnnouncement
+        set(v) { vm.activeAnnouncement = v }
+    private var globalLeaderboard
+        get() = vm.globalLeaderboard
+        set(v) { vm.globalLeaderboard = v }
+    private var isLoadingLeaderboard
+        get() = vm.isLoadingLeaderboard
+        set(v) { vm.isLoadingLeaderboard = v }
+
+    // ── Learner profile state owned by the view model ──
+    private val streak get() = vm.streak
+    private val xp get() = vm.xp
+    private val completedLessons get() = vm.completedLessons
+    private val vocab get() = vm.vocab
+    private val accuracy get() = vm.accuracy
+    private var learnerName
+        get() = vm.learnerName
+        set(v) { vm.learnerName = v }
+    private var learnerEmail
+        get() = vm.learnerEmail
+        set(v) { vm.learnerEmail = v }
+
+    private fun launch(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) =
+        vm.vmScope.launch(block = block)
+    private val app get() = vm.app
+
+    val isAdmin: Boolean
+        get() = isDeveloperUnlocked || userRole == "admin" ||
+            cloudEmail?.lowercase()?.trim() == "mohammedalbkhyty@gmail.com"
+
+    fun unlockDeveloperAdmin(code: String): Boolean {
+        val trimmed = code.trim()
+        if (trimmed == "ADMIN2026" || trimmed == "2026" || trimmed.lowercase() == "admin") {
+            isDeveloperUnlocked = true
+            userRole = "admin"
+            vm.persist()
+            syncUserProfileToCloud()
+            cloudSyncMessage = "تم تفعيل وضع المطور والمسؤول بنجاح 👑"
+            return true
+        }
+        return false
+    }
+
+    private fun refreshCloudAuthState() {
+        cloudUid = com.zmastery.english.cloud.CloudAuth.uid
+        cloudIsAnonymous = com.zmastery.english.cloud.CloudAuth.isAnonymous
+        cloudDisplayName = com.zmastery.english.cloud.CloudAuth.displayName
+        cloudEmail = com.zmastery.english.cloud.CloudAuth.email
+        syncUserProfileToCloud()
+    }
+
+    /**
+     * Auto-provision or update user profile and progress in Firestore under /users/{uid}
+     */
+    fun syncUserProfileToCloud() {
+        val user = com.zmastery.english.cloud.CloudAuth.currentUser ?: return
+        launch {
+            val snapshot = com.zmastery.english.cloud.CloudSync.UserProfileSnapshot(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName ?: "مستخدم",
+                photoUrl = user.photoUrl?.toString(),
+                isAnonymous = user.isAnonymous,
+                streak = streak,
+                xp = xp,
+                completedLessonsCount = completedLessons,
+                wordsLearnedCount = vocab.count { it.repetitions > 0 },
+                accuracy = accuracy.toDouble(),
+            )
+            val roleResult = com.zmastery.english.cloud.CloudSync.provisionOrUpdateUser(user, snapshot)
+            roleResult.onSuccess { role ->
+                userRole = role
+            }
+        }
+    }
+
+    /**
+     * Fetch all registered users for Admin panel
+     */
+    fun loadRegisteredUsers() {
+        launch {
+            isLoadingUsers = true
+            val res = com.zmastery.english.cloud.CloudSync.fetchAllUsers()
+            res.onSuccess { users ->
+                registeredUsersList = users
+            }
+            isLoadingUsers = false
+        }
+    }
+
+    /**
+     * Fetch the active announcement
+     */
+    fun loadActiveAnnouncement() {
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.fetchActiveAnnouncement()
+            res.onSuccess { announcement ->
+                activeAnnouncement = announcement
+            }
+        }
+    }
+
+    /**
+     * Post a new broadcast announcement (Admin only)
+     */
+    fun postAnnouncement(title: String, message: String, type: String = "info", onResult: (Boolean, String) -> Unit) {
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.postAnnouncement(title, message, type)
+            res.onSuccess {
+                loadActiveAnnouncement()
+                onResult(true, "تم نشر الإشعار العام لجميع الطلاب بنجاح 📢")
+            }.onFailure { e ->
+                onResult(false, "فشل نشر الإشعار: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Dismiss active announcement locally
+     */
+    fun dismissActiveAnnouncement() {
+        activeAnnouncement = null
+    }
+
+    /**
+     * Deactivate announcement globally (Admin only)
+     */
+    fun deactivateAnnouncement(id: String) {
+        launch {
+            com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id)
+            activeAnnouncement = null
+        }
+    }
+
+    /**
+     * Fetch global leaderboard
+     */
+    fun loadGlobalLeaderboard(limit: Int = 30) {
+        launch {
+            isLoadingLeaderboard = true
+            val res = com.zmastery.english.cloud.CloudSync.fetchLeaderboard(limit)
+            res.onSuccess { users ->
+                globalLeaderboard = users
+            }
+            isLoadingLeaderboard = false
+        }
+    }
+
+    /**
+     * Publish a single lesson package to Firestore (Admin only)
+     */
+    fun publishLessonToCloud(pkg: LessonPackage, onResult: (Boolean, String) -> Unit) {
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+            res.onSuccess { docId ->
+                onResult(true, "تم نشر الدرس سحابياً بنجاح ($docId) 🚀")
+                syncCloudLessons(silent = false)
+            }.onFailure { e ->
+                onResult(false, "فشل النشر السحابي: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Publish multiple lesson packages to Firestore in a batch (Admin only)
+     */
+    fun publishLessonsBatchToCloud(packages: List<LessonPackage>, onResult: (Boolean, String) -> Unit) {
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.publishLessonsBatchToCloud(packages)
+            res.onSuccess { count ->
+                onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب سحابياً 🚀")
+                syncCloudLessons(silent = false)
+            }.onFailure { e ->
+                onResult(false, "فشل النشر السحابي: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Called once from the Activity/Composition root at startup. Ensures a
+     * Firebase user exists (anonymous if nothing else), then pulls any new
+     * cloud lessons and the latest progress snapshot — completely silent,
+     * never blocks the UI, safe to call with no network at all.
+     */
+    fun initCloudSync() {
+        if (!cloudSyncEnabled) return
+        launch {
+            runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+            refreshCloudAuthState()
+            val uid = cloudUid ?: return@launch
+            // Pull progress FIRST (only if the cloud copy is newer than anything
+            // we have locally — a fresh install has nothing to lose by adopting
+            // it; an existing install keeps its own state, since local writes
+            // always win once this device has been used at all).
+            if (lastCloudLessonSyncMillis == 0L) {
+                runCatching {
+                    com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
+                }.getOrNull()?.let { cloudJson ->
+                    if (cloudJson != null) {
+                        Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
+                    }
+                }
+            }
+            syncCloudLessons(silent = true)
+            syncQuotes()
+            loadActiveAnnouncement()
+        }
+    }
+
+    /**
+     * Pull every lesson document added/changed in Firestore since the last
+     * sync and import them exactly like a manual batch import — instant,
+     * fully local once downloaded, and audio generation (if enabled) queues
+     * separately afterwards so this never freezes the UI.
+     */
+    fun syncCloudLessons(silent: Boolean = false) {
+        if (!cloudSyncEnabled) {
+            if (!silent) cloudSyncMessage = "المزامنة السحابية متوقفة من الإعدادات"
+            return
+        }
+        if (isSyncingCloud) return
+        launch {
+            isSyncingCloud = true
+            if (!silent) cloudSyncMessage = "جارٍ التحقق من دروس جديدة…"
+            val uid = cloudUid ?: run {
+                runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+                refreshCloudAuthState()
+                cloudUid
+            }
+            if (uid == null) {
+                isSyncingCloud = false
+                if (!silent) cloudSyncMessage = "تعذّر الاتصال بالسحابة الآن"
+                return@launch
+            }
+            val result = com.zmastery.english.cloud.CloudSync.pullNewLessons(lastCloudLessonSyncMillis)
+            result.onSuccess { sync ->
+                if (sync.packages.isNotEmpty()) {
+                    vm.importLessons(sync.packages)
+                    newLessonsFromCloud += sync.packages.size
+                    vm.autoGenerateAudioIfOnline()
+                }
+                if (sync.latestUpdatedAtMillis > lastCloudLessonSyncMillis) {
+                    lastCloudLessonSyncMillis = sync.latestUpdatedAtMillis
+                    vm.persist()
+                }
+                cloudSyncMessage = when {
+                    sync.packages.isEmpty() -> "لا توجد دروس جديدة — كل شيء محدّث ✓"
+                    else -> "تمت إضافة ${sync.packages.size} درس جديد من السحابة ✓"
+                }
+                pushProgressToCloud()
+            }.onFailure {
+                cloudSyncMessage = "تعذّر المزامنة — تحقق من الاتصال"
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    /** Push the CURRENT local state to Firestore under this learner's uid.
+     *  API keys are stripped before pushing — they must NEVER leave the device. */
+    fun pushProgressToCloud() {
+        if (!cloudSyncEnabled) return
+        val uid = cloudUid ?: return
+        launch {
+            val state = vm.buildAppState()
+            // Strip API keys before cloud sync — keys stay on device only
+            val safeState = KeyProtector.stripKeysForSharing(state)
+            val raw = Persistence.encode(safeState)
+            com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
+            syncUserProfileToCloud()
+        }
+    }
+
+    /**
+     * Complete sign-in when Google ID Token is received from the Google Account Picker dialog.
+     */
+    fun signInWithGoogleIdToken(idToken: String, displayName: String? = null, email: String? = null) {
+        launch {
+            isSyncingCloud = true
+            val result = com.zmastery.english.cloud.CloudAuth.signInWithIdToken(idToken)
+            result.onSuccess { user ->
+                if (user != null) {
+                    if (!displayName.isNullOrBlank() && learnerName.isBlank()) {
+                        learnerName = displayName
+                    }
+                    if (!email.isNullOrBlank() && learnerEmail.isBlank()) {
+                        learnerEmail = email
+                    }
+                    vm.persist()
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم تسجيل الدخول بحساب Google بنجاح ✓"
+                    pushProgressToCloud()
+                }
+            }.onFailure { e ->
+                cloudSyncMessage = e.message ?: "تعذّر إكمال تسجيل الدخول عبر Google"
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    /**
+     * Direct sign-in attempt (using CredentialManager)
+     */
+    fun signInWithGoogle(context: android.content.Context) {
+        launch {
+            isSyncingCloud = true
+            com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId.trim()
+            val result = com.zmastery.english.cloud.CloudAuth.signInWithCredentialManager(context)
+            result.onSuccess { user ->
+                if (user != null) {
+                    refreshCloudAuthState()
+                    cloudSyncMessage = "تم ربط حساب جوجل بنجاح ✓"
+                    pushProgressToCloud()
+                }
+            }.onFailure { e ->
+                cloudSyncMessage = e.message ?: "تعذّر تسجيل الدخول بحساب جوجل"
+            }
+            isSyncingCloud = false
+        }
+    }
+
+    fun signOutFromGoogle(context: android.content.Context? = null) {
+        launch {
+            com.zmastery.english.cloud.CloudAuth.signOut(context)
+            refreshCloudAuthState()
+            cloudSyncMessage = "تم تسجيل الخروج بنجاح"
+        }
+    }
+
+    fun updateGoogleWebClientId(id: String) {
+        googleWebClientId = id.trim()
+        com.zmastery.english.cloud.CloudAuth.webClientId = googleWebClientId
+        vm.persist()
+    }
+
+    fun updateCloudSyncEnabled(enabled: Boolean) {
+        cloudSyncEnabled = enabled
+        vm.persist()
+    }
+
+    // ---------------------------------------------------------------- QUOTES
+    private var cloudQuoteCount
+        get() = vm.cloudQuoteCount
+        set(v) { vm.cloudQuoteCount = v }
+    private var quoteMessage
+        get() = vm.quoteMessage
+        set(v) { vm.quoteMessage = v }
+    private var isAddingQuote
+        get() = vm.isAddingQuote
+        set(v) { vm.isAddingQuote = v }
+    private val isAdmin get() = vm.isAdmin
+
+    /** يسحب عبارات السحابة ويخزّنها محلياً (للودجت والشاشة الرئيسية). */
+    fun syncQuotes(onResult: ((Boolean, Int) -> Unit)? = null) {
+        if (!cloudSyncEnabled) { onResult?.invoke(false, cloudQuoteCount); return }
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.pullQuotes()
+            res.onSuccess { quotes ->
+                QuoteStore.saveCloud(app, quotes)
+                cloudQuoteCount = quotes.size
+                onResult?.invoke(true, quotes.size)
+            }.onFailure {
+                cloudQuoteCount = QuoteStore.cloudCount(app)
+                onResult?.invoke(false, cloudQuoteCount)
+            }
+        }
+    }
+
+    /**
+     * يضيف المسؤول عبارة جديدة إلى السحابة (تظهر لكل الأجهزة عند المزامنة).
+     * الهدف الوحيد لكل مسؤول عبر الإمتيازات.
+     */
+    fun addQuote(text: String, author: String, onResult: (Boolean, String) -> Unit) {
+        if (!isAdmin) {
+            onResult(false, "إضافة العبارات متاحة للمسؤول فقط")
+            return
+        }
+        if (text.isBlank()) {
+            onResult(false, "نص العبارة فارغ")
+            return
+        }
+        val uid = cloudUid ?: run {
+            runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+            refreshCloudAuthState()
+            cloudUid
+        }
+        if (uid == null) {
+            onResult(false, "تعذّر الاتصال بالسحابة الآن")
+            return
+        }
+        isAddingQuote = true
+        launch {
+            val res = com.zmastery.english.cloud.CloudSync.addQuote(text, author, uid)
+            isAddingQuote = false
+            res.onSuccess {
+                quoteMessage = "تم نشر العبارة لكل الأجهزة ✓"
+                syncQuotes()
+                onResult(true, quoteMessage!!)
+            }.onFailure { e ->
+                quoteMessage = "فشل النشر: ${e.message}"
+                onResult(false, quoteMessage!!)
+            }
+        }
+    }
+}

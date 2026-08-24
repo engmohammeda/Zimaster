@@ -1209,6 +1209,67 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                         Spacer(Modifier.height(6.dp))
                         Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
+
+                    // ---- Admin: إدارة عبارات التحفيز السحابية ----
+                    Spacer(Modifier.height(16.dp))
+                    Divider(color = ZBorder)
+                    Spacer(Modifier.height(12.dp))
+
+                    var quoteText by remember { mutableStateOf("") }
+                    var quoteAuthor by remember { mutableStateOf("") }
+                    var quoteStatus by remember { mutableStateOf<String?>(null) }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("💬 عبارات التحفيز اليومية", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        TextButton(onClick = { vm.syncQuotes() }) {
+                            Text("${vm.cloudQuoteCount} عبارة 🔄", color = ZCyan, fontSize = 11.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "عبارة عشوائية واحدة يومياً لكل متعلم، تُسحب من السحابة وتظهر في الودجت والشاشة الرئيسية.",
+                        color = ZTextSecondary, fontSize = 10.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = quoteText,
+                        onValueChange = { quoteText = it },
+                        label = { Text("نص العبارة التحفيزية") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = quoteAuthor,
+                        onValueChange = { quoteAuthor = it },
+                        label = { Text("المصدر/الكاتب (اختياري)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            vm.addQuote(quoteText, quoteAuthor) { success, msg ->
+                                quoteStatus = msg
+                                if (success) { quoteText = ""; quoteAuthor = "" }
+                            }
+                        },
+                        enabled = !vm.isAddingQuote && quoteText.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                    ) {
+                        Text(if (vm.isAddingQuote) "جارٍ النشر..." else "👑 نشر العبارة لكل الأجهزة", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                    quoteStatus?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

@@ -772,7 +772,8 @@ private fun MicroHabitRow(vm: AppViewModel, onStart: () -> Unit) {
  */
 @Composable
 private fun DailyPhraseCard() {
-    val quote = remember { com.zmastery.english.data.Quotes.today() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val quote = remember { com.zmastery.english.data.QuoteStore.today(context) }
     val tts = com.zmastery.english.audio.LocalTts.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 

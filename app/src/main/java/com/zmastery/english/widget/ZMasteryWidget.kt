@@ -13,10 +13,14 @@ import android.widget.RemoteViews
 import com.zmastery.english.MainActivity
 import com.zmastery.english.R
 import com.zmastery.english.data.ProgressStore
-import com.zmastery.english.data.Quotes
+import com.zmastery.english.data.QuoteStore
 
 /**
- * Z-Mastery home-screen widget.
+ * Z-Mastery home-screen widget — streak-first design focused on "يوم الحماسة".
+ *
+ * Hero: the streak flame + a clear day-status pill (secured / at-risk / start).
+ * A daily learning-goal bar, the dynamic daily quote (cloud-synced), and one CTA.
+ *
  * Engineered for 100% compatibility across Samsung (OneUI), Xiaomi (MIUI/HyperOS),
  * Huawei (EMUI), Google Pixel, Oppo, Vivo, and generic Android launchers.
  */
@@ -72,7 +76,6 @@ class ZMasteryWidget : AppWidgetProvider() {
             try {
                 val views = RemoteViews(context.packageName, R.layout.widget_zmastery)
 
-                // 1. Defensively load progress data
                 val data = try {
                     ProgressStore.load(context)
                 } catch (e: Throwable) {
@@ -80,23 +83,24 @@ class ZMasteryWidget : AppWidgetProvider() {
                     null
                 }
 
+                // Dynamic daily quote — merges built-in + cloud-synced quotes.
                 val quote = try {
-                    Quotes.today()
+                    QuoteStore.today(context)
                 } catch (e: Throwable) {
                     Log.w(TAG, "Failed to load quote", e)
                     null
                 }
 
                 val streak = data?.streak ?: 0
-                val xp = data?.xp ?: 0
                 val reviews = data?.reviewsToday ?: 0
                 val goal = (data?.dailyGoal ?: 30).coerceAtLeast(1)
                 val hasContent = data?.hasContent ?: false
+                val daySecured = data?.minimumDone ?: false
                 val mood = data?.chestMood ?: "IDLE"
                 val cracking = mood == "CRACKING"
                 val broken = mood == "BROKEN"
 
-                // 2. Set background
+                // 1. Mood-aware background
                 try {
                     val bgRes = when {
                         cracking -> R.drawable.widget_bg_cracking
@@ -108,7 +112,7 @@ class ZMasteryWidget : AppWidgetProvider() {
                     Log.e(TAG, "Failed to set background", e)
                 }
 
-                // 3. Smoke overlay for cracking state
+                // 2. Smoke overlay when the streak is at risk
                 try {
                     if (cracking) {
                         val severity = data?.decaySeverity ?: 0f
@@ -126,48 +130,52 @@ class ZMasteryWidget : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_smoke, View.GONE)
                 }
 
-                // 4. Streak text
+                // 3. HERO — streak number + label
                 try {
-                    val streakText = when {
-                        cracking && streak > 0 -> "$streak أيام ⚠️"
-                        broken -> "أنقذ الشعلة"
-                        streak > 0 -> "$streak أيام"
-                        else -> "ابدأ اليوم"
+                    views.setTextViewText(R.id.widget_streak_number, streak.toString())
+                    val streakLabel = when {
+                        broken -> "أنقذ شعلتك"
+                        streak > 0 -> "يوم متتالية 🔥"
+                        else -> "ابدأ سلسلتك"
                     }
-                    views.setTextViewText(R.id.widget_streak, streakText)
+                    views.setTextViewText(R.id.widget_streak_label, streakLabel)
                 } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to set streak text", e)
+                    Log.e(TAG, "Failed to set streak hero", e)
                 }
 
-                // 5. XP text
+                // 4. Day-status pill — the heart of "يوم الحماسة"
                 try {
-                    views.setTextViewText(R.id.widget_xp, "⚡ $xp XP")
+                    val status = when {
+                        broken -> "🚨 مهمة إنقاذ عاجلة"
+                        cracking -> "⚠️ سلسلتك في خطر"
+                        daySecured -> "يومك مؤمَّن ✓"
+                        !hasContent -> "ابدأ رحلتك"
+                        else -> "أكمل هدف اليوم"
+                    }
+                    views.setTextViewText(R.id.widget_status, status)
                 } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to set xp text", e)
+                    Log.e(TAG, "Failed to set status", e)
                 }
 
-                // 6. Quote text
+                // 5. Dynamic daily quote
                 try {
                     val quoteText = quote?.text ?: "استمر في التعلم يومياً لتصل إلى الطلاقة."
-                    val authorText = "— ${quote?.author ?: "Z-Mastery"}"
-                    views.setTextViewText(R.id.widget_quote, "\"$quoteText\"")
+                    val authorText = "— ${quote?.author?.takeIf { it.isNotBlank() } ?: "Z-Mastery"}"
+                    views.setTextViewText(R.id.widget_quote, "\u201C$quoteText\u201D")
                     views.setTextViewText(R.id.widget_author, authorText)
                 } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to set quote text", e)
+                    Log.e(TAG, "Failed to set quote", e)
                 }
 
-                // 7. Progress & Target
+                // 6. Daily learning-goal progress
                 try {
                     val pct = ((reviews.toFloat() / goal) * 100).toInt().coerceIn(0, 100)
                     views.setProgressBar(R.id.widget_progressbar, 100, pct, false)
-                    views.setTextViewText(
-                        R.id.widget_progress_value,
-                        if (hasContent) "$reviews / $goal" else "$reviews / $goal"
-                    )
+                    views.setTextViewText(R.id.widget_progress_value, "$reviews / $goal")
                     val labelText = when {
                         cracking -> "السلسلة في خطر!"
                         broken -> "استعد شعلتك"
-                        pct >= 100 -> "تم إنجاز هدف اليوم 🎉"
+                        pct >= 100 -> "اكتمل هدف اليوم 🎉"
                         else -> "هدف اليوم"
                     }
                     views.setTextViewText(R.id.widget_progress_label, labelText)
@@ -175,12 +183,12 @@ class ZMasteryWidget : AppWidgetProvider() {
                     Log.e(TAG, "Failed to set progress", e)
                 }
 
-                // 8. CTA Button text
+                // 7. CTA
                 try {
                     val ctaText = when {
                         cracking -> "أنقذ سلسلتك الآن 🔥"
                         broken -> "مهمة إنقاذ عاجلة ⚡"
-                        reviews >= goal -> "أحسنت! راجع المزيد ✨"
+                        reviews >= goal -> "راجع المزيد ✨"
                         else -> "ابدأ المراجعة الآن ⚡"
                     }
                     views.setTextViewText(R.id.widget_cta, ctaText)
@@ -188,7 +196,7 @@ class ZMasteryWidget : AppWidgetProvider() {
                     Log.e(TAG, "Failed to set cta text", e)
                 }
 
-                // 9. Click pending intent
+                // 8. Click → open app (to review when at risk)
                 try {
                     val openIntent = Intent(context, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -206,7 +214,6 @@ class ZMasteryWidget : AppWidgetProvider() {
                     Log.e(TAG, "Failed to set pending intent", e)
                 }
 
-                // 10. Perform the update
                 mgr.updateAppWidget(widgetId, views)
             } catch (e: Throwable) {
                 Log.e(TAG, "Fatal error updating widget $widgetId", e)
