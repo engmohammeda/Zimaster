@@ -35,10 +35,11 @@ internal fun LazyListScope.vocabBlock(
     words: List<VocabWord>,
     accent: Color,
     revealMode: RevealMode,
+    number: Int,
     onRevealMode: (RevealMode) -> Unit,
 ) {
     item { RevealModeToggle(revealMode, accent, onRevealMode) }
-    item { SectionHeader(Icons.Filled.Style, "المفردات (${words.size})", accent) }
+    item { BlockHeader(number, "المفردات (${words.size})", accent) }
     items(words.size, key = { "wb_${words[it].id}" }) { idx ->
         WordRevealCard(words[idx], accent, revealMode)
     }

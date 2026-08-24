@@ -35,6 +35,13 @@ service cloud.firestore {
       return request.resource.data.size() < 1048576;
     }
 
+    // Is the signed-in user a recorded admin (role == "admin" in /users)?
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // ─── Lessons collection (public content) ───
     //
     // The upload tool (Flask app) writes to this collection using
@@ -83,6 +90,24 @@ service cloud.firestore {
       match /{document=**} {
         allow read, write: if false;
       }
+    }
+
+    // ─── Quotes collection (admin-managed motivation quotes) ───
+    //
+    // Any signed-in learner can READ today's quote pool (the widget + dashboard
+    // pull from here). Only ADMINS can create/update/delete quotes — they are
+    // shared content, not per-user data.
+    match /quotes/{quoteId} {
+      allow read: if isSignedIn();
+
+      // Admins may add a quote; validate shape + reasonable length.
+      allow create: if isAdmin()
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() < 600
+                    && request.resource.data.author is string;
+
+      allow update, delete: if isAdmin();
     }
 
     // ─── Catch-all: deny everything else ───

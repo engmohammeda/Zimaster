@@ -1,6 +1,7 @@
 package com.zmastery.english.ui.screens.lessons.blocks
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,57 @@ internal fun SectionHeader(icon: ImageVector, title: String, accent: Color) {
         ) { Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp)) }
         Spacer(Modifier.width(10.dp))
         Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+    }
+}
+
+/**
+ * الرأس الموحّد المرقّم لبلوكات الدرس — مطابق لنظام التصميم المعتمد:
+ * شارة دائرية برقم البلوك + عنوان عريض + زر صوت اختياري + فاصل أسفله.
+ * يمنح المتعلّم إحساساً بالتقدّم والتوجّه داخل الدرس.
+ *
+ * @param number ترتيب البلوك (1-based).
+ * @param onPlay عند توفّره يُظهر زر تشغيل الصوت بجانب العنوان.
+ */
+@Composable
+internal fun BlockHeader(
+    number: Int,
+    title: String,
+    accent: Color,
+    onPlay: (() -> Unit)? = null,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("$number", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                title,
+                color = ZTextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier.weight(1f),
+            )
+            if (onPlay != null) {
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(accent.copy(alpha = 0.10f))
+                        .clickable(onClick = onPlay),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.VolumeUp, null, tint = accent, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+        Divider(color = ZBorder, thickness = 1.dp)
     }
 }
 

@@ -1,93 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Z-Mastery home widget — streak-first design (يوم الحماسة).
+     Hero = the streak flame + whether today is "secured"; a daily-goal bar;
+     the dynamic daily quote; a single CTA. Mood-aware backgrounds for the
+     cracking / rescue states. 100% RemoteViews (compatible everywhere). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- خلفية البطاقة الأساسية -->
+    <!-- Background card -->
     <ImageView
         android:id="@+id/widget_bg_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="fitXY"
+        android:scaleType="centerCrop"
         android:src="@drawable/widget_bg"
         android:contentDescription="@null" />
 
-    <!-- طبقة تنبيه تصدع السلسلة (تظهر فقط عند الخطر) -->
+    <!-- Streak-decay smoke overlay (only when streak is at risk) -->
     <ImageView
         android:id="@+id/widget_smoke"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="48dp"
         android:layout_gravity="top"
         android:scaleType="fitXY"
         android:visibility="gone"
         android:contentDescription="@null" />
 
-    <!-- المحتوى الداخلي الرئيسي -->
     <LinearLayout
         android:id="@+id/widget_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:gravity="center_horizontal"
+        android:padding="14dp">
 
-        <!-- الشريط العلوي: السلسلة + النقاط (عبر RelativeLayout متوافق 100% مع RemoteViews) -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+        <!-- ── HERO: the streak flame ── -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <!-- شارة السلسلة -->
-            <LinearLayout
-                android:id="@+id/widget_streak_container"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/widget_pill"
-                android:paddingStart="8dp"
-                android:paddingEnd="10dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔥"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/widget_streak"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="0 أيام"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- شارة النقاط XP -->
             <TextView
-                android:id="@+id/widget_xp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:text="⚡ 0 XP"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
+                android:text="🔥"
+                android:textSize="30sp" />
 
-        <!-- بطاقة الحكمة اليومية / التحفيز -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_streak_number"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#FFFFFF"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/widget_streak_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="يوم متتالية"
+                    android:textColor="#F5E4DC"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Day-status pill (secured / at-risk / start) -->
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/widget_pill"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="ابدأ يومك"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <!-- Quote grows to fill available space -->
         <LinearLayout
             android:id="@+id/widget_quote_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:layout_marginBottom="8dp"
             android:orientation="vertical"
             android:background="@drawable/widget_quote_card"
@@ -98,26 +107,26 @@
                 android:id="@+id/widget_quote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="كنتُ واثقاً أنني أصنع نفسي بنفسي."
+                android:text="\u201Cاستمر في التعلم يومياً.\u201D"
                 android:textColor="#FFFFFF"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:maxLines="2"
+                android:maxLines="3"
                 android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/widget_author"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="— بنيامين فرانكلين"
+                android:layout_marginTop="3dp"
+                android:text="\u2014 Z-Mastery"
                 android:textColor="#F5E4DC"
                 android:textSize="11sp"
                 android:maxLines="1"
                 android:ellipsize="end" />
         </LinearLayout>
 
-        <!-- شريط التقدم اليومي -->
+        <!-- Daily learning goal -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -158,15 +167,15 @@
                 android:progress="0" />
         </LinearLayout>
 
-        <!-- زر المتابعة السريعة -->
+        <!-- Single clear CTA -->
         <TextView
             android:id="@+id/widget_cta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:background="@drawable/widget_cta"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp"
             android:text="ابدأ المراجعة الآن ⚡"
             android:textColor="#CB5F41"
             android:textSize="13sp"

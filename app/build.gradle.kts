@@ -48,8 +48,12 @@ android {
             isDebuggable = true
         }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8: shrink + obfuscate the release build.
+            // App reflection surface is kept via app/proguard-rules.pro
+            // (kotlinx.serialization data classes, the AppViewModel constructor,
+            // the widget provider, enums persisted by name, Firebase).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
