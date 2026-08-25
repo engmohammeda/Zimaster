@@ -15,7 +15,10 @@ android {
         applicationId = "com.zmastery.english"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
+        // CI builds use the workflow run number as a monotonically increasing
+        // versionCode (required by Google Play); local builds fall back to the
+        // baseline below.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 2
         versionName = "1.1.0"
     }
 

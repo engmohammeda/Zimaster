@@ -56,6 +56,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
     // Email / Password Form Fields
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
+    var confirmPasswordInput by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
 
@@ -464,6 +465,25 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 }
                             }
                         } else {
+                            Spacer(Modifier.height(10.dp))
+                            // تأكيد كلمة المرور — يمنع أخطاء الطباعة قبل إنشاء الحساب
+                            OutlinedTextField(
+                                value = confirmPasswordInput,
+                                onValueChange = { confirmPasswordInput = it; error = null },
+                                label = { Text("تأكيد كلمة المرور") },
+                                leadingIcon = { Icon(Icons.Filled.Lock, null, tint = Color(0xFF94A3B8)) },
+                                singleLine = true,
+                                isError = confirmPasswordInput.isNotBlank() && confirmPasswordInput != passwordInput,
+                                supportingText = {
+                                    if (confirmPasswordInput.isNotBlank() && confirmPasswordInput != passwordInput) {
+                                        Text("كلمتا المرور غير متطابقتين", color = Color(0xFFF87171), fontSize = 11.sp)
+                                    }
+                                },
+                                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                            )
                             Spacer(Modifier.height(12.dp))
                         }
 
@@ -473,6 +493,11 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 error = null
                                 successMsg = null
                                 if (isSignUpMode) {
+                                    if (passwordInput != confirmPasswordInput) {
+                                        isSigningIn = false
+                                        error = "كلمتا المرور غير متطابقتين"
+                                        return@Button
+                                    }
                                     vm.signUpWithEmail(emailInput, passwordInput, nameInput) { ok, err ->
                                         isSigningIn = false
                                         if (ok) {
@@ -494,7 +519,8 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                     }
                                 }
                             },
-                            enabled = !isSigningIn && emailInput.isNotBlank() && passwordInput.isNotBlank(),
+                            enabled = !isSigningIn && emailInput.isNotBlank() && passwordInput.isNotBlank()
+                                && (!isSignUpMode || confirmPasswordInput == passwordInput),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -516,6 +542,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
 
                         TextButton(onClick = {
                             isSignUpMode = !isSignUpMode
+                            confirmPasswordInput = ""
                             error = null
                         }) {
                             Text(

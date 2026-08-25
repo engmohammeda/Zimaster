@@ -765,6 +765,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
     var isEmailSignUp by remember { mutableStateOf(false) }
     var emailInput by remember { mutableStateOf("") }
     var passInput by remember { mutableStateOf("") }
+    var confirmPassInput by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
     var emailAuthError by remember { mutableStateOf<String?>(null) }
     var isEmailProcessing by remember { mutableStateOf(false) }
@@ -1159,6 +1160,24 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(10.dp),
                                 )
+                                if (isEmailSignUp) {
+                                    Spacer(Modifier.height(8.dp))
+                                    // تأكيد كلمة المرور — يمنع أخطاء الطباعة قبل إنشاء الحساب
+                                    OutlinedTextField(
+                                        value = confirmPassInput,
+                                        onValueChange = { confirmPassInput = it; emailAuthError = null },
+                                        label = { Text("تأكيد كلمة المرور") },
+                                        singleLine = true,
+                                        isError = confirmPassInput.isNotBlank() && confirmPassInput != passInput,
+                                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp),
+                                    )
+                                    if (confirmPassInput.isNotBlank() && confirmPassInput != passInput) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("كلمتا المرور غير متطابقتين", color = ZRose, fontSize = 11.sp)
+                                    }
+                                }
                                 emailAuthError?.let {
                                     Spacer(Modifier.height(8.dp))
                                     Text(it, color = ZRose, fontSize = 11.sp)
@@ -1167,6 +1186,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 TextButton(
                                     onClick = {
                                         isEmailSignUp = !isEmailSignUp
+                                        confirmPassInput = ""
                                         emailAuthError = null
                                     },
                                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -1185,6 +1205,10 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 onClick = {
                                     if (emailInput.isBlank() || passInput.isBlank()) {
                                         emailAuthError = "يرجى إدخال البريد الإلكتروني وكلمة المرور"
+                                        return@Button
+                                    }
+                                    if (isEmailSignUp && passInput != confirmPassInput) {
+                                        emailAuthError = "كلمتا المرور غير متطابقتين"
                                         return@Button
                                     }
                                     isEmailProcessing = true

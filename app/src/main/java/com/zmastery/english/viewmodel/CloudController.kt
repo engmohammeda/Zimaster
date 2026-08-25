@@ -90,7 +90,10 @@ internal class CloudController(internal val vm: AppViewModel) {
 
     fun unlockDeveloperAdmin(code: String): Boolean {
         val trimmed = code.trim()
-        if (trimmed == "ADMIN2026" || trimmed == "2026" || trimmed.lowercase() == "admin") {
+        // SECURITY: a single non-guessable code. Cloud-side privileges still
+        // require the verified super-admin account (Firestore rules enforce
+        // the role) — this unlock only enables local developer UI tooling.
+        if (trimmed == "ADMIN2026") {
             isDeveloperUnlocked = true
             userRole = "admin"
             vm.persist()
