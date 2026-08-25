@@ -289,7 +289,7 @@ fun ZMasteryApp(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                if (showBars) TopBar(currentRoute, onImport = { goTopLevel("import") })
+                if (showBars) TopBar(currentRoute, onImport = { goTopLevel("import") }, showImport = vm.isAdmin)
             },
             bottomBar = {
                 if (currentRoute in tabs.map { it.route } || currentRoute in extraTop) {
@@ -384,6 +384,7 @@ fun ZMasteryApp(
                 dragHandle = { BottomSheetDefaults.DragHandle(color = ZBorder) },
             ) {
                 MoreSheetContent(
+                    isAdmin = vm.isAdmin,
                     onImport = { closeSheetAndGo("import") },
                     onNavigate = { r -> closeSheetAndGo(r) },
                 )
@@ -441,12 +442,13 @@ private fun ExitConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
  *     and a chevron — instead of a grid of disconnected mini-tiles.
  */
 @Composable
-private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit) {
+private fun MoreSheetContent(isAdmin: Boolean, onImport: () -> Unit, onNavigate: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 28.dp),
     ) {
+        if (isAdmin) {
         // ── Hero header — mesh gradient backdrop + real headline ──
         Box(
             Modifier.fillMaxWidth()
@@ -543,9 +545,38 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                 }
             }
         }
+        } else {
+            // ── بطاقة الطالب: لا استيراد — الدروس تصل من السحابة تلقائياً ──
+            Box(
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Brush.linearGradient(listOf(ZCyanDeep, ZIndigo)))
+                    .padding(20.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.CloudDownload, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("دروسك تصل تلقائياً", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "كل درس ينشره معلمك يظهر لديك عند فتح التطبيق — لا تحتاج استيراد أي ملف",
+                            color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, lineHeight = 17.sp,
+                        )
+                    }
+                }
+            }
+        }
 
         // ── Grouped destinations — one elevated "settings-style" card per group ──
         moreGroups.forEach { group ->
+            val visibleItems = group.items.filter { it.route != "import" || isAdmin }
+            if (visibleItems.isEmpty()) return@forEach
             Spacer(Modifier.height(24.dp))
             Text(
                 group.title, color = ZTextSecondary,
@@ -561,7 +592,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column {
-                        group.items.forEachIndexed { idx, item ->
+                        visibleItems.forEachIndexed { idx, item ->
                             Surface(
                                 color = Color.Transparent,
                                 onClick = { onNavigate(item.route) },
@@ -597,7 +628,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(route: String?, onImport: () -> Unit) {
+private fun TopBar(route: String?, onImport: () -> Unit, showImport: Boolean = true) {
     val title = when (route) {
         "dashboard" -> "لوحة القيادة"
         "review" -> "مراجعة الكلمات"
@@ -631,8 +662,11 @@ private fun TopBar(route: String?, onImport: () -> Unit) {
             }
         },
         actions = {
-            IconButton(onClick = onImport) {
-                Icon(Icons.Filled.UploadFile, "استيراد", tint = ZIndigo)
+            // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون الدروس من السحابة.
+            if (showImport) {
+                IconButton(onClick = onImport) {
+                    Icon(Icons.Filled.UploadFile, "استيراد", tint = ZIndigo)
+                }
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

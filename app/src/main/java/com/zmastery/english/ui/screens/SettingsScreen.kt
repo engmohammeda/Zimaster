@@ -231,7 +231,10 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
 
     Spacer(Modifier.height(16.dp))
     SettingsGroup("المكتبة") {
-        ActionRow(Icons.Filled.UploadFile, "استيراد الكورسات", "رفع/لصق JSON أو ZIP", onImport)
+        // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون دروسهم من السحابة.
+        if (vm.isAdmin) {
+            ActionRow(Icons.Filled.UploadFile, "استيراد الكورسات 👑", "رفع/لصق JSON أو ZIP", onImport)
+        }
         ActionRow(
             Icons.Filled.LibraryBooks, "محتواك الحالي",
             "${vm.courses.size} كورس · ${vm.lessons.size} درس · ${vm.totalWords} كلمة",

@@ -144,7 +144,7 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
                 )
             }
             if (vm.activeDailyTasks.isEmpty()) {
-                item { NoTasksYet(onNavigate) }
+                item { NoTasksYet(onNavigate, vm.isAdmin) }
             } else {
                 item { PlanTierNote(vm) }
                 items(vm.activeDailyTasks, key = { it.id }) { task ->
@@ -272,11 +272,19 @@ private fun GetStartedCard(vm: AppViewModel, onNavigate: (String) -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text("أكمل أي خطوة لتفعيل لوحة القيادة", color = ZTextSecondary, fontSize = 11.sp)
                 Spacer(Modifier.height(16.dp))
-                StartStep(
-                    1, Icons.Filled.UploadFile, "استورد كورساً",
-                    "ملف JSON أو لصق مباشر", ZIndigo,
-                    done = vm.lessons.isNotEmpty(),
-                ) { onNavigate("import") }
+                if (vm.isAdmin) {
+                    StartStep(
+                        1, Icons.Filled.UploadFile, "استورد كورساً",
+                        "ملف JSON أو لصق مباشر", ZIndigo,
+                        done = vm.lessons.isNotEmpty(),
+                    ) { onNavigate("import") }
+                } else {
+                    StartStep(
+                        1, Icons.Filled.CloudDownload, "دروسك من السحابة",
+                        "تُحدَّث تلقائياً عند فتح التطبيق", ZIndigo,
+                        done = vm.lessons.isNotEmpty(),
+                    ) { onNavigate("levels") }
+                }
                 StartStep(
                     2, Icons.Filled.Add, "أضف كلمات للقاموس",
                     "يدوياً أو بالذكاء الاصطناعي", ZCyanDeep,
@@ -373,7 +381,7 @@ private fun MascotBanner(eng: Engagement) {
 /* ══════════════════════ 4 · tasks & plan ══════════════════════ */
 
 @Composable
-private fun NoTasksYet(onNavigate: (String) -> Unit) {
+private fun NoTasksYet(onNavigate: (String) -> Unit, isAdmin: Boolean) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 18.dp) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -384,14 +392,18 @@ private fun NoTasksYet(onNavigate: (String) -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text("لا توجد مهام متاحة اليوم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(
-                    "أضف كلمات أو استورد درساً لتتولّد خطة يومية",
+                    if (isAdmin) "أضف كلمات أو استورد درساً لتتولّد خطة يومية"
+                    else "ستتولّد خطتك اليومية تلقائياً عند إضافة كلماتك أو نزول دروسك من السحابة",
                     color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Surface(shape = RoundedCornerShape(12.dp), color = ZIndigo, onClick = { onNavigate("import") }) {
+            Surface(shape = RoundedCornerShape(12.dp), color = ZIndigo, onClick = {
+                if (isAdmin) onNavigate("import") else onNavigate("levels")
+            }) {
                 Text(
-                    "استيراد", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    if (isAdmin) "استيراد" else "المستويات",
+                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 )
             }

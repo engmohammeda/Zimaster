@@ -83,6 +83,29 @@ fun ImportScreen(vm: AppViewModel) {
             }
         }
 
+        // 👑 لافتة المسؤول: أداتا النشر السحابي لكل الطلاب
+        if (vm.isAdmin) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = ZAmber.copy(alpha = 0.12f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ZAmber.copy(alpha = 0.45f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.AdminPanelSettings, null, tint = ZAmber, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("وضع المسؤول 👑", color = ZAmberDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "بعد التعرّف على الدروس سيظهر زر «نشر سحابياً لجميع الطلاب» — كل جهاز يسحبها تلقائياً عند فتح التطبيق.",
+                            color = ZTextSecondary, fontSize = 11.sp, lineHeight = 17.sp,
+                        )
+                    }
+                }
+            }
+        }
+
         // Upload files card (multiple JSON + ZIP)
         Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
