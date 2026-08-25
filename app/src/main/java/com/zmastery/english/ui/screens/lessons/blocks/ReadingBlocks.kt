@@ -55,6 +55,12 @@ internal fun LazyListScope.readingBlock(
         )
     }
 
+    // «تشغيل الكل» — جوهر تجربة كورسات الاستماع: سرد متتابع للنص كاملاً
+    val fullNarration = segments.joinToString(". ") { it.en }.ifBlank { fullEn }
+    if (fullNarration.isNotBlank()) {
+        item { PlayAllReadingCard(fullNarration, accent) }
+    }
+
     // Passage
     if (mode == 0 && segments.isNotEmpty()) {
         item { SectionHeader(Icons.Filled.MenuBook, "النص التفاعلي", accent) }
@@ -64,6 +70,24 @@ internal fun LazyListScope.readingBlock(
     } else if (fullEn.isNotBlank()) {
         item { SectionHeader(Icons.Filled.Article, "النص الكامل", accent) }
         item { FullTextCard(fullEn, fullAr, accent, showAllAr, vm, lessonId, audioReady) }
+    }
+}
+
+/** «استمع للنص كاملاً» — سرد متتابع بضغطة واحدة (يخدم كورسات الاستماع قبل كل شيء). */
+@Composable
+private fun PlayAllReadingCard(fullText: String, accent: Color) {
+    SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            AudioButton(
+                text = fullText, audioKey = "read_all_${fullText.hashCode()}",
+                accent = accent, size = 44.dp, iconSize = 22.dp,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("استمع للنص كاملاً", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("تشغيل متتابع من أوله لآخره", color = ZTextSecondary, fontSize = 12.sp)
+            }
+        }
     }
 }
 
