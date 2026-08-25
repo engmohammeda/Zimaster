@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AgonApp"
+rootProject.name = "Zimaster"
 include(":app")
