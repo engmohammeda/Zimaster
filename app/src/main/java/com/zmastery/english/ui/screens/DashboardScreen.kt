@@ -132,10 +132,7 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
                 item { MicroHabitRow(vm) { onNavigate(vm.microHabit.route) } }
             }
 
-            // ── 4 · لافتة الحالة ──
-            item { MascotBanner(eng) }
-
-            // ── 5 · خطة اليوم — قلب الشاشة ──
+            // ── 4 · خطة اليوم — قلب الشاشة (أقصر مسافة بصرية للأهم) ──
             item {
                 SectionTitle(
                     "خطة اليوم",
@@ -155,17 +152,20 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
                 }
             }
 
+            // ── 5 · المذاكرة العاجلة — المراجعة قبل الجديد (مبدأ التكرار المتباعد) ──
+            if (vm.forgottenWords.isNotEmpty()) {
+                item { SectionTitle("المذاكرة العاجلة \uD83D\uDEA8", "كلمات على وشك النسيان — راجعها أولاً") }
+                item { ForgottenWordsRow(vm.forgottenWords) { onNavigate("review") } }
+            }
+
             // ── 6 · دروس اليوم ──
             if (vm.todayPlan.isNotEmpty()) {
                 item { SectionTitle("دروس اليوم", "مختارة من كورساتك") }
                 items(vm.todayPlan, key = { it.lessonId }) { PlanCard(it) { onOpenLesson(it.lessonId) } }
             }
 
-            // ── 7 · عاجل: كلمات على وشك النسيان ──
-            if (vm.forgottenWords.isNotEmpty()) {
-                item { SectionTitle("المذاكرة العاجلة \uD83D\uDEA8", "كلمات على وشك النسيان") }
-                item { ForgottenWordsRow(vm.forgottenWords) { onNavigate("review") } }
-            }
+            // ── 7 · لافتة الحالة — تحفيز بعد إنجاز الخطة، لا قبلها ──
+            item { MascotBanner(eng) }
 
             // ── 8 · قصة اليوم ──
             item { DailyStoryCard(vm, onOpenArchive = { onNavigate("stories") }) }
