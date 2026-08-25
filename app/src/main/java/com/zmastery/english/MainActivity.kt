@@ -652,7 +652,7 @@ private fun TopBar(route: String?) {
         "analytics" -> "التحليلات"
         "momentum" -> "زخم الالتزام"
         "mnemonics" -> "الروابط الذهنية"
-        "import" -> "استيراد الكورسات",
+        "import" -> "استيراد الكورسات"
         "devtools" -> "أدوات المطور 👑"
         "backup" -> "النسخ الاحتياطي"
         "settings" -> "الإعدادات"
