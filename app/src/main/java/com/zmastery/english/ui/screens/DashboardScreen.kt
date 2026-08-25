@@ -144,7 +144,7 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
                 )
             }
             if (vm.activeDailyTasks.isEmpty()) {
-                item { NoTasksYet(onNavigate, vm.isAdmin) }
+                item { NoTasksYet(onNavigate) }
             } else {
                 item { PlanTierNote(vm) }
                 items(vm.activeDailyTasks, key = { it.id }) { task ->
@@ -381,7 +381,7 @@ private fun MascotBanner(eng: Engagement) {
 /* ══════════════════════ 4 · tasks & plan ══════════════════════ */
 
 @Composable
-private fun NoTasksYet(onNavigate: (String) -> Unit, isAdmin: Boolean) {
+private fun NoTasksYet(onNavigate: (String) -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 18.dp) {
         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -392,17 +392,14 @@ private fun NoTasksYet(onNavigate: (String) -> Unit, isAdmin: Boolean) {
             Column(Modifier.weight(1f)) {
                 Text("لا توجد مهام متاحة اليوم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(
-                    if (isAdmin) "أضف كلمات أو استورد درساً لتتولّد خطة يومية"
-                    else "ستتولّد خطتك اليومية تلقائياً عند إضافة كلماتك أو نزول دروسك من السحابة",
+                    "ستتولّد خطتك اليومية تلقائياً عند إضافة كلماتك أو نزول دروسك من السحابة",
                     color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Surface(shape = RoundedCornerShape(12.dp), color = ZIndigo, onClick = {
-                if (isAdmin) onNavigate("import") else onNavigate("levels")
-            }) {
+            Surface(shape = RoundedCornerShape(12.dp), color = ZIndigo, onClick = { onNavigate("levels") }) {
                 Text(
-                    if (isAdmin) "استيراد" else "المستويات",
+                    "المستويات",
                     color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 )

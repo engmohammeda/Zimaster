@@ -50,13 +50,13 @@ private enum class SettingsSection(val title: String, val subtitle: String, val 
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(vm: AppViewModel, onImport: () -> Unit = {}, onBackup: () -> Unit = {}) {
+fun SettingsScreen(vm: AppViewModel, onBackup: () -> Unit = {}) {
     var section by remember { mutableStateOf<SettingsSection?>(null) }
 
     if (section == null) {
         SettingsHub(vm) { section = it }
     } else {
-        SettingsDetail(vm, section!!, onImport, onBackup) { section = null }
+        SettingsDetail(vm, section!!, onBackup) { section = null }
     }
 }
 
@@ -100,7 +100,7 @@ private fun SettingsHub(vm: AppViewModel, onOpen: (SettingsSection) -> Unit) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport: () -> Unit, onBackup: () -> Unit, onBack: () -> Unit) {
+private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onBackup: () -> Unit, onBack: () -> Unit) {
     // AI section is a full dedicated screen
     if (section == SettingsSection.AI) {
         Column(Modifier.fillMaxSize()) {
@@ -159,7 +159,7 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
                     Text("نظام التكرار المتباعد الحديث المبني على نموذج ذاكرة من ثلاثة عوامل: الاستقرار، والصعوبة، وقابلية الاسترجاع — يجدول كل كلمة بدقة لحظة اقتراب نسيانها.", color = ZTextMuted, fontSize = 11.sp, lineHeight = 18.sp)
                 }
             }
-            SettingsSection.BACKUP -> BackupSection(vm, onImport, onBackup)
+            SettingsSection.BACKUP -> BackupSection(vm, onBackup)
             SettingsSection.NOTIFICATIONS -> NotificationSection(vm)
             SettingsSection.HOME -> SettingsGroup("الشاشة الرئيسية") { WidgetRow() }
             SettingsSection.GENERAL -> {
@@ -199,7 +199,7 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
 }
 
 @Composable
-private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -> Unit) {
+private fun BackupSection(vm: AppViewModel, onBackup: () -> Unit) {
     var step by remember { mutableStateOf(0) }      // 0 idle · 1 warn · 2 final
     var typed by remember { mutableStateOf("") }
     var authFailed by remember { mutableStateOf(false) }
@@ -231,10 +231,6 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
 
     Spacer(Modifier.height(16.dp))
     SettingsGroup("المكتبة") {
-        // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون دروسهم من السحابة.
-        if (vm.isAdmin) {
-            ActionRow(Icons.Filled.UploadFile, "استيراد الكورسات 👑", "رفع/لصق JSON أو ZIP", onImport)
-        }
         ActionRow(
             Icons.Filled.LibraryBooks, "محتواك الحالي",
             "${vm.courses.size} كورس · ${vm.lessons.size} درس · ${vm.totalWords} كلمة",
@@ -1259,216 +1255,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                     )
                 }
 
-                // ---- Admin Section: View Registered Users ----
-                if (vm.isAdmin) {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Group, null, tint = ZAmber, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("قائمة الطلاب المسجلين سحابياً", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        TextButton(onClick = { vm.loadRegisteredUsers() }) {
-                            Text(if (vm.isLoadingUsers) "جارٍ الجلب…" else "تحديث القائمة 🔄", color = ZCyan, fontSize = 11.sp)
-                        }
-                    }
 
-                    if (vm.registeredUsersList.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            vm.registeredUsersList.forEach { user ->
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = ZSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Row(
-                                        Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Box(
-                                            Modifier.size(36.dp).clip(CircleShape).background(ZBorder),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                (user.displayName?.take(1) ?: "U").uppercase(),
-                                                color = ZTextPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                        }
-                                        Spacer(Modifier.width(12.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(user.displayName ?: "مستخدم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                if (user.role == "admin") {
-                                                    Spacer(Modifier.width(4.dp))
-                                                    Text("👑", fontSize = 10.sp)
-                                                }
-                                            }
-                                            Text(user.email ?: "حساب مجهول", color = ZTextSecondary, fontSize = 10.sp)
-                                            Text(
-                                                "🔥 ${user.streak} يوم  ·  ⚡ ${user.xp} XP  ·  📚 ${user.completedLessonsCount} درس",
-                                                color = ZTextMuted,
-                                                fontSize = 9.sp,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // ---- Admin: Broadcast Announcement to Students ----
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-
-                    var broadcastTitle by remember { mutableStateOf("") }
-                    var broadcastMessage by remember { mutableStateOf("") }
-                    var broadcastType by remember { mutableStateOf("info") }
-                    var broadcastStatus by remember { mutableStateOf<String?>(null) }
-                    var isBroadcasting by remember { mutableStateOf(false) }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Campaign, null, tint = ZAmber, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("بث إشعار عام للطلاب", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = broadcastTitle,
-                        onValueChange = { broadcastTitle = it },
-                        label = { Text("عنوان الإشعار (مثال: تحديث هام / تحدي الأسبوع)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = broadcastMessage,
-                        onValueChange = { broadcastMessage = it },
-                        label = { Text("نص الرسالة المنشورة للجميع") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        listOf(
-                            "info" to "معلومة 💡",
-                            "update" to "تحديث 🚀",
-                            "challenge" to "تحدي 🏆",
-                            "alert" to "تنبيه ⚠️",
-                        ).forEach { (typeKey, typeLabel) ->
-                            FilterChip(
-                                selected = broadcastType == typeKey,
-                                onClick = { broadcastType = typeKey },
-                                label = { Text(typeLabel, fontSize = 11.sp) },
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            if (broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank()) {
-                                isBroadcasting = true
-                                vm.postAnnouncement(broadcastTitle, broadcastMessage, broadcastType) { success, msg ->
-                                    isBroadcasting = false
-                                    broadcastStatus = msg
-                                    if (success) {
-                                        broadcastTitle = ""
-                                        broadcastMessage = ""
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !isBroadcasting && broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
-                    ) {
-                        Icon(Icons.Filled.Send, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (isBroadcasting) "جارٍ البث..." else "👑 إرسال الإشعار لجميع الطلاب", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-
-                    broadcastStatus?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    // ---- Admin: إدارة عبارات التحفيز السحابية ----
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-
-                    var quoteText by remember { mutableStateOf("") }
-                    var quoteAuthor by remember { mutableStateOf("") }
-                    var quoteStatus by remember { mutableStateOf<String?>(null) }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("💬 عبارات التحفيز اليومية", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        TextButton(onClick = { vm.syncQuotes() }) {
-                            Text("${vm.cloudQuoteCount} عبارة 🔄", color = ZCyan, fontSize = 11.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "عبارة عشوائية واحدة يومياً لكل متعلم، تُسحب من السحابة وتظهر في الودجت والشاشة الرئيسية.",
-                        color = ZTextSecondary, fontSize = 10.sp,
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = quoteText,
-                        onValueChange = { quoteText = it },
-                        label = { Text("نص العبارة التحفيزية") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = quoteAuthor,
-                        onValueChange = { quoteAuthor = it },
-                        label = { Text("المصدر/الكاتب (اختياري)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            vm.addQuote(quoteText, quoteAuthor) { success, msg ->
-                                quoteStatus = msg
-                                if (success) { quoteText = ""; quoteAuthor = "" }
-                            }
-                        },
-                        enabled = !vm.isAddingQuote && quoteText.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
-                    ) {
-                        Text(if (vm.isAddingQuote) "جارٍ النشر..." else "👑 نشر العبارة لكل الأجهزة", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                    quoteStatus?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
             }
         }
     }
