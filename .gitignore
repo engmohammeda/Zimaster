@@ -19,3 +19,4 @@ local.properties
 # ============ Misc ============
 *.hprof
 upload_tool/__pycache__/
+__pycache__/

@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zmastery.english.data.RevealMode
@@ -38,30 +39,21 @@ internal fun LazyListScope.vocabBlock(
     number: Int,
     onRevealMode: (RevealMode) -> Unit,
 ) {
-    item { RevealModeToggle(revealMode, accent, onRevealMode) }
-    item { BlockHeader(number, "المفردات (${words.size})", accent) }
-    items(words.size, key = { "wb_${words[it].id}" }) { idx ->
-        WordRevealCard(words[idx], accent, revealMode)
-    }
-}
-
-/** Toggle at the top of the lesson to switch reveal behaviour. */
-@Composable
-private fun RevealModeToggle(mode: RevealMode, accent: Color, onChange: (RevealMode) -> Unit) {
-    SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
-        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Visibility, null, tint = accent, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("العرض:", color = ZTextSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
+    // مبدّل نمط العرض مدمج في رأس البلوك نفسه — يوفّر بطاقة كاملة كانت
+    // تُستهكل أعلى كل درس (مساحة أقل، نفس الوظيفة).
+    item {
+        BlockHeader(number, "المفردات (${words.size})", accent) {
             Row(
-                Modifier.clip(RoundedCornerShape(10.dp)).background(ZSurfaceVariant).padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                Modifier.clip(RoundedCornerShape(12.dp)).background(ZSurfaceVariant).padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                RevealSeg("كامل", mode == RevealMode.FULL, accent) { onChange(RevealMode.FULL) }
-                RevealSeg("الكلمة فقط", mode == RevealMode.WORD_ONLY, accent) { onChange(RevealMode.WORD_ONLY) }
+                RevealSeg("كامل", revealMode == RevealMode.FULL, accent) { onRevealMode(RevealMode.FULL) }
+                RevealSeg("الكلمة فقط", revealMode == RevealMode.WORD_ONLY, accent) { onRevealMode(RevealMode.WORD_ONLY) }
             }
         }
+    }
+    items(words.size, key = { "wb_${words[it].id}" }) { idx ->
+        WordRevealCard(words[idx], accent, revealMode)
     }
 }
 
@@ -91,19 +83,27 @@ private fun WordRevealCard(word: VocabWord, accent: Color, mode: RevealMode) {
         modifier = Modifier.fillMaxWidth(),
         onClick = if (clickable) ({ revealed = !revealed }) else null,
     ) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 com.zmastery.english.audio.AudioButton(
                     text = if (word.exampleEn.isNotBlank()) "${word.english}. ${word.exampleEn}" else word.english,
                     audioKey = "wb_${word.id}", accent = accent, size = 40.dp, iconSize = 20.dp,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(word.english, color = ZTextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        word.english,
+                        color = ZTextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
                     if (word.phonetic.isNotBlank()) Text(word.phonetic, color = accent, fontSize = 12.sp)
                 }
                 if (revealed) {
-                    Text(word.arabic, color = ZAmber, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    // الترجمة تُترك تلتف طبيعياً (قد تكون طويلة) — الكلمة فقط تُقتطع.
+                    Text(
+                        word.arabic,
+                        color = ZAmber, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                    )
                 }
             }
 
@@ -114,23 +114,23 @@ private fun WordRevealCard(word: VocabWord, accent: Color, mode: RevealMode) {
             ) { show ->
                 if (show && word.exampleEn.isNotBlank()) {
                     Column {
-                        Spacer(Modifier.height(14.dp))
-                        Divider(color = accent.copy(alpha = 0.35f))
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider(color = accent.copy(alpha = 0.35f))
+                        Spacer(Modifier.height(16.dp))
                         Row(verticalAlignment = Alignment.Top) {
                             Text("💡", fontSize = 16.sp)
                             Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(word.exampleEn, color = ZTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Text(word.exampleAr, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 22.sp)
                             }
                         }
                         if (word.mentalImage.isNotBlank()) {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Image, null, tint = accent, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text(word.mentalImage, color = ZTextMuted, fontSize = 12.sp)
                             }
                         }
@@ -138,7 +138,7 @@ private fun WordRevealCard(word: VocabWord, accent: Color, mode: RevealMode) {
                 } else if (!show) {
                     Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.TouchApp, null, tint = ZTextMuted, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("اضغط لكشف المعنى والجملة", color = ZTextMuted, fontSize = 12.sp)
                     }
                 }

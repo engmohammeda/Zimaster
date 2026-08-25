@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 controller.isAppearanceLightNavigationBars = !dark
             }
             val startRoute = pendingRoute ?: intent?.getStringExtra("nav_route")
-            AgonAppTheme(darkTheme = dark) {
+            ZMasteryTheme(darkTheme = dark) {
                 // Provide the TTS engine + a telemetry sink so EVERY audio
                 // button in the app contributes to listening-time analytics.
                 com.zmastery.english.audio.ProvideAudio(
@@ -134,8 +134,8 @@ private val moreGroups = listOf(
     MoreGroup(
         "المحتوى", listOf(
             MoreItem("mnemonics", "الروابط الذهنية", "صور تثبّت الكلمات", Icons.Filled.Link, listOf(ZPurple, ZRose)),
-            MoreItem("stories", "أرشيف القصص", "قصة اليوم", Icons.Filled.AutoStories, listOf(ZAmber, Color(0xFFEA580C))),
-            MoreItem("roadmap", "خريطة المنهج", "تابع خطتك", Icons.Filled.Map, listOf(ZEmerald, Color(0xFF059669))),
+            MoreItem("stories", "أرشيف القصص", "قصة اليوم", Icons.Filled.AutoStories, listOf(ZAmber, ZRoseDeep)),
+            MoreItem("roadmap", "خريطة المنهج", "تابع خطتك", Icons.Filled.Map, listOf(ZEmerald, ZEmeraldDeep)),
         ),
     ),
     MoreGroup(
@@ -147,7 +147,7 @@ private val moreGroups = listOf(
     MoreGroup(
         "الإعداد", listOf(
             MoreItem("profile", "الملف الشخصي", "بياناتك وإحصائياتك", Icons.Filled.Person, listOf(ZIndigo, ZCyanDeep)),
-            MoreItem("settings", "الإعدادات", "التخصيص وAPI", Icons.Filled.Settings, listOf(Color(0xFF475569), Color(0xFF64748B))),
+            MoreItem("settings", "الإعدادات", "التخصيص وAPI", Icons.Filled.Settings, listOf(ZCyanDeep, ZIndigo)),
             MoreItem("backup", "النسخ الاحتياطي", "صدّر واستعد", Icons.Filled.CloudSync, listOf(ZEmerald, ZCyanDeep)),
         ),
     ),
@@ -263,7 +263,7 @@ fun ZMasteryApp(
     // "dashboard" is ALSO deliberately excluded — it renders its own
     // Duolingo-style StreakTopBar at the very top of the screen, so the
     // generic app bar underneath it would just be redundant duplication.
-    val extraTop = listOf("stories", "stories/{focus}", "settings", "profile", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum")
+    val extraTop = listOf("stories", "stories/{focus}", "settings", "profile", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools")
     val showBars = currentRoute in (tabs.map { it.route }.filter { it != "dashboard" } + extraTop)
 
     // Navigate to a top-level destination as a SINGLE instance:
@@ -289,7 +289,7 @@ fun ZMasteryApp(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                if (showBars) TopBar(currentRoute, onImport = { goTopLevel("import") })
+                if (showBars) TopBar(currentRoute)
             },
             bottomBar = {
                 if (currentRoute in tabs.map { it.route } || currentRoute in extraTop) {
@@ -341,7 +341,10 @@ fun ZMasteryApp(
                 composable("analytics") { AnalyticsScreen(vm) }
                 composable("import") { ImportScreen(vm) }
                 composable("backup") { BackupScreen(vm) }
-                composable("settings") { SettingsScreen(vm, onImport = { goTopLevel("import") }, onBackup = { goTopLevel("backup") }) }
+                composable("devtools") {
+                    DeveloperToolsScreen(vm, onOpenImport = { nav.navigate("import") })
+                }
+                composable("settings") { SettingsScreen(vm, onBackup = { goTopLevel("backup") }) }
                 composable("profile") { ProfileScreen(vm, onBack = { nav.popBackStack() }) }
                 composable("course/{id}") { entry ->
                     val id = entry.arguments?.getString("id")?.toIntOrNull() ?: 1
@@ -384,7 +387,7 @@ fun ZMasteryApp(
                 dragHandle = { BottomSheetDefaults.DragHandle(color = ZBorder) },
             ) {
                 MoreSheetContent(
-                    onImport = { closeSheetAndGo("import") },
+                    isAdmin = vm.isAdmin,
                     onNavigate = { r -> closeSheetAndGo(r) },
                 )
             }
@@ -441,17 +444,17 @@ private fun ExitConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
  *     and a chevron — instead of a grid of disconnected mini-tiles.
  */
 @Composable
-private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit) {
+private fun MoreSheetContent(isAdmin: Boolean, onNavigate: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 28.dp),
     ) {
-        // ── Hero header — mesh gradient backdrop + real headline ──
+        // ── Hero header — mesh gradient backdrop + real headline (للجميع) ──
         Box(
             Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(ZIndigo, ZPurple)))
                 .drawBehind {
                     drawCircle(
@@ -465,7 +468,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                         center = androidx.compose.ui.geometry.Offset(size.width * 0.05f, size.height * 1.05f),
                     )
                 }
-                .padding(horizontal = 22.dp, vertical = 24.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Column {
                 Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
@@ -474,71 +477,105 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("مركز التحكم", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "كل أدواتك في مكان واحد",
                     color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black, lineHeight = 28.sp,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "الدراسة، التقدّم، والإعداد — منظّمة لتصل لما تريد بأقل عدد لمسات",
-                    color = Color.White.copy(alpha = 0.88f), fontSize = 12.5.sp, lineHeight = 18.sp,
+                    color = Color.White.copy(alpha = 0.88f), fontSize = 12.sp, lineHeight = 18.sp,
                 )
             }
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // ── Spotlight hero card: Import (the critical first action) ──
-        Box(Modifier.padding(horizontal = 16.dp)) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.Transparent,
-                modifier = Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(24.dp), ambientColor = ZIndigo.copy(alpha = 0.25f), spotColor = ZIndigo.copy(alpha = 0.25f)),
-                onClick = onImport,
-            ) {
-                Box(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                        .background(Brush.linearGradient(listOf(ZCyanDeep, ZIndigo)))
-                        .drawBehind {
-                            drawCircle(
-                                Color.White.copy(alpha = 0.08f),
-                                radius = size.minDimension * 0.6f,
-                                center = androidx.compose.ui.geometry.Offset(size.width * 1.02f, size.height * 0.5f),
-                            )
-                        }
-                        .padding(20.dp),
+        // ── بوابة المطور الذهبية — كل أدوات النشر في مكان واحد ──
+        if (isAdmin) {
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
+                        .shadow(14.dp, RoundedCornerShape(24.dp), ambientColor = ZAmber.copy(alpha = 0.30f), spotColor = ZAmber.copy(alpha = 0.30f)),
+                    onClick = { onNavigate("devtools") },
                 ) {
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                            .background(Brush.linearGradient(listOf(ZAmberDeep, ZAmber)))
+                            .drawBehind {
+                                drawCircle(
+                                    Color.White.copy(alpha = 0.10f),
+                                    radius = size.minDimension * 0.55f,
+                                    center = androidx.compose.ui.geometry.Offset(size.width * 0.95f, -size.height * 0.2f),
+                                )
+                            }
+                            .padding(20.dp),
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(50.dp).clip(RoundedCornerShape(16.dp))
+                                        .background(Color.White.copy(alpha = 0.22f)),
+                                    contentAlignment = Alignment.Center,
+                                ) { Icon(Icons.Filled.AdminPanelSettings, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("أدوات المطور والمسؤول 👑", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "رفع الدروس · بث الإعلانات · العبارات · الطلاب",
+                                        color = Color.White.copy(alpha = 0.92f), fontSize = 11.sp,
+                                    )
+                                }
+                                Icon(Icons.Filled.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Surface(shape = RoundedCornerShape(50), color = Color.White) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                ) {
+                                    Text("فتح مركز النشر", color = ZAmberDeep, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Filled.ArrowBackIosNew, null, tint = ZAmberDeep, modifier = Modifier.size(12.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+        } else {
+            // ── بطاقة الطالب: لا استيراد — الدروس تصل من السحابة تلقائياً ──
+            Box(
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Brush.linearGradient(listOf(ZCyanDeep, ZIndigo)))
+                    .padding(20.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.CloudDownload, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
+                    Spacer(Modifier.width(12.dp))
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(54.dp).clip(RoundedCornerShape(17.dp))
-                                    .background(Color.White.copy(alpha = 0.22f))
-                                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), RoundedCornerShape(17.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Filled.UploadFile, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("استيراد الدروس", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                                Spacer(Modifier.height(2.dp))
-                                Text("أضف كورساتك عبر JSON أو ZIP أو لصق مباشر", color = Color.White.copy(alpha = 0.85f), fontSize = 11.5.sp, lineHeight = 16.sp)
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        Surface(shape = RoundedCornerShape(50), color = Color.White) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-                            ) {
-                                Text("ابدأ الآن", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 12.5.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Icon(Icons.Filled.ArrowBackIosNew, null, tint = ZIndigo, modifier = Modifier.size(12.dp))
-                            }
-                        }
+                        Text("دروسك تصل تلقائياً", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "كل درس ينشره معلمك يظهر لديك عند فتح التطبيق — لا تحتاج استيراد أي ملف",
+                            color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, lineHeight = 17.sp,
+                        )
                     }
                 }
             }
@@ -546,13 +583,15 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
 
         // ── Grouped destinations — one elevated "settings-style" card per group ──
         moreGroups.forEach { group ->
-            Spacer(Modifier.height(22.dp))
+            val visibleItems = group.items.filter { it.route != "import" || isAdmin }
+            if (visibleItems.isEmpty()) return@forEach
+            Spacer(Modifier.height(24.dp))
             Text(
                 group.title, color = ZTextSecondary,
                 fontWeight = FontWeight.Black, fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 22.dp),
+                modifier = Modifier.padding(horizontal = 24.dp),
             )
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(8.dp))
             Box(Modifier.padding(horizontal = 16.dp)) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
@@ -561,31 +600,31 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column {
-                        group.items.forEachIndexed { idx, item ->
+                        visibleItems.forEachIndexed { idx, item ->
                             Surface(
                                 color = Color.Transparent,
                                 onClick = { onNavigate(item.route) },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Row(
-                                    Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                                    Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                        Modifier.size(42.dp).clip(RoundedCornerShape(13.dp))
+                                        Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
                                             .background(Brush.linearGradient(item.colors)),
                                         contentAlignment = Alignment.Center,
                                     ) { Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(21.dp)) }
-                                    Spacer(Modifier.width(13.dp))
+                                    Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(item.label, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(item.desc, color = ZTextSecondary, fontSize = 11.5.sp, maxLines = 1)
+                                        Text(item.desc, color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)
                                     }
                                     Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted, modifier = Modifier.size(20.dp))
                                 }
                             }
                             if (idx < group.items.lastIndex) {
-                                Divider(color = ZBorder, modifier = Modifier.padding(start = 69.dp, end = 14.dp))
+                                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(start = 69.dp, end = 14.dp))
                             }
                         }
                     }
@@ -597,7 +636,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(route: String?, onImport: () -> Unit) {
+private fun TopBar(route: String?) {
     val title = when (route) {
         "dashboard" -> "لوحة القيادة"
         "review" -> "مراجعة الكلمات"
@@ -614,6 +653,7 @@ private fun TopBar(route: String?, onImport: () -> Unit) {
         "momentum" -> "زخم الالتزام"
         "mnemonics" -> "الروابط الذهنية"
         "import" -> "استيراد الكورسات"
+        "devtools" -> "أدوات المطور 👑"
         "backup" -> "النسخ الاحتياطي"
         "settings" -> "الإعدادات"
         else -> "Z-Mastery"
@@ -622,19 +662,17 @@ private fun TopBar(route: String?, onImport: () -> Unit) {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(30.dp).clip(RoundedCornerShape(9.dp))
+                    Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
                         .background(Brush.linearGradient(listOf(ZIndigo, ZCyan))),
                     contentAlignment = Alignment.Center,
                 ) { Text("Z", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp) }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },
         actions = {
-            IconButton(onClick = onImport) {
-                Icon(Icons.Filled.UploadFile, "استيراد", tint = ZIndigo)
-            }
-        },
+            // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون الدروس من السحابة.
+        }
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = ZSurface.copy(alpha = 0.85f),
             titleContentColor = ZTextPrimary,

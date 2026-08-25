@@ -1,0 +1,51 @@
+Zimaster (Z-Mastery) — English Mastery Application
+==================================================
+
+Copyright (c) 2026 Mohammed Al-Bukhaiti (محمد البخيتي)
+All rights reserved.
+
+1. Ownership
+-----------
+This source code, its design, assets, and documentation are the exclusive
+property of the copyright holder. "Zimaster", "Z-Mastery", the application
+icon, and the Dusk Indigo design system are protected works.
+
+2. Permitted Use
+----------------
+a. Anyone may READ, clone, and build this repository for PERSONAL,
+   NON-COMMERCIAL evaluation and learning purposes.
+b. Contributions are welcome exclusively through the official repository's
+   Pull Request process. By submitting a contribution you grant the copyright
+   holder a perpetual, worldwide, irrevocable license to use, modify, and
+   redistribute your contribution as part of this project.
+
+3. Prohibited Use
+-----------------
+Without prior WRITTEN permission from the copyright holder, you may NOT:
+a. Distribute, publish, sublicense, or sell this software or any substantial
+   part of it — including compiled APK/AAB builds of this source.
+b. Publish it on any application store or marketplace under any name.
+c. Remove, obscure, or alter any copyright notice, attribution, or license
+   terms contained within.
+d. Use it to train commercial machine-learning models or datasets.
+
+4. Commercial & Store Licensing
+-------------------------------
+Licensing for commercial use, deployment, or redistribution is available
+upon request. Contact the copyright holder via the repository's owner page:
+https://github.com/engmohammeda
+
+5. Trademarks
+-------------
+Product names, logos, and brands mentioned are the property of their
+respective owners and are used for identification purposes only.
+
+6. Disclaimer of Warranty
+-------------------------
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH
+THE SOFTWARE OR ITS USE.
+
+For permissions beyond the scope of this license, contact:
+https://github.com/engmohammeda

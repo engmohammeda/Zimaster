@@ -91,19 +91,19 @@ fun BackupScreen(vm: AppViewModel) {
         // Hero
         Box(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(22.dp)
+                .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(24.dp)
         ) {
             Column {
                 Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Shield, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("حماية بياناتك", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text("النسخ الاحتياطي والاستعادة", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "احفظ كل بياناتك في ملف واحد واستعدها في أي وقت. أصوات النطق تُولّد تلقائياً من النصوص المحفوظة — لا شيء يُفقد.",
                     color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp, lineHeight = 20.sp,
@@ -218,11 +218,11 @@ private fun SnapshotCard(vm: AppViewModel) {
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
             SnapStat("${vm.courses.count { c -> vm.lessons.any { it.courseId == c.id } }}", "كورس", ZIndigo)
-            Divider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
+            HorizontalDivider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
             SnapStat("${vm.lessons.size}", "درس", ZCyanDeep)
-            Divider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
+            HorizontalDivider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
             SnapStat("${vm.totalWords}", "كلمة", ZEmerald)
-            Divider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
+            HorizontalDivider(Modifier.height(36.dp).width(1.dp), color = ZBorder)
             SnapStat("${vm.hardWordsCount}", "صعبة", ZRose)
         }
     }
@@ -238,7 +238,7 @@ private fun SnapStat(value: String, label: String, accent: Color) {
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, color = ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp))
+    Text(text, color = ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
 }
 
 @Composable
@@ -252,7 +252,7 @@ private fun BackupCard(
     onClick: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         color = ZCard,
         shadowElevation = if (enabled) 5.dp else 0.dp,
         modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.5f),
@@ -260,16 +260,16 @@ private fun BackupCard(
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.14f)),
+                Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp)) }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(desc, color = ZTextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
             }
-            Spacer(Modifier.width(10.dp))
-            Surface(shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = 0.14f)) {
+            Spacer(Modifier.width(12.dp))
+            Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.14f)) {
                 Text(actionText, color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
             }
         }

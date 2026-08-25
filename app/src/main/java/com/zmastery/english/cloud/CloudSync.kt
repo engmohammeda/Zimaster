@@ -23,6 +23,7 @@ object CloudSync {
     private const val USERS_COLLECTION = "users"
     private const val ANNOUNCEMENTS_COLLECTION = "announcements"
     private const val QUOTES_COLLECTION = "quotes"
+    private const val LEADERBOARD_COLLECTION = "leaderboard"
     private const val UPDATED_AT = "updated_at"
 
     /** Known super-admin emails */
@@ -79,11 +80,6 @@ object CloudSync {
 
         val isSuperAdmin = user.email?.lowercase()?.trim() in SUPER_ADMIN_EMAILS
         val existingRole = existingDoc.getString("role")
-        val finalRole = when {
-            isSuperAdmin -> "admin"
-            existingRole != null -> existingRole
-            else -> "student"
-        }
 
         val userData = mutableMapOf<String, Any?>(
             "uid" to user.uid,
@@ -91,7 +87,6 @@ object CloudSync {
             "displayName" to (user.displayName ?: profile.displayName ?: "Learner"),
             "photoUrl" to (user.photoUrl?.toString() ?: profile.photoUrl),
             "isAnonymous" to user.isAnonymous,
-            "role" to finalRole,
             "streak" to profile.streak,
             "xp" to profile.xp,
             "completedLessonsCount" to profile.completedLessonsCount,
@@ -101,9 +96,15 @@ object CloudSync {
             "lastActiveMillis" to System.currentTimeMillis(),
             "deviceModel" to "${Build.MANUFACTURER} ${Build.MODEL}",
             "androidVersion" to Build.VERSION.RELEASE,
-            "appVersion" to "1.1.0",
+            "appVersion" to com.zmastery.english.BuildConfig.VERSION_NAME,
             "platform" to "android",
         )
+
+        // SECURITY (anti privilege-escalation): the 'role' key is written ONLY
+        // by the verified super-admin account. Everyone else must omit it
+        // entirely — Firestore rules reject any write that attempts to change
+        // 'role', so sending it would break the whole profile sync.
+        if (isSuperAdmin) userData["role"] = "admin"
 
         if (!existingDoc.exists()) {
             userData["createdAt"] = FieldValue.serverTimestamp()
@@ -111,7 +112,30 @@ object CloudSync {
         }
 
         userRef.set(userData, SetOptions.merge()).await()
-        finalRole
+
+        // Public leaderboard mirror. /leaderboard is readable by EVERY signed-in
+        // learner, so it must never contain the email (or any private field) —
+        // the same rule also validates this server-side.
+        db.collection(LEADERBOARD_COLLECTION).document(user.uid).set(
+            mapOf(
+                "uid" to user.uid,
+                "displayName" to (user.displayName ?: profile.displayName ?: "Learner"),
+                "photoUrl" to (user.photoUrl?.toString() ?: profile.photoUrl),
+                "streak" to profile.streak,
+                "xp" to profile.xp,
+                "completedLessonsCount" to profile.completedLessonsCount,
+                "wordsLearnedCount" to profile.wordsLearnedCount,
+                "accuracy" to profile.accuracy,
+                "lastActiveMillis" to System.currentTimeMillis(),
+            ),
+            SetOptions.merge(),
+        ).await()
+
+        when {
+            isSuperAdmin -> "admin"
+            existingRole != null -> existingRole
+            else -> "student"
+        }
     }
 
     /**
@@ -402,18 +426,20 @@ object CloudSync {
     }
 
     /**
-     * Fetch global leaderboard sorted by XP or streak.
+     * Fetch the global leaderboard from `/leaderboard` — a public mirror of
+     * each learner's stats that deliberately contains NO email and NO role.
+     * (Reading `/users` directly is admin-only under the Firestore rules.)
      */
     suspend fun fetchLeaderboard(limit: Int = 30): Result<List<UserRecord>> = runCatching {
         val snap = try {
-            db.collection(USERS_COLLECTION)
+            db.collection(LEADERBOARD_COLLECTION)
                 .orderBy("xp", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get()
                 .await()
         } catch (e: Exception) {
-            db.collection(USERS_COLLECTION)
-                .limit(limit.toLong() * 2)
+            db.collection(LEADERBOARD_COLLECTION)
+                .limit((limit * 2).toLong())
                 .get()
                 .await()
         }
@@ -421,17 +447,17 @@ object CloudSync {
         snap.documents.mapNotNull { doc ->
             UserRecord(
                 uid = doc.getString("uid") ?: doc.id,
-                email = doc.getString("email"),
+                email = null,
                 displayName = doc.getString("displayName") ?: "متعلم",
                 photoUrl = doc.getString("photoUrl"),
-                role = doc.getString("role") ?: "student",
+                role = "student",
                 streak = (doc.getLong("streak") ?: 0L).toInt(),
                 xp = (doc.getLong("xp") ?: 0L).toInt(),
                 completedLessonsCount = (doc.getLong("completedLessonsCount") ?: 0L).toInt(),
                 wordsLearnedCount = (doc.getLong("wordsLearnedCount") ?: 0L).toInt(),
                 accuracy = doc.getDouble("accuracy") ?: 0.0,
                 lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
-                deviceModel = doc.getString("deviceModel"),
+                deviceModel = null,
             )
         }.sortedByDescending { it.xp }
     }

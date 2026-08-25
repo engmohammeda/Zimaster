@@ -6,7 +6,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 // ==========================================================================
-// Dynamic warm palette with full light + dark support.
+// «Dusk Indigo» — the Z-Mastery design language (v2, adopted 2026/08/25).
+//
+// A calm, modern learning palette: soft periwinkle indigo, teal support and a
+// warm amber accent, on cool near-white / deep-navy canvases.
+//
 // Screens read the ZXxx properties directly; they are computed getters that
 // depend on ZThemeState.isDark (a Compose state), so toggling dark mode
 // recomposes the entire app instantly — no per-screen changes needed.
@@ -17,30 +21,35 @@ object ZThemeState {
 }
 
 // ---- Canvas & surfaces ----
-val ZBackground: Color get() = if (ZThemeState.isDark) Color(0xFF1A1613) else Color(0xFFF3ECE1) // warm charcoal / warm cream
-val ZSurface: Color get() = if (ZThemeState.isDark) Color(0xFF241F1A) else Color(0xFFFFFFFF)     // bars / nav
-val ZSurfaceVariant: Color get() = if (ZThemeState.isDark) Color(0xFF2E2822) else Color(0xFFEDE3D5) // chips / fills
-val ZCard: Color get() = if (ZThemeState.isDark) Color(0xFF29231D) else Color(0xFFFFFFFF)        // cards
+val ZBackground: Color get() = if (ZThemeState.isDark) Color(0xFF12131C) else Color(0xFFF4F5F9)   // deep navy / cool near-white
+val ZSurface: Color get() = if (ZThemeState.isDark) Color(0xFF1B1D2A) else Color(0xFFFFFFFF)      // bars / nav
+val ZSurfaceVariant: Color get() = if (ZThemeState.isDark) Color(0xFF262938) else Color(0xFFE9EBF2) // chips / fills
+val ZCard: Color get() = if (ZThemeState.isDark) Color(0xFF202231) else Color(0xFFFFFFFF)         // cards
 
-// ---- Brand accents (warm) — softened slightly in dark for comfort ----
-val ZIndigo: Color get() = if (ZThemeState.isDark) Color(0xFFE88968) else Color(0xFFE07856)      // primary terracotta
-val ZPurple: Color get() = if (ZThemeState.isDark) Color(0xFFD46F4F) else Color(0xFFCB5F41)      // deep sienna (gradient)
-val ZCyan: Color get() = if (ZThemeState.isDark) Color(0xFF87AA9A) else Color(0xFF6B9080)        // sage green
-val ZCyanDeep: Color get() = if (ZThemeState.isDark) Color(0xFF6B9488) else Color(0xFF52796F)    // pine teal
-val ZEmerald: Color get() = if (ZThemeState.isDark) Color(0xFF74B48C) else Color(0xFF5E9C76)     // success green
-val ZAmber: Color get() = if (ZThemeState.isDark) Color(0xFFE9B36A) else Color(0xFFE0A34E)       // warm gold
-val ZRose: Color get() = if (ZThemeState.isDark) Color(0xFFE38C80) else Color(0xFFD9776A)        // soft coral
+// ---- Brand accents — lightened in dark mode for comfort ----
+val ZIndigo: Color get() = if (ZThemeState.isDark) Color(0xFF8E94F0) else Color(0xFF5B62D6)       // primary periwinkle indigo
+val ZPurple: Color get() = if (ZThemeState.isDark) Color(0xFF6A70E0) else Color(0xFF4148B8)       // deep indigo (gradient partner)
+val ZCyan: Color get() = if (ZThemeState.isDark) Color(0xFF5BC2B0) else Color(0xFF2E9E8F)         // teal
+val ZCyanDeep: Color get() = if (ZThemeState.isDark) Color(0xFF4FA996) else Color(0xFF1F7A6E)     // deep teal
+val ZEmerald: Color get() = if (ZThemeState.isDark) Color(0xFF6FCB92) else Color(0xFF2FA36B)      // success green
+val ZAmber: Color get() = if (ZThemeState.isDark) Color(0xFFE8B26A) else Color(0xFFE8A23D)        // warm gold
+val ZRose: Color get() = if (ZThemeState.isDark) Color(0xFFE08282) else Color(0xFFD66060)         // soft coral (danger)
 
 // ---- Text ----
-val ZTextPrimary: Color get() = if (ZThemeState.isDark) Color(0xFFF3EDE4) else Color(0xFF33302C)
-val ZTextSecondary: Color get() = if (ZThemeState.isDark) Color(0xFFB6ABA0) else Color(0xFF6F6A62)
-val ZTextMuted: Color get() = if (ZThemeState.isDark) Color(0xFF7E7468) else Color(0xFFA79F94)
-val ZBorder: Color get() = if (ZThemeState.isDark) Color(0xFF3A322A) else Color(0xFFEDE4D6)
+val ZTextPrimary: Color get() = if (ZThemeState.isDark) Color(0xFFEDEEF4) else Color(0xFF2A2C38)
+val ZTextSecondary: Color get() = if (ZThemeState.isDark) Color(0xFFA8ABC2) else Color(0xFF5F6272)
+val ZTextMuted: Color get() = if (ZThemeState.isDark) Color(0xFF6E7188) else Color(0xFF9A9DAD)
+val ZBorder: Color get() = if (ZThemeState.isDark) Color(0xFF323648) else Color(0xFFE2E4EC)
 
-// Legacy names kept for any Theme references
-val Purple80 = Color(0xFFF5C6B0)
-val PurpleGrey80 = Color(0xFFDED3C6)
-val Pink80 = Color(0xFFF3C4A6)
-val Purple40 = Color(0xFFE07856)
-val PurpleGrey40 = Color(0xFF6B9080)
-val Pink40 = Color(0xFFD9776A)
+// ---- Semantic deep variants (readable text on tinted chips in LIGHT mode) ----
+val ZEmeraldDeep: Color get() = if (ZThemeState.isDark) Color(0xFF9EE7BC) else Color(0xFF1F7A4D)
+val ZRoseDeep: Color get() = if (ZThemeState.isDark) Color(0xFFF3B8B8) else Color(0xFFB4443E)
+val ZAmberDeep: Color get() = if (ZThemeState.isDark) Color(0xFFF3D5A0) else Color(0xFF8F6614)
+
+// Legacy names kept for any older references
+val Purple80 = Color(0xFFC7CBF7)
+val PurpleGrey80 = Color(0xFF323648)
+val Pink80 = Color(0xFFE8B26A)
+val Purple40 = Color(0xFF5B62D6)
+val PurpleGrey40 = Color(0xFF2E9E8F)
+val Pink40 = Color(0xFFE8A23D)

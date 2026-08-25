@@ -38,25 +38,25 @@ import com.zmastery.english.viewmodel.AppViewModel
 
 private enum class SettingsSection(val title: String, val subtitle: String, val icon: ImageVector, val colors: List<Color>) {
     AI("الذكاء الاصطناعي", "النماذج · المفاتيح · الأصوات · الشخصيات · المطالبات", Icons.Filled.AutoAwesome, listOf(ZIndigo, ZPurple)),
-    APPEARANCE("المظهر", "الوضع النهاري/الليلي والألوان", Icons.Filled.Palette, listOf(ZAmber, Color(0xFFEA580C))),
+    APPEARANCE("المظهر", "الوضع النهاري/الليلي والألوان", Icons.Filled.Palette, listOf(ZAmber, ZRoseDeep)),
     LEARNING("التعلم", "الهدف اليومي وطريقة عرض الكلمات", Icons.Filled.School, listOf(ZCyanDeep, ZCyan)),
-    REVIEW("محرّك المراجعة", "إعدادات FSRS والتكرار المتباعد", Icons.Filled.Science, listOf(ZEmerald, Color(0xFF059669))),
+    REVIEW("محرّك المراجعة", "إعدادات FSRS والتكرار المتباعد", Icons.Filled.Science, listOf(ZEmerald, ZEmeraldDeep)),
     BACKUP("النسخ الاحتياطي والبيانات", "التصدير · الاستعادة · المكتبة · حذف المحتوى", Icons.Filled.CloudSync, listOf(ZEmerald, ZCyanDeep)),
     NOTIFICATIONS("الإشعارات والتنبيهات", "التذكير اليومي وتنبيهات الحماسة والأصوات", Icons.Filled.NotificationsActive, listOf(ZAmber, ZRose)),
     HOME("الشاشة الرئيسية", "أداة الشاشة الرئيسية", Icons.Filled.Widgets, listOf(ZPurple, ZIndigo)),
-    GENERAL("عام", "اللغة والمزامنة", Icons.Filled.Settings, listOf(Color(0xFF64748B), Color(0xFF475569))),
-    ABOUT("حول", "الإصدار والخصوصية", Icons.Filled.Info, listOf(Color(0xFF6B9080), Color(0xFF52796F))),
+    GENERAL("عام", "اللغة والمزامنة", Icons.Filled.Settings, listOf(ZCyanDeep, ZIndigo)),
+    ABOUT("حول", "الإصدار والخصوصية", Icons.Filled.Info, listOf(ZEmerald, ZEmeraldDeep)),
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen(vm: AppViewModel, onImport: () -> Unit = {}, onBackup: () -> Unit = {}) {
+fun SettingsScreen(vm: AppViewModel, onBackup: () -> Unit = {}) {
     var section by remember { mutableStateOf<SettingsSection?>(null) }
 
     if (section == null) {
         SettingsHub(vm) { section = it }
     } else {
-        SettingsDetail(vm, section!!, onImport, onBackup) { section = null }
+        SettingsDetail(vm, section!!, onBackup) { section = null }
     }
 }
 
@@ -64,10 +64,10 @@ fun SettingsScreen(vm: AppViewModel, onImport: () -> Unit = {}, onBackup: () -> 
 private fun SettingsHub(vm: AppViewModel, onOpen: (SettingsSection) -> Unit) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Profile header
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(22.dp)) {
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(64.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
                     Text("Z", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
@@ -80,12 +80,12 @@ private fun SettingsHub(vm: AppViewModel, onOpen: (SettingsSection) -> Unit) {
             }
         }
         SettingsSection.values().forEach { s ->
-            Surface(shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = { onOpen(s) }) {
+            Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = { onOpen(s) }) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(s.colors)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(s.colors)), contentAlignment = Alignment.Center) {
                         Icon(s.icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text(s.title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(s.subtitle, color = ZTextSecondary, fontSize = 11.sp)
@@ -100,7 +100,7 @@ private fun SettingsHub(vm: AppViewModel, onOpen: (SettingsSection) -> Unit) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport: () -> Unit, onBackup: () -> Unit, onBack: () -> Unit) {
+private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onBackup: () -> Unit, onBack: () -> Unit) {
     // AI section is a full dedicated screen
     if (section == SettingsSection.AI) {
         Column(Modifier.fillMaxSize()) {
@@ -120,21 +120,21 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
             SettingsSection.LEARNING -> SettingsGroup("التعلم") {
                 SliderRow(vm)
                 RevealModeRow(vm)
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 ToggleRow(
                     Icons.Filled.VolumeUp,
                     "تشغيل النطق تلقائياً",
                     "يُنطق الصوت فور ظهور كل مرحلة في المراجعة",
                     vm.reviewAutoPlay,
                 ) { vm.reviewAutoPlay = it; vm.persist() }
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 ToggleRow(
                     Icons.Filled.PowerSettingsNew,
                     "إيقاف توليد الأصوات بالذكاء الاصطناعي نهائياً",
                     "عند التفعيل، لن يُولَّد أي صوت AI إطلاقاً (لا تلقائياً ولا يدوياً) — يبقى النطق الفوري المحلي يعمل كالمعتاد لكل الأزرار. أوقف هذا إذا كنت لا تريد استهلاك حصة Gemini إطلاقاً.",
                     vm.aiAudioEnabled,
                 ) { vm.updateAiAudioEnabled(it) }
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 ToggleRow(
                     Icons.Filled.AutoAwesome,
                     "توليد وحفظ الصوت بالذكاء الاصطناعي تلقائياً",
@@ -142,24 +142,24 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
                     vm.autoGenerateAiAudio,
                     enabled = vm.aiAudioEnabled,
                 ) { vm.autoGenerateAiAudio = it; vm.persist() }
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 AudioGenStatusRow(vm)
             }
             SettingsSection.REVIEW -> SettingsGroup("محرّك المراجعة (FSRS)") {
                 RetentionRow(vm)
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 IntervalRow(vm)
-                Column(Modifier.padding(14.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Science, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("خوارزمية FSRS-5", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text("نظام التكرار المتباعد الحديث المبني على نموذج ذاكرة من ثلاثة عوامل: الاستقرار، والصعوبة، وقابلية الاسترجاع — يجدول كل كلمة بدقة لحظة اقتراب نسيانها.", color = ZTextMuted, fontSize = 11.sp, lineHeight = 18.sp)
                 }
             }
-            SettingsSection.BACKUP -> BackupSection(vm, onImport, onBackup)
+            SettingsSection.BACKUP -> BackupSection(vm, onBackup)
             SettingsSection.NOTIFICATIONS -> NotificationSection(vm)
             SettingsSection.HOME -> SettingsGroup("الشاشة الرئيسية") { WidgetRow() }
             SettingsSection.GENERAL -> {
@@ -172,7 +172,7 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
             SettingsSection.ABOUT -> SettingsGroup("حول") {
                 // The mission is the product thesis — always re-readable.
                 Column(
-                    Modifier.fillMaxWidth().padding(14.dp),
+                    Modifier.fillMaxWidth().padding(16.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Insights, null, tint = ZIndigo, modifier = Modifier.size(18.dp))
@@ -187,7 +187,7 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
                         color = ZTextMuted, fontSize = 11.sp, lineHeight = 19.sp,
                     )
                 }
-                Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
                 ActionRow(Icons.Filled.Info, "الإصدار", "2.2.0 · محرك FSRS-5 + AI")
                 ActionRow(Icons.Filled.Favorite, "قيّم التطبيق", "ساعدنا على التحسين")
                 ActionRow(Icons.Filled.Shield, "الخصوصية", "بياناتك محفوظة محلياً")
@@ -199,7 +199,7 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onImport:
 }
 
 @Composable
-private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -> Unit) {
+private fun BackupSection(vm: AppViewModel, onBackup: () -> Unit) {
     var step by remember { mutableStateOf(0) }      // 0 idle · 1 warn · 2 final
     var typed by remember { mutableStateOf("") }
     var authFailed by remember { mutableStateOf(false) }
@@ -214,12 +214,12 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
 
     // ---- Backup / restore is the headline action of this section ----
     Surface(shape = RoundedCornerShape(20.dp), color = Color.Transparent, onClick = onBackup, modifier = Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(ZEmerald, ZCyanDeep))).padding(18.dp)) {
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(ZEmerald, ZCyanDeep))).padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
                     Icon(Icons.Filled.CloudDownload, null, tint = Color.White, modifier = Modifier.size(26.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text("النسخ الاحتياطي والاستعادة", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                     Text("صدّر بياناتك بكل الصيغ · استعدها في أي وقت", color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp)
@@ -231,7 +231,6 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
 
     Spacer(Modifier.height(16.dp))
     SettingsGroup("المكتبة") {
-        ActionRow(Icons.Filled.UploadFile, "استيراد الكورسات", "رفع/لصق JSON أو ZIP", onImport)
         ActionRow(
             Icons.Filled.LibraryBooks, "محتواك الحالي",
             "${vm.courses.size} كورس · ${vm.lessons.size} درس · ${vm.totalWords} كلمة",
@@ -241,7 +240,7 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
     Spacer(Modifier.height(16.dp))
 
     // ---- Danger zone ----
-    Text("منطقة الخطر", color = ZRose, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp, bottom = 8.dp))
+    Text("منطقة الخطر", color = ZRose, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
     Surface(
         shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp,
         modifier = Modifier.fillMaxWidth(),
@@ -250,13 +249,13 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Warning, null, tint = ZRose, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("حذف كل المحتوى", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Text("يتطلب تأكيداً بخطوتين + قفل الجهاز", color = ZTextSecondary, fontSize = 11.sp)
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 "صدّر نسخة احتياطية أولاً — الحذف نهائي ولا يمكن التراجع عنه.",
                 color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
@@ -318,7 +317,7 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
             text = {
                 Column {
                     Text("اكتب كلمة «$phrase» للتأكيد:", color = ZTextSecondary, fontSize = 14.sp)
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = typed, onValueChange = { typed = it; authFailed = false },
                         singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -329,13 +328,13 @@ private fun BackupSection(vm: AppViewModel, onImport: () -> Unit, onBackup: () -
                             focusedTextColor = ZTextPrimary, unfocusedTextColor = ZTextPrimary,
                         ),
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             if (secure) Icons.Filled.Fingerprint else Icons.Filled.Info,
                             null, tint = if (secure) ZCyanDeep else ZAmber, modifier = Modifier.size(15.dp),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             if (secure) "ستُطلب بصمتك أو رمز القفل بعد الضغط على «احذف»"
                             else "لا يوجد قفل شاشة على جهازك — الكتابة وحدها ستؤكّد الحذف",
@@ -393,7 +392,7 @@ private fun WidgetRow() {
         Row(
             Modifier.fillMaxWidth()
                 .clickable { com.zmastery.english.widget.HomeShortcuts.pinWidget(context) }
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -412,13 +411,13 @@ private fun WidgetRow() {
             Icon(Icons.Filled.AddToHomeScreen, null, tint = ZIndigo)
         }
 
-        Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+        HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
 
         // ---- Pinned quick-review shortcut ----
         Row(
             Modifier.fillMaxWidth()
                 .clickable { com.zmastery.english.widget.HomeShortcuts.pinReviewShortcut(context) }
-                .padding(14.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -437,15 +436,15 @@ private fun WidgetRow() {
             Icon(Icons.Filled.AddToHomeScreen, null, tint = ZEmerald)
         }
 
-        Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+        HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
 
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.TouchApp, null, tint = ZCyanDeep, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("اختصارات الضغط المطوّل", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "اضغط مطولاً على أيقونة التطبيق للوصول السريع إلى: المراجعة · القاموس · الاستيراد. " +
                     "هذه الاختصارات مُفعّلة تلقائياً.",
@@ -463,16 +462,16 @@ private fun WidgetRow() {
 @Composable
 internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column {
-        Text(title, color = ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp, bottom = 8.dp))
+        Text(title, color = ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))
         Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(6.dp), content = content)
+            Column(Modifier.padding(8.dp), content = content)
         }
     }
 }
 
 @Composable
 private fun SliderRow(vm: AppViewModel) {
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Flag, null, tint = ZCyan)
             Spacer(Modifier.width(12.dp))
@@ -492,7 +491,7 @@ private fun SliderRow(vm: AppViewModel) {
 @Composable
 private fun RevealModeRow(vm: AppViewModel) {
     val mode = vm.revealMode
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Visibility, null, tint = ZIndigo)
             Spacer(Modifier.width(12.dp))
@@ -501,7 +500,7 @@ private fun RevealModeRow(vm: AppViewModel) {
                 Text(mode.desc, color = ZTextSecondary, fontSize = 11.sp)
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ZSurfaceVariant).padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -509,10 +508,10 @@ private fun RevealModeRow(vm: AppViewModel) {
             com.zmastery.english.data.RevealMode.values().forEach { m ->
                 val active = m == mode
                 Box(
-                    Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
+                    Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
                         .background(if (active) ZIndigo else Color.Transparent)
                         .clickable { vm.revealMode = m }
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(m.label, color = if (active) Color.White else ZTextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -530,7 +529,7 @@ private fun ThemeModeRow(vm: AppViewModel) {
         com.zmastery.english.data.ThemeMode.LIGHT -> Icons.Filled.LightMode
         com.zmastery.english.data.ThemeMode.DARK -> Icons.Filled.DarkMode
     }
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = ZAmber)
             Spacer(Modifier.width(12.dp))
@@ -539,7 +538,7 @@ private fun ThemeModeRow(vm: AppViewModel) {
                 Text("افتراضياً يتبع إعداد النظام (نهاري/ليلي)", color = ZTextSecondary, fontSize = 11.sp)
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ZSurfaceVariant).padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -552,10 +551,10 @@ private fun ThemeModeRow(vm: AppViewModel) {
                     com.zmastery.english.data.ThemeMode.DARK -> Icons.Filled.DarkMode
                 }
                 Column(
-                    Modifier.weight(1f).clip(RoundedCornerShape(9.dp))
+                    Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
                         .background(if (active) ZIndigo else Color.Transparent)
                         .clickable { vm.themeMode = m }
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(mIcon, null, tint = if (active) Color.White else ZTextSecondary, modifier = Modifier.size(18.dp))
@@ -569,7 +568,7 @@ private fun ThemeModeRow(vm: AppViewModel) {
 
 @Composable
 private fun RetentionRow(vm: AppViewModel) {
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.TrackChanges, null, tint = ZEmerald)
             Spacer(Modifier.width(12.dp))
@@ -598,7 +597,7 @@ private fun RetentionRow(vm: AppViewModel) {
 
 @Composable
 private fun IntervalRow(vm: AppViewModel) {
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Event, null, tint = ZAmber)
             Spacer(Modifier.width(12.dp))
@@ -617,7 +616,7 @@ private fun IntervalRow(vm: AppViewModel) {
 @Composable
 private fun ToggleRow(icon: ImageVector, title: String, sub: String, checked: Boolean, enabled: Boolean = true, onCheck: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(14.dp).alpha(if (enabled) 1f else 0.5f),
+        Modifier.fillMaxWidth().padding(16.dp).alpha(if (enabled) 1f else 0.5f),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = ZIndigo)
@@ -636,7 +635,7 @@ private fun ToggleRow(icon: ImageVector, title: String, sub: String, checked: Bo
 @Composable
 private fun ActionRow(icon: ImageVector, title: String, sub: String, onClick: () -> Unit = {}) {
     Surface(color = Color.Transparent, onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = ZTextSecondary)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -651,7 +650,7 @@ private fun ActionRow(icon: ImageVector, title: String, sub: String, onClick: ()
 /** Shows current AI-audio generation progress/status + a manual "generate now" button. */
 @Composable
 private fun AudioGenStatusRow(vm: AppViewModel) {
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
@@ -682,7 +681,7 @@ private fun AudioGenStatusRow(vm: AppViewModel) {
             Text(it, color = ZCyanDeep, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         if (vm.isGeneratingAudio) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             OutlinedButton(
                 onClick = { vm.stopAudioGeneration() },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
@@ -695,7 +694,7 @@ private fun AudioGenStatusRow(vm: AppViewModel) {
             }
         } else {
             if (vm.hasPendingAudio && vm.aiAudioEnabled) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = { vm.generateMissingAudio() },
                     modifier = Modifier.fillMaxWidth().height(44.dp),
@@ -765,6 +764,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
     var isEmailSignUp by remember { mutableStateOf(false) }
     var emailInput by remember { mutableStateOf("") }
     var passInput by remember { mutableStateOf("") }
+    var confirmPassInput by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
     var emailAuthError by remember { mutableStateOf<String?>(null) }
     var isEmailProcessing by remember { mutableStateOf(false) }
@@ -794,9 +794,9 @@ private fun CloudSyncGroup(vm: AppViewModel) {
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
             // ---- Status header ----
-            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                    Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZEmerald, ZCyanDeep))),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -817,10 +817,10 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 }
             }
             vm.cloudSyncMessage?.let {
-                Text(it, color = ZCyanDeep, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp))
-                Spacer(Modifier.height(6.dp))
+                Text(it, color = ZCyanDeep, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp))
+                Spacer(Modifier.height(8.dp))
             }
-            Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+            HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
 
             ToggleRow(
                 Icons.Filled.CloudSync,
@@ -829,7 +829,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 vm.cloudSyncEnabled,
             ) { vm.updateCloudSyncEnabled(it) }
 
-            Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+            HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
 
             ActionRow(
                 Icons.Filled.Sync,
@@ -837,10 +837,10 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 if (vm.isSyncingCloud) "جارٍ المزامنة…" else "تحقق من دروس جديدة وارفع تقدمك",
             ) { if (!vm.isSyncingCloud) vm.syncCloudLessons() }
 
-            Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 14.dp))
+            HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 16.dp))
 
             // ---- Google Sign-In & Authentication ----
-            Column(Modifier.padding(14.dp)) {
+            Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.AccountCircle, null, tint = ZIndigo, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(12.dp))
@@ -850,7 +850,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                             if (vm.isAdmin) {
                                 Spacer(Modifier.width(8.dp))
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
+                                    shape = RoundedCornerShape(8.dp),
                                     color = ZAmber.copy(alpha = 0.2f),
                                 ) {
                                     Text(
@@ -858,7 +858,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                         color = ZAmber,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     )
                                 }
                             }
@@ -875,7 +875,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                 }
 
                 if (showWebIdField) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = ZSurfaceVariant,
@@ -902,7 +902,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = { Text("xxxx.apps.googleusercontent.com", color = ZTextMuted, fontSize = 12.sp) },
                                 singleLine = true,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = ZIndigo,
                                     unfocusedBorderColor = ZBorder,
@@ -917,11 +917,11 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                     showWebIdField = false
                                 },
                                 modifier = Modifier.fillMaxWidth().height(40.dp),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                             ) {
                                 Icon(Icons.Filled.Save, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text("حفظ المعرّف واستخدامه", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
@@ -989,7 +989,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text("متصل سحابياً", color = ZEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
@@ -1057,15 +1057,15 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                                 Icon(
                                                     if (showAdminPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                                     contentDescription = if (showAdminPassword) "إخفاء الرمز" else "إظهار الرمز",
-                                                    tint = Color(0xFF94A3B8),
+                                                    tint = ZTextMuted,
                                                 )
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RoundedCornerShape(12.dp),
                                     )
                                     adminError?.let {
-                                        Spacer(Modifier.height(6.dp))
+                                        Spacer(Modifier.height(8.dp))
                                         Text(it, color = ZRose, fontSize = 11.sp)
                                     }
                                 }
@@ -1128,7 +1128,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                         label = { Text("الاسم") },
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RoundedCornerShape(12.dp),
                                     )
                                     Spacer(Modifier.height(8.dp))
                                 }
@@ -1138,7 +1138,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                     label = { Text("البريد الإلكتروني") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 OutlinedTextField(
@@ -1152,13 +1152,31 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                             Icon(
                                                 if (showPassText) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                                 null,
-                                                tint = Color(0xFF94A3B8),
+                                                tint = ZTextMuted,
                                             )
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                 )
+                                if (isEmailSignUp) {
+                                    Spacer(Modifier.height(8.dp))
+                                    // تأكيد كلمة المرور — يمنع أخطاء الطباعة قبل إنشاء الحساب
+                                    OutlinedTextField(
+                                        value = confirmPassInput,
+                                        onValueChange = { confirmPassInput = it; emailAuthError = null },
+                                        label = { Text("تأكيد كلمة المرور") },
+                                        singleLine = true,
+                                        isError = confirmPassInput.isNotBlank() && confirmPassInput != passInput,
+                                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    if (confirmPassInput.isNotBlank() && confirmPassInput != passInput) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text("كلمتا المرور غير متطابقتين", color = ZRose, fontSize = 11.sp)
+                                    }
+                                }
                                 emailAuthError?.let {
                                     Spacer(Modifier.height(8.dp))
                                     Text(it, color = ZRose, fontSize = 11.sp)
@@ -1167,6 +1185,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 TextButton(
                                     onClick = {
                                         isEmailSignUp = !isEmailSignUp
+                                        confirmPassInput = ""
                                         emailAuthError = null
                                     },
                                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -1174,7 +1193,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                     Text(
                                         if (isEmailSignUp) "لديك حساب بالفعل؟ تسجيل الدخول" else "ليس لديك حساب؟ إنشاء حساب جديد",
                                         color = ZIndigo,
-                                        fontSize = 11.5.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                     )
                                 }
@@ -1185,6 +1204,10 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                                 onClick = {
                                     if (emailInput.isBlank() || passInput.isBlank()) {
                                         emailAuthError = "يرجى إدخال البريد الإلكتروني وكلمة المرور"
+                                        return@Button
+                                    }
+                                    if (isEmailSignUp && passInput != confirmPassInput) {
+                                        emailAuthError = "كلمتا المرور غير متطابقتين"
                                         return@Button
                                     }
                                     isEmailProcessing = true
@@ -1232,216 +1255,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                     )
                 }
 
-                // ---- Admin Section: View Registered Users ----
-                if (vm.isAdmin) {
-                    Spacer(Modifier.height(16.dp))
-                    Divider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Group, null, tint = ZAmber, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("قائمة الطلاب المسجلين سحابياً", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        TextButton(onClick = { vm.loadRegisteredUsers() }) {
-                            Text(if (vm.isLoadingUsers) "جارٍ الجلب…" else "تحديث القائمة 🔄", color = ZCyan, fontSize = 11.sp)
-                        }
-                    }
 
-                    if (vm.registeredUsersList.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            vm.registeredUsersList.forEach { user ->
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = ZSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Row(
-                                        Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Box(
-                                            Modifier.size(36.dp).clip(CircleShape).background(ZBorder),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                (user.displayName?.take(1) ?: "U").uppercase(),
-                                                color = ZTextPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                        }
-                                        Spacer(Modifier.width(10.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(user.displayName ?: "مستخدم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                if (user.role == "admin") {
-                                                    Spacer(Modifier.width(4.dp))
-                                                    Text("👑", fontSize = 10.sp)
-                                                }
-                                            }
-                                            Text(user.email ?: "حساب مجهول", color = ZTextSecondary, fontSize = 10.sp)
-                                            Text(
-                                                "🔥 ${user.streak} يوم  ·  ⚡ ${user.xp} XP  ·  📚 ${user.completedLessonsCount} درس",
-                                                color = ZTextMuted,
-                                                fontSize = 9.sp,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // ---- Admin: Broadcast Announcement to Students ----
-                    Spacer(Modifier.height(16.dp))
-                    Divider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-
-                    var broadcastTitle by remember { mutableStateOf("") }
-                    var broadcastMessage by remember { mutableStateOf("") }
-                    var broadcastType by remember { mutableStateOf("info") }
-                    var broadcastStatus by remember { mutableStateOf<String?>(null) }
-                    var isBroadcasting by remember { mutableStateOf(false) }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Campaign, null, tint = ZAmber, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("بث إشعار عام للطلاب", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = broadcastTitle,
-                        onValueChange = { broadcastTitle = it },
-                        label = { Text("عنوان الإشعار (مثال: تحديث هام / تحدي الأسبوع)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(6.dp))
-
-                    OutlinedTextField(
-                        value = broadcastMessage,
-                        onValueChange = { broadcastMessage = it },
-                        label = { Text("نص الرسالة المنشورة للجميع") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        listOf(
-                            "info" to "معلومة 💡",
-                            "update" to "تحديث 🚀",
-                            "challenge" to "تحدي 🏆",
-                            "alert" to "تنبيه ⚠️",
-                        ).forEach { (typeKey, typeLabel) ->
-                            FilterChip(
-                                selected = broadcastType == typeKey,
-                                onClick = { broadcastType = typeKey },
-                                label = { Text(typeLabel, fontSize = 11.sp) },
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-                    Button(
-                        onClick = {
-                            if (broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank()) {
-                                isBroadcasting = true
-                                vm.postAnnouncement(broadcastTitle, broadcastMessage, broadcastType) { success, msg ->
-                                    isBroadcasting = false
-                                    broadcastStatus = msg
-                                    if (success) {
-                                        broadcastTitle = ""
-                                        broadcastMessage = ""
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !isBroadcasting && broadcastTitle.isNotBlank() && broadcastMessage.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
-                    ) {
-                        Icon(Icons.Filled.Send, null, tint = Color.Black, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (isBroadcasting) "جارٍ البث..." else "👑 إرسال الإشعار لجميع الطلاب", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-
-                    broadcastStatus?.let {
-                        Spacer(Modifier.height(6.dp))
-                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    // ---- Admin: إدارة عبارات التحفيز السحابية ----
-                    Spacer(Modifier.height(16.dp))
-                    Divider(color = ZBorder)
-                    Spacer(Modifier.height(12.dp))
-
-                    var quoteText by remember { mutableStateOf("") }
-                    var quoteAuthor by remember { mutableStateOf("") }
-                    var quoteStatus by remember { mutableStateOf<String?>(null) }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("💬 عبارات التحفيز اليومية", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        TextButton(onClick = { vm.syncQuotes() }) {
-                            Text("${vm.cloudQuoteCount} عبارة 🔄", color = ZCyan, fontSize = 11.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "عبارة عشوائية واحدة يومياً لكل متعلم، تُسحب من السحابة وتظهر في الودجت والشاشة الرئيسية.",
-                        color = ZTextSecondary, fontSize = 10.sp,
-                    )
-                    Spacer(Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = quoteText,
-                        onValueChange = { quoteText = it },
-                        label = { Text("نص العبارة التحفيزية") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = quoteAuthor,
-                        onValueChange = { quoteAuthor = it },
-                        label = { Text("المصدر/الكاتب (اختياري)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Button(
-                        onClick = {
-                            vm.addQuote(quoteText, quoteAuthor) { success, msg ->
-                                quoteStatus = msg
-                                if (success) { quoteText = ""; quoteAuthor = "" }
-                            }
-                        },
-                        enabled = !vm.isAddingQuote && quoteText.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth().height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
-                    ) {
-                        Text(if (vm.isAddingQuote) "جارٍ النشر..." else "👑 نشر العبارة لكل الأجهزة", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                    quoteStatus?.let {
-                        Spacer(Modifier.height(6.dp))
-                        Text(it, color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
             }
         }
     }
@@ -1450,7 +1264,7 @@ private fun CloudSyncGroup(vm: AppViewModel) {
 @Composable
 private fun GeminiKeyRow(vm: AppViewModel) {
     var visible by remember { mutableStateOf(false) }
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Key, null, tint = ZIndigo)
             Spacer(Modifier.width(12.dp))
@@ -1467,7 +1281,7 @@ private fun GeminiKeyRow(vm: AppViewModel) {
                 )
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = vm.geminiApiKey,
             onValueChange = { vm.geminiApiKey = it.trim() },
@@ -1487,7 +1301,7 @@ private fun GeminiKeyRow(vm: AppViewModel) {
                 focusedTextColor = ZTextPrimary, unfocusedTextColor = ZTextPrimary,
             ),
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text("بدون مفتاح، يعمل النطق عبر محرّك أندرويد المدمج (بلا إنترنت).", color = ZTextMuted, fontSize = 11.sp)
     }
 }
@@ -1497,13 +1311,13 @@ private val geminiVoices = listOf("Kore", "Puck", "Charon", "Fenrir", "Aoede", "
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun VoiceRow(vm: AppViewModel) {
-    Column(Modifier.padding(14.dp)) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.RecordVoiceOver, null, tint = ZCyanDeep)
             Spacer(Modifier.width(12.dp))
             Text("صوت النطق", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         androidx.compose.foundation.layout.FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1515,7 +1329,7 @@ private fun VoiceRow(vm: AppViewModel) {
                     color = if (sel) ZCyanDeep else ZSurfaceVariant,
                     onClick = { vm.ttsVoice = v },
                 ) {
-                    Text(v, color = if (sel) Color.White else ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
+                    Text(v, color = if (sel) Color.White else ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp))
                 }
             }
         }

@@ -52,7 +52,7 @@ fun AnalyticsScreen(vm: AppViewModel) {
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item { AnalyticsHeader(vm) }
@@ -91,7 +91,7 @@ fun AnalyticsScreen(vm: AppViewModel) {
             Text(
                 "مرآة الإدراك",
                 color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp,
-                modifier = Modifier.padding(top = 6.dp),
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
         item {
@@ -123,7 +123,7 @@ fun AnalyticsScreen(vm: AppViewModel) {
             Text(
                 "الكلمات الصعبة",
                 color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp,
-                modifier = Modifier.padding(top = 6.dp),
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
         val hard = vm.activeVocab
@@ -135,7 +135,7 @@ fun AnalyticsScreen(vm: AppViewModel) {
                 Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.SentimentVerySatisfied, null, tint = ZEmerald)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text("لا توجد كلمات صعبة حالياً — ذاكرتك نظيفة \uD83D\uDC4F", color = ZTextSecondary, fontSize = 13.sp)
                     }
                 }
@@ -182,12 +182,12 @@ private fun AnalyticsHeader(vm: AppViewModel) {
 
 @Composable
 private fun MiniPill(icon: ImageVector, value: String, label: String) {
-    Surface(shape = RoundedCornerShape(10.dp), color = Color.White.copy(alpha = 0.2f)) {
+    Surface(shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.2f)) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
             Text(value, color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Spacer(Modifier.width(3.dp))
+            Spacer(Modifier.width(4.dp))
             Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp)
         }
     }
@@ -196,13 +196,13 @@ private fun MiniPill(icon: ImageVector, value: String, label: String) {
 @Composable
 private fun ScopeTabs(current: CoachScope, onPick: (CoachScope) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(ZSurfaceVariant).padding(4.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(ZSurfaceVariant).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         CoachScope.values().forEach { s ->
             val active = s == current
             Surface(
-                modifier = Modifier.weight(1f), shape = RoundedCornerShape(11.dp),
+                modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
                 color = if (active) ZIndigo else Color.Transparent, onClick = { onPick(s) },
             ) {
                 Text(
@@ -210,7 +210,7 @@ private fun ScopeTabs(current: CoachScope, onPick: (CoachScope) -> Unit) {
                     color = if (active) Color.White else ZTextSecondary,
                     fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 )
             }
         }
@@ -230,22 +230,22 @@ private fun PeriodCard(scope: CoachScope, span: StatSpan, prev: StatSpan) {
                 Spacer(Modifier.weight(1f))
                 Text("${span.activeDays}/${scope.days} يوم نشط", color = ZTextMuted, fontSize = 10.sp)
             }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DeltaStat(Modifier.weight(1f), Telemetry.formatMinutes(span.studyMinutes), "وقت دراسة",
                     span.deltaPct(prev) { it.studyMinutes }, ZIndigo)
                 DeltaStat(Modifier.weight(1f), "${span.reviews}", "مراجعة",
                     span.deltaPct(prev) { it.reviews }, ZCyanDeep)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DeltaStat(Modifier.weight(1f), "${span.lessons}", "دروس",
                     span.deltaPct(prev) { it.lessons }, ZEmerald)
                 DeltaStat(Modifier.weight(1f), "${span.wordsAdded}", "كلمات جديدة",
                     span.deltaPct(prev) { it.wordsAdded }, ZAmber)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DeltaStat(Modifier.weight(1f), "${(span.recallRate * 100).toInt()}%", "دقة التذكّر",
                     span.deltaPct(prev) { (it.recallRate * 100).toInt() }, ZPurple)
                 DeltaStat(Modifier.weight(1f), "${span.mistakes}", "أخطاء",
@@ -261,11 +261,11 @@ private fun DeltaStat(
 ) {
     val improving = if (inverse) delta < 0 else delta > 0
     val neutral = delta == 0
-    Surface(modifier = modifier, shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.10f)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.10f)) {
         Column(Modifier.padding(12.dp)) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 19.sp)
             Text(label, color = ZTextSecondary, fontSize = 10.sp)
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 Telemetry.arrow(delta),
                 color = when { neutral -> ZTextMuted; improving -> ZEmerald; else -> ZRose },
@@ -312,9 +312,9 @@ private fun TodayDetail(vm: AppViewModel) {
 
 @Composable
 private fun RowStat(label: String, value: String, sub: String, accent: Color) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(accent))
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Text(label, color = ZTextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
         Text(sub, color = ZTextMuted, fontSize = 9.sp)
         Spacer(Modifier.width(8.dp))
@@ -335,7 +335,7 @@ private fun ForgottenTodayCard(vm: AppViewModel) {
                 Spacer(Modifier.width(8.dp))
                 Text("نسيتها اليوم (${forgotten.size})", color = ZRose, fontWeight = FontWeight.Black, fontSize = 14.sp)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 forgotten.forEach { w ->
                     Surface(shape = RoundedCornerShape(50), color = ZCard) {
@@ -365,12 +365,12 @@ private fun TrendChartCard(title: String, days: List<DayStat>, accent: Color) {
                 Spacer(Modifier.width(8.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
-            Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SeriesKey(accent, "مراجعات")
                 SeriesKey(ZAmber, "دقائق دراسة")
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Canvas(Modifier.fillMaxWidth().height(140.dp)) {
                 if (days.size < 2) return@Canvas
                 val w = size.width
@@ -434,8 +434,8 @@ private fun TrendChartCard(title: String, days: List<DayStat>, accent: Color) {
                     Text(it.label, color = ZTextMuted, fontSize = 9.sp)
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("ذروة: $maxReviews مراجعة/يوم", color = ZTextMuted, fontSize = 10.sp)
                 Text("·", color = ZTextMuted, fontSize = 10.sp)
                 Text("ذروة: $maxMinutes دقيقة/يوم", color = ZTextMuted, fontSize = 10.sp)
@@ -447,8 +447,8 @@ private fun TrendChartCard(title: String, days: List<DayStat>, accent: Color) {
 @Composable
 private fun SeriesKey(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(width = 14.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(color))
-        Spacer(Modifier.width(5.dp))
+        Box(Modifier.size(width = 14.dp, height = 4.dp).clip(RoundedCornerShape(4.dp)).background(color))
+        Spacer(Modifier.width(4.dp))
         Text(label, color = ZTextMuted, fontSize = 10.sp)
     }
 }
@@ -467,7 +467,7 @@ private fun HeatmapCard(vm: AppViewModel) {
                 Spacer(Modifier.weight(1f))
                 Text("${days.count { it.isActive }} يوم نشط", color = ZTextMuted, fontSize = 10.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -476,7 +476,7 @@ private fun HeatmapCard(vm: AppViewModel) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         week.forEach { d ->
                             Box(
-                                Modifier.size(14.dp).clip(RoundedCornerShape(3.dp))
+                                Modifier.size(14.dp).clip(RoundedCornerShape(4.dp))
                                     .background(heatColor(d.intensity))
                             )
                         }
@@ -486,12 +486,12 @@ private fun HeatmapCard(vm: AppViewModel) {
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("أقل", color = ZTextMuted, fontSize = 9.sp)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 (0..4).forEach { i ->
-                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(heatColor(i)))
-                    Spacer(Modifier.width(3.dp))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(4.dp)).background(heatColor(i)))
+                    Spacer(Modifier.width(4.dp))
                 }
-                Spacer(Modifier.width(3.dp))
+                Spacer(Modifier.width(4.dp))
                 Text("أكثر", color = ZTextMuted, fontSize = 9.sp)
                 Spacer(Modifier.weight(1f))
                 Text("أطول سلسلة: ${vm.bestActivityStreak} يوم", color = ZTextMuted, fontSize = 10.sp)
@@ -501,7 +501,7 @@ private fun HeatmapCard(vm: AppViewModel) {
 }
 
 private fun heatColor(intensity: Int): Color = when (intensity) {
-    0 -> Color(0xFF3A322A).copy(alpha = if (ZThemeState.isDark) 1f else 0.10f)
+    0 -> if (ZThemeState.isDark) Color(0xFF262938) else Color(0xFFE2E4EC) // خلية فارغة محايدة من الثيم
     1 -> Color(0xFF9BE9A8)
     2 -> Color(0xFF40C463)
     3 -> Color(0xFF30A14E)
@@ -519,21 +519,21 @@ private fun CefrCard(vm: AppViewModel) {
                 Spacer(Modifier.width(8.dp))
                 Text("مستوى الطلاقة المتوقع", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(cefr, color = ZAmber, fontWeight = FontWeight.Black, fontSize = 30.sp)
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     LinearProgressIndicator(
                         progress = { prog },
-                        modifier = Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(5.dp)),
+                        modifier = Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(4.dp)),
                         color = ZAmber, trackColor = ZBorder,
                     )
-                    Spacer(Modifier.height(5.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text("${(prog * 100).toInt()}% نحو $next", color = ZTextSecondary, fontSize = 11.sp)
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 "يُحتسب من ${vm.masteredCount} كلمة محفوظة + ${vm.completedLessons} درس + دقة الاختبارات ${vm.lifetime.examAvg}%",
                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
@@ -551,15 +551,15 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
     val shown = report ?: if (showLocal) vm.quickCoach(scope) else null
 
     Surface(
-        shape = RoundedCornerShape(22.dp), color = Color.Transparent,
+        shape = RoundedCornerShape(24.dp), color = Color.Transparent,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            Modifier.background(Brush.linearGradient(listOf(ZPurple, ZIndigo))).padding(18.dp)
+            Modifier.background(Brush.linearGradient(listOf(ZPurple, ZIndigo))).padding(20.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(38.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = 0.22f)),
+                    Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.22f)),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Psychology, null, tint = Color.White, modifier = Modifier.size(21.dp)) }
                 Spacer(Modifier.width(12.dp))
@@ -581,7 +581,7 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             if (shown == null) {
                 Text(
@@ -593,8 +593,8 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
                 CoachSection("نقاط الضعف", Icons.Filled.ReportProblem, shown.weak, Color(0xFFFFCDD2))
                 CoachSection("خطة العلاج", Icons.Filled.Checklist, shown.suggestions, Color(0xFFFFF9C4))
                 if (shown.focusNextWeek.isNotBlank()) {
-                    Spacer(Modifier.height(10.dp))
-                    Surface(shape = RoundedCornerShape(13.dp), color = Color.White.copy(alpha = 0.18f), modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.height(12.dp))
+                    Surface(shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.18f), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.CenterFocusStrong, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
@@ -603,7 +603,7 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
                     }
                 }
                 if (shown.motivation.isNotBlank()) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         "\u201C${shown.motivation}\u201D",
                         color = Color.White.copy(alpha = 0.93f), fontSize = 12.sp,
@@ -619,7 +619,7 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
-                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(13.dp),
+                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
                     color = Color.White,
                     onClick = { if (!vm.isCoaching) vm.runCoach(scope) },
                 ) {
@@ -633,7 +633,7 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
                             Text("جاري التحليل…", color = ZIndigo, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         } else {
                             Icon(Icons.Filled.AutoAwesome, null, tint = ZIndigo, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text(
                                 if (report == null) "حلّل أدائي" else "تحليل جديد",
                                 color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 13.sp,
@@ -643,12 +643,12 @@ private fun CoachCard(vm: AppViewModel, scope: CoachScope) {
                 }
                 if (shown == null) {
                     Surface(
-                        shape = RoundedCornerShape(13.dp), color = Color.White.copy(alpha = 0.22f),
+                        shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.22f),
                         onClick = { showLocal = true },
                     ) {
                         Text(
                             "تحليل سريع", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
                         )
                     }
                 }
@@ -670,14 +670,14 @@ private fun CoachSection(title: String, icon: ImageVector, items: List<String>, 
     Column(Modifier.padding(bottom = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(title, color = tint, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         items.forEach { line ->
-            Row(Modifier.padding(vertical = 3.dp)) {
+            Row(Modifier.padding(vertical = 4.dp)) {
                 Text("•", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(line, color = Color.White.copy(alpha = 0.93f), fontSize = 12.sp, lineHeight = 19.sp)
             }
         }
@@ -695,13 +695,13 @@ private fun MemoryHealthCard(vm: AppViewModel) {
                 Spacer(Modifier.width(8.dp))
                 Text("صحة الذاكرة (FSRS)", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MemoryStat(Modifier.weight(1f), "${(vm.predictedRetention * 100).toInt()}%", "الاحتفاظ المتوقع", ZEmerald)
                 MemoryStat(Modifier.weight(1f), "${(vm.trueRecallRate * 100).toInt()}%", "معدل التذكر", ZCyan)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MemoryStat(Modifier.weight(1f), if (vm.avgStability >= 1) "${vm.avgStability.toInt()} يوم" else "<1 يوم", "متوسط الاستقرار", ZAmber)
                 MemoryStat(Modifier.weight(1f), "${vm.dueCount}", "مستحقة الآن", ZRose)
             }
@@ -716,7 +716,7 @@ private fun MemoryHealthCard(vm: AppViewModel) {
 
 @Composable
 private fun MemoryStat(modifier: Modifier, value: String, label: String, accent: Color) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.10f)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.10f)) {
         Column(Modifier.padding(vertical = 12.dp, horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 18.sp)
             Text(label, color = ZTextSecondary, fontSize = 11.sp)
@@ -786,7 +786,7 @@ private fun SkillRadarCard(vm: AppViewModel) {
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             skills.forEach { s ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(s.emoji, fontSize = 14.sp)
@@ -821,7 +821,7 @@ private fun LifetimeCard(vm: AppViewModel) {
                 Spacer(Modifier.width(8.dp))
                 Text("كل الأوقات", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             val cells = listOf(
                 Triple(Icons.Filled.Style, "${vm.totalWords}", "كلمة كلية"),
                 Triple(Icons.Filled.Verified, "${vm.masteredCount}", "محفوظة"),
@@ -836,10 +836,10 @@ private fun LifetimeCard(vm: AppViewModel) {
             cells.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { (icon, value, label) ->
-                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(13.dp), color = ZSurfaceVariant) {
-                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
+                            Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(icon, null, tint = ZEmerald, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.height(5.dp))
+                                Spacer(Modifier.height(4.dp))
                                 Text(value, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
                                 Text(label, color = ZTextMuted, fontSize = 9.sp, maxLines = 1, textAlign = TextAlign.Center)
                             }
@@ -882,7 +882,7 @@ private fun StudyTimeCard(vm: AppViewModel, span: StatSpan) {
             Spacer(Modifier.height(4.dp))
             Text("مقيس فعلياً من وقتك على شاشات التعلم", color = ZTextMuted, fontSize = 10.sp)
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MiniBox(Modifier.weight(1f), Telemetry.formatMinutes(span.avgMinutesPerActiveDay), "متوسط/يوم نشط", ZIndigo)
                 MiniBox(Modifier.weight(1f), "${span.activeDays}/${days.size}", "أيام نشطة", ZEmerald)
@@ -896,11 +896,11 @@ private fun StudyTimeCard(vm: AppViewModel, span: StatSpan) {
             // ---- weekday rhythm ----
             Spacer(Modifier.height(16.dp))
             Text("إيقاعك الأسبوعي", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 Modifier.fillMaxWidth().height(72.dp),
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 byDow.forEachIndexed { i, mins ->
                     val h = (mins.toFloat() / dowMax).coerceIn(0.04f, 1f)
@@ -910,7 +910,7 @@ private fun StudyTimeCard(vm: AppViewModel, span: StatSpan) {
                             if (mins > 0) "$mins" else "",
                             color = ZTextMuted, fontSize = 8.sp,
                         )
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Box(
                             Modifier.fillMaxWidth().fillMaxHeight(h)
                                 .clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
@@ -942,8 +942,8 @@ private fun StudyTimeCard(vm: AppViewModel, span: StatSpan) {
 
 @Composable
 private fun MiniBox(modifier: Modifier, value: String, label: String, accent: Color) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(13.dp), color = accent.copy(alpha = 0.10f)) {
-        Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.10f)) {
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1)
             Text(label, color = ZTextSecondary, fontSize = 9.sp, textAlign = TextAlign.Center)
         }
@@ -976,11 +976,11 @@ private fun CurriculumCard(vm: AppViewModel) {
             )
 
             if (withContent.isEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZAmber.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(16.dp))
+                Surface(shape = RoundedCornerShape(16.dp), color = ZAmber.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.UploadFile, null, tint = ZAmber, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             "لا توجد دروس مستوردة بعد — استورد كورساً لتبدأ القياس الحقيقي.",
                             color = ZTextSecondary, fontSize = 12.sp, lineHeight = 19.sp,
@@ -993,17 +993,17 @@ private fun CurriculumCard(vm: AppViewModel) {
             Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { cur.overallProgress },
-                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(8.dp)),
                 color = ZIndigo, trackColor = ZBorder,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "${cur.lessonsDone} من ${cur.lessonsTotal} درساً · ${cur.coursesCompleted} كورس مكتمل من ${withContent.size}",
                 color = ZTextSecondary, fontSize = 11.sp,
             )
 
             // ---- what I have actually studied (content inventory) ----
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Text("ما درستُه فعلياً", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             val inv = listOf(
@@ -1017,10 +1017,10 @@ private fun CurriculumCard(vm: AppViewModel) {
             inv.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { (icon, value, label) ->
-                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(13.dp), color = ZSurfaceVariant) {
-                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
+                            Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(icon, null, tint = ZIndigo, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.height(5.dp))
+                                Spacer(Modifier.height(4.dp))
                                 Text(value, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
                                 Text(label, color = ZTextSecondary, fontSize = 9.sp, textAlign = TextAlign.Center)
                             }
@@ -1031,7 +1031,7 @@ private fun CurriculumCard(vm: AppViewModel) {
             }
 
             // ---- per-skill coverage ----
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text("التغطية حسب المهارة", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             cur.skills.filter { it.hasContent }.forEach { sk ->
@@ -1058,10 +1058,10 @@ private fun CurriculumCard(vm: AppViewModel) {
             // ---- next up ----
             cur.nextCourse?.let { nc ->
                 Spacer(Modifier.height(12.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.PlayCircle, null, tint = ZEmerald, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text("التالي في منهجك", color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             Text(nc.name, color = ZTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -1075,12 +1075,12 @@ private fun CurriculumCard(vm: AppViewModel) {
             }
 
             // ---- per-course breakdown (collapsible) ----
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Surface(
                 shape = RoundedCornerShape(12.dp), color = Color.Transparent,
                 onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         if (expanded) "إخفاء تفاصيل الكورسات" else "تفاصيل كل كورس (${withContent.size})",
                         color = ZIndigo, fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -1097,7 +1097,7 @@ private fun CurriculumCard(vm: AppViewModel) {
                     withContent.sortedWith(compareBy({ it.levelId }, { it.courseId })).forEach { c ->
                         val accent = Color(c.accent)
                         Surface(
-                            shape = RoundedCornerShape(13.dp), color = ZSurfaceVariant,
+                            shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         ) {
                             Column(Modifier.padding(12.dp)) {
@@ -1117,13 +1117,13 @@ private fun CurriculumCard(vm: AppViewModel) {
                                     }
                                     Text("${c.pct}%", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
                                 }
-                                Spacer(Modifier.height(7.dp))
+                                Spacer(Modifier.height(8.dp))
                                 LinearProgressIndicator(
                                     progress = { c.progress },
                                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
                                     color = accent, trackColor = ZBorder,
                                 )
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Text(
                                     "${c.type.label} · ${c.lessonsDone}/${c.lessonsTotal} درس" +
                                         if (c.wordsTotal > 0) " · ${c.wordsMastered}/${c.wordsTotal} كلمة محفوظة" else "",
@@ -1160,17 +1160,17 @@ private fun ExamTrendCard(vm: AppViewModel) {
                 Spacer(Modifier.weight(1f))
                 Text("متوسط ${vm.examAverage}%", color = ZAmber, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Row(
                 Modifier.fillMaxWidth().height(96.dp),
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 recent.forEach { e ->
                     val h = (e.pct / 100f).coerceIn(0.06f, 1f)
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${e.pct}", color = ZTextMuted, fontSize = 8.sp)
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Box(
                             Modifier.fillMaxWidth().fillMaxHeight(h).clip(RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp))
                                 .background(if (e.passed) ZEmerald else ZRose)
@@ -1178,15 +1178,15 @@ private fun ExamTrendCard(vm: AppViewModel) {
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             val skills = vm.skillAccuracy
             if (skills.isNotEmpty()) {
                 Text("الدقة حسب المهارة", color = ZTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 skills.entries.sortedBy { it.value }.forEach { (skill, acc) ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(skill.emoji, fontSize = 12.sp)
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(skill.label, color = ZTextSecondary, fontSize = 11.sp, modifier = Modifier.width(96.dp))
                         LinearProgressIndicator(
                             progress = { acc },
@@ -1216,12 +1216,12 @@ private fun TopHardWordsCard(vm: AppViewModel) {
             }
             Spacer(Modifier.height(12.dp))
             leeches.forEachIndexed { i, w ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(ZRose.copy(alpha = 0.16f)),
+                        Modifier.size(22.dp).clip(RoundedCornerShape(8.dp)).background(ZRose.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center,
                     ) { Text("${i + 1}", color = ZRose, fontWeight = FontWeight.Black, fontSize = 10.sp) }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(w.english, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text(w.arabic, color = ZTextSecondary, fontSize = 10.sp)
@@ -1235,14 +1235,14 @@ private fun TopHardWordsCard(vm: AppViewModel) {
 
 @Composable
 private fun HardWordRow(w: VocabWord, vm: AppViewModel) {
-    Surface(shape = RoundedCornerShape(14.dp), color = ZCard, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             val path = vm.mnemonicPath(w.id)
             if (path != null) {
                 coil3.compose.AsyncImage(
                     model = java.io.File(path), contentDescription = w.english,
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)),
+                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)),
                 )
             } else {
                 Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(ZRose))
@@ -1273,19 +1273,19 @@ private fun MirrorInlineReport(vm: AppViewModel) {
 
     if (report == null) {
         Surface(
-            shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 3.dp,
+            shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.AutoAwesome, null, tint = ZPurple, modifier = Modifier.size(19.dp))
-                    Spacer(Modifier.width(9.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         "التحليل السيكولوجي العميق",
                         color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                     )
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "يحلّل سرعتك وتوقيتك وقناتك الحسّية ونمط نسيانك، ثم يكتب لك من أنت كمتعلّم.",
                     color = ZTextSecondary, fontSize = 12.sp, lineHeight = 19.sp,
@@ -1294,7 +1294,7 @@ private fun MirrorInlineReport(vm: AppViewModel) {
                 if (vm.isMirrorLoading) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(color = ZPurple, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text("جارٍ قراءة بصمتك المعرفية…", color = ZTextSecondary, fontSize = 12.sp)
                     }
                 } else {
@@ -1302,13 +1302,13 @@ private fun MirrorInlineReport(vm: AppViewModel) {
                         onClick = { vm.generateMirrorReport(key, force = true) },
                         enabled = vm.cognitiveMirror.hasEnoughData,
                         modifier = Modifier.fillMaxWidth().height(46.dp),
-                        shape = RoundedCornerShape(13.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ZPurple, disabledContainerColor = ZBorder,
                         ),
                     ) {
                         Icon(Icons.Filled.Psychology, null, tint = Color.White, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(7.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             if (vm.cognitiveMirror.hasEnoughData) "اكشف مرآة إدراكي"
                             else "راجع كلمات أكثر أولاً",
@@ -1320,18 +1320,18 @@ private fun MirrorInlineReport(vm: AppViewModel) {
         }
     } else {
         Surface(
-            shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 3.dp,
+            shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 3.dp,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp)) {
                 MirrorReportView(report)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 TextButton(
                     onClick = { vm.generateMirrorReport(key, force = true) },
                     enabled = !vm.isMirrorLoading,
                 ) {
                     Icon(Icons.Filled.Refresh, null, tint = ZPurple, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         if (vm.isMirrorLoading) "جارٍ التحديث…" else "حدّث التحليل",
                         color = ZPurple, fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -1381,7 +1381,7 @@ private fun WeeklyActivityCard(vm: AppViewModel) {
                                 color = if (isToday) ZIndigo else ZTextMuted,
                                 fontSize = 9.sp, fontWeight = FontWeight.Bold,
                             )
-                            Spacer(Modifier.height(3.dp))
+                            Spacer(Modifier.height(4.dp))
                         }
                         Box(
                             Modifier.fillMaxWidth()
@@ -1395,7 +1395,7 @@ private fun WeeklyActivityCard(vm: AppViewModel) {
                                     }
                                 )
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             dayNames[d.date.dayOfWeek.value % 7],
                             color = if (isToday) ZIndigo else ZTextMuted,

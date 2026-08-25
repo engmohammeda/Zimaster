@@ -60,11 +60,11 @@ internal fun LazyListScope.writingBlock(lesson: Lesson, accent: Color) {
         item { SectionHeader(Icons.Filled.FormatListNumbered, "جمل موجّهة (${lesson.guidedSentences.size})", accent) }
         item {
             SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(6.dp)) {
+                Column(Modifier.padding(8.dp)) {
                     lesson.guidedSentences.forEachIndexed { i, s ->
                         GuidedSentenceRow(s, i + 1, accent)
                         if (i != lesson.guidedSentences.lastIndex) {
-                            Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 12.dp))
+                            HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 12.dp))
                         }
                     }
                 }
@@ -86,12 +86,12 @@ internal fun LazyListScope.writingBlock(lesson: Lesson, accent: Color) {
 @Composable
 private fun TopicCard(topicEn: String, topicAr: String, accent: Color) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             if (topicEn.isNotBlank()) {
                 Text(topicEn, color = ZTextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             }
             if (topicAr.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(topicAr, color = ZTextSecondary, fontSize = 15.sp, lineHeight = 24.sp)
             }
         }
@@ -105,7 +105,7 @@ private fun BrainstormCard(q: BrainstormQ, index: Int, accent: Color) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.14f)),
+                    Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center,
                 ) { Text("$index", color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 Spacer(Modifier.width(12.dp))
@@ -146,12 +146,12 @@ private fun BrainstormCard(q: BrainstormQ, index: Int, accent: Color) {
 
 @Composable
 private fun GuidedSentenceRow(s: Sentence, index: Int, accent: Color) {
-    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.14f)),
+            Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) { Text("$index", color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(s.en, color = ZTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp)
             if (s.ar.isNotBlank()) {
@@ -183,13 +183,13 @@ private fun DraftEditor(lessonId: Int, accent: Color) {
     }
 
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.padding(16.dp)) {
             OutlinedTextField(
                 value = draft ?: "",
                 onValueChange = { draft = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp),
                 placeholder = { Text("اكتب مسودتك هنا بالإنجليزية…", color = ZTextMuted, fontSize = 14.sp) },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = accent,
                     unfocusedBorderColor = ZBorder,
@@ -198,7 +198,7 @@ private fun DraftEditor(lessonId: Int, accent: Color) {
                     cursorColor = accent,
                 ),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "تُحفظ تلقائياً على جهازك · قارنها بالمسودة النموذجية بعد الإنهاء",
                 color = ZTextMuted, fontSize = 11.sp,
@@ -210,19 +210,19 @@ private fun DraftEditor(lessonId: Int, accent: Color) {
 @Composable
 private fun FinalDraftCard(final: Sentence, accent: Color) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 com.zmastery.english.audio.AudioButton(
                     text = final.en, audioKey = "fd_${final.en.hashCode()}", accent = ZEmerald, size = 40.dp, iconSize = 20.dp,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text("اقرأها بصوت، ثم قارنها بمسودّتك", color = ZTextSecondary, fontSize = 13.sp)
             }
             Spacer(Modifier.height(12.dp))
             Text(final.en, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Medium)
             if (final.ar.isNotBlank()) {
                 Spacer(Modifier.height(12.dp))
-                Divider(color = ZBorder)
+                HorizontalDivider(color = ZBorder)
                 Spacer(Modifier.height(12.dp))
                 Text(final.ar, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 24.sp)
             }

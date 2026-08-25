@@ -70,16 +70,39 @@ fun ImportScreen(vm: AppViewModel) {
         result = null; lessonResult = null
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZCyanDeep))).padding(20.dp)) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.UploadFile, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Text("استيراد الكورسات", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text("الصق درساً أو عدة دروس، أو ارفع ملفات JSON متعددة أو ملف ZIP دفعة واحدة", color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
+            }
+        }
+
+        // 👑 لافتة المسؤول: أداتا النشر السحابي لكل الطلاب
+        if (vm.isAdmin) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = ZAmber.copy(alpha = 0.12f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ZAmber.copy(alpha = 0.45f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.AdminPanelSettings, null, tint = ZAmber, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("وضع المسؤول 👑", color = ZAmberDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "بعد التعرّف على الدروس سيظهر زر «نشر سحابياً لجميع الطلاب» — كل جهاز يسحبها تلقائياً عند فتح التطبيق.",
+                            color = ZTextSecondary, fontSize = 11.sp, lineHeight = 17.sp,
+                        )
+                    }
+                }
             }
         }
 
@@ -88,7 +111,7 @@ fun ImportScreen(vm: AppViewModel) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                        Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                             .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.DriveFolderUpload, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
@@ -133,25 +156,25 @@ fun ImportScreen(vm: AppViewModel) {
                     modifier = Modifier.fillMaxWidth().height(200.dp),
                     placeholder = { Text("[ { \"metadata\": { \"course_id\": ... } } ]", color = ZTextMuted, fontFamily = FontFamily.Monospace) },
                     textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = ZSurfaceVariant, unfocusedContainerColor = ZSurfaceVariant,
                         focusedBorderColor = ZIndigo, unfocusedBorderColor = ZBorder,
                         focusedTextColor = ZTextPrimary, unfocusedTextColor = ZTextPrimary,
                     ),
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { verify() },
                         enabled = text.isNotBlank(),
                         modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZIndigo, disabledContainerColor = ZBorder),
                     ) {
                         Icon(Icons.Filled.FactCheck, null); Spacer(Modifier.width(8.dp)); Text("تحقق", fontWeight = FontWeight.Bold)
                     }
-                    OutlinedButton(onClick = { text = ""; clearResults() }, modifier = Modifier.height(50.dp), shape = RoundedCornerShape(14.dp)) {
+                    OutlinedButton(onClick = { text = ""; clearResults() }, modifier = Modifier.height(50.dp), shape = RoundedCornerShape(16.dp)) {
                         Icon(Icons.Filled.Clear, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("مسح")
                     }
                 }
@@ -164,7 +187,7 @@ fun ImportScreen(vm: AppViewModel) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(if (r.success) Icons.Filled.LibraryBooks else Icons.Filled.Error, null, tint = if (r.success) ZEmerald else ZRose)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(r.message, color = if (r.success) ZEmerald else ZRose, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 20.sp)
                     }
                     if (r.success && r.packages.isNotEmpty()) {
@@ -214,7 +237,7 @@ fun ImportScreen(vm: AppViewModel) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.Top) {
                         Icon(if (r.success) Icons.Filled.CheckCircle else Icons.Filled.Error, null, tint = if (r.success) ZEmerald else ZRose)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(r.message, color = if (r.success) ZEmerald else ZRose, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 20.sp)
                     }
                     if (r.success && r.pkg != null) {
@@ -262,7 +285,7 @@ fun ImportScreen(vm: AppViewModel) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(if (r.success) Icons.Filled.CheckCircle else Icons.Filled.Error, null, tint = if (r.success) ZEmerald else ZRose)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(r.message, color = if (r.success) ZEmerald else ZRose, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     }
                     if (r.success && r.pkg != null) {
@@ -287,7 +310,7 @@ fun ImportScreen(vm: AppViewModel) {
             Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Celebration, null, tint = ZAmber)
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Text(msg, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
@@ -297,7 +320,7 @@ fun ImportScreen(vm: AppViewModel) {
         Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text("طرق الاستيراد المدعومة", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 MethodRow(Icons.Filled.ContentPaste, "لصق درس واحد أو عدة دروس (مصفوفة)", "مدعوم")
                 MethodRow(Icons.Filled.InsertDriveFile, "رفع عدة ملفات JSON دفعة واحدة", "مدعوم")
                 MethodRow(Icons.Filled.FolderZip, "رفع ملف ZIP يحوي كورسات كاملة", "مدعوم")
@@ -312,9 +335,9 @@ fun ImportScreen(vm: AppViewModel) {
 
 @Composable
 private fun MethodRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, badge: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = ZCyan, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Text(title, color = ZTextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
         Surface(shape = RoundedCornerShape(8.dp), color = ZEmerald.copy(alpha = 0.15f)) {
             Text(badge, color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))

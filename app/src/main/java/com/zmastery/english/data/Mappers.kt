@@ -6,6 +6,15 @@ package com.zmastery.english.data
 
 fun Course.toDto() = CourseDto(id, levelId, name, type.name, target, accent, style.name, key, jsonId)
 
+fun LevelDto.toDomain() = Level(
+    id = id,
+    name = name.ifBlank { "المسار التخصصي $id" },
+    description = description,
+    emoji = emoji.ifBlank { "🎯" },
+)
+
+fun Level.toDto() = LevelDto(id = id, name = name, description = description, emoji = emoji)
+
 fun CourseDto.toDomain() = Course(
     id = id, levelId = levelId, name = name,
     type = runCatching { CourseType.valueOf(type) }.getOrDefault(CourseType.VOCABULARY),

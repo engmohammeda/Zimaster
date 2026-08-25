@@ -3,39 +3,50 @@ rules_version = '2';
 // Z-Mastery Firestore Security Rules
 // ===================================
 //
-// Data structure:
-//   /lessons/{lessonId}               — Public lesson content (read-only for app)
-//   /users/{uid}/progress/state       — Per-user progress JSON blob
-//   /users/{uid}/metadata             — User metadata (display name, etc.)
+// Data structure (must match CloudSync.kt exactly):
+//   /lessons/{lessonId}               — Public lesson content (read: all signed-in; write: admin)
+//   /users/{uid}                      — User profile doc (owner read/write, admin read/list)
+//   /users/{uid}/progress/state       — Per-user progress JSON blob (owner only)
+//   /users/{uid}/metadata/{doc}       — Reserved per-user metadata (owner only)
+//   /leaderboard/{uid}                — PUBLIC stats mirror for the leaderboard (NO email/role)
+//   /quotes/{quoteId}                 — Admin-managed motivation quotes (read: all signed-in)
+//   /announcements/{id}               — Admin broadcasts (read: all signed-in)
 //
 // Key principles:
-//   1. Lessons are readable by any authenticated user (including anonymous)
-//   2. Lessons are NOT writable from the client app (only admin/upload tool)
-//   3. Users can ONLY read/write their OWN progress
-//   4. Progress documents are capped at 1 MB to prevent abuse
-//   5. Rate limiting: max 1 write per second per user
+//   1. Lessons/quotes/announcements readable by any authenticated user (incl. anonymous)
+//   2. Admin powers come ONLY from role == 'admin' stored in /users/{uid}
+//   3. PRIVILEGE-ESCALATION GUARD: no client may write its own 'role'.
+//      Only the verified super-admin email may set/upgrade a role.
+//   4. /leaderboard is world-readable among signed-in users, so it is
+//      validated to NEVER contain 'email' or 'role' (privacy).
+//   5. Users can ONLY read/write their OWN progress; docs capped at 1 MB.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ─── Helper functions ───
 
-    // Is the request from an authenticated user (including anonymous)?
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Does the authenticated user match the document owner?
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Is the document within a reasonable size limit (1 MB)?
     function isWithinSizeLimit() {
       return request.resource.data.size() < 1048576;
     }
 
-    // Is the signed-in user a recorded admin (role == "admin" in /users)?
+    function isSuperAdminToken() {
+      // The email comes from the VERIFIED Firebase Auth ID token, not from the
+      // client payload — it cannot be forged by the app or a replayed request.
+      return isSignedIn()
+        && request.auth.token.email == 'mohammedalbkhyty@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // Role recorded for the signed-in user in /users (missing → student).
     function isAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -44,69 +55,88 @@ service cloud.firestore {
 
     // ─── Lessons collection (public content) ───
     //
-    // The upload tool (Flask app) writes to this collection using
-    // the Firebase Admin SDK, which bypasses security rules.
-    // The mobile app only READS from this collection.
-    //
+    // The mobile app READS lessons; the in-app admin publish flow and the
+    // upload tool (Admin SDK — bypasses rules) WRITE them.
     match /lessons/{lessonId} {
-      // Any authenticated user (including anonymous) can read lessons
       allow read: if isSignedIn();
-
-      // Writing is NOT allowed from the client app
-      // (only the admin SDK / upload tool can write here)
-      allow write: if false;
+      allow create, update: if isAdmin() && isWithinSizeLimit();
+      allow delete: if isAdmin();
     }
 
     // ─── Users collection (per-user data) ───
     match /users/{uid} {
 
-      // User metadata (display name, email, etc.)
+      // The profile document itself:
+      //   get  → the owner (fetchUserRole) or an admin (admin panel)
+      //   list → admins only (registered-users list / queries)
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+
+      // Create: owner only; a role key may only be 'student' (or absent),
+      // unless written by the verified super-admin account.
+      allow create: if isOwner(uid)
+                    && isWithinSizeLimit()
+                    && (isSuperAdminToken()
+                        || !request.resource.data.keys().hasAny(['role'])
+                        || request.resource.data.role == 'student');
+
+      // Update: owner only; the 'role' key must NOT change (no escalation),
+      // unless written by the verified super-admin account.
+      allow update: if isOwner(uid)
+                    && isWithinSizeLimit()
+                    && (isSuperAdminToken()
+                        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+
+      // Profile documents are never deleted from the client.
+      allow delete: if false;
+
+      // Reserved per-user metadata subcollection
       match /metadata/{doc} {
-        allow read: if isOwner(uid);
-        allow write: if isOwner(uid) && isWithinSizeLimit();
+        allow read, write: if isOwner(uid) && isWithinSizeLimit();
       }
 
       // Progress subcollection
       match /progress/{doc} {
-        // Only the owner can read their own progress
         allow read: if isOwner(uid);
-
-        // Only the owner can write their own progress
-        // Additional validation:
-        //   - Document must contain a 'json' field (string)
-        //   - Document must contain an 'updated_at' field
-        //   - JSON field must not exceed 900 KB (leaving room for metadata)
         allow write: if isOwner(uid)
                      && isWithinSizeLimit()
                      && request.resource.data.keys().hasAll(['json', 'updated_at'])
                      && request.resource.data.json is string
                      && request.resource.data.json.size() < 921600;
-
-        // Delete is allowed (user can reset their progress)
         allow delete: if isOwner(uid);
-      }
-
-      // Prevent listing other users' documents
-      match /{document=**} {
-        allow read, write: if false;
       }
     }
 
-    // ─── Quotes collection (admin-managed motivation quotes) ───
+    // ─── Leaderboard (public stats mirror — NO email, NO role) ───
     //
-    // Any signed-in learner can READ today's quote pool (the widget + dashboard
-    // pull from here). Only ADMINS can create/update/delete quotes — they are
-    // shared content, not per-user data.
+    // Written by each client alongside its /users/{uid} profile so the
+    // Momentum leaderboard can be read by every signed-in learner without
+    // exposing private emails stored in /users.
+    match /leaderboard/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(uid)
+                            && isWithinSizeLimit()
+                            && !request.resource.data.keys().hasAny(['email', 'role']);
+      allow delete: if isOwner(uid);
+    }
+
+    // ─── Quotes collection (admin-managed motivation quotes) ───
     match /quotes/{quoteId} {
       allow read: if isSignedIn();
 
-      // Admins may add a quote; validate shape + reasonable length.
       allow create: if isAdmin()
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() < 600
                     && request.resource.data.author is string;
 
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Announcements (admin broadcasts) ───
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isWithinSizeLimit();
       allow update, delete: if isAdmin();
     }
 

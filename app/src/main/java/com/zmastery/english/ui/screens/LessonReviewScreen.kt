@@ -66,7 +66,7 @@ fun LessonReviewScreen(vm: AppViewModel) {
             ) {
                 Column {
                     Text("مراجعة الدروس", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "أعد قراءة الدروس المستحقة وقيّم مدى تذكّرك. كلما تذكّرت أكثر، تباعدت المراجعة القادمة.",
                         color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp,
@@ -93,14 +93,14 @@ private fun ZSage() = ZCyan
 @Composable
 private fun LessonReviewRow(vm: AppViewModel, lesson: Lesson, onClick: () -> Unit) {
     val course = vm.courses.firstOrNull { it.id == lesson.courseId }
-    Surface(shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(46.dp).clip(RoundedCornerShape(13.dp))
+                Modifier.size(46.dp).clip(RoundedCornerShape(12.dp))
                     .background(Color(course?.accent ?: 0xFFE07856).copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Filled.Autorenew, null, tint = Color(course?.accent ?: 0xFFE07856)) }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(lesson.title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
@@ -128,10 +128,10 @@ private fun LessonReviewDetail(vm: AppViewModel, lesson: Lesson, onDone: () -> U
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         TextButton(onClick = onBack) {
-            Icon(Icons.Filled.ArrowForward, null, tint = ZIndigo); Spacer(Modifier.width(6.dp)); Text("رجوع", color = ZIndigo)
+            Icon(Icons.Filled.ArrowForward, null, tint = ZIndigo); Spacer(Modifier.width(8.dp)); Text("رجوع", color = ZIndigo)
         }
 
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(20.dp)) {
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(20.dp)) {
             Column {
                 Text("مراجعة الدرس", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
@@ -145,9 +145,9 @@ private fun LessonReviewDetail(vm: AppViewModel, lesson: Lesson, onDone: () -> U
                     if (lesson.readingEn.isNotBlank()) {
                         ReviewSection("النص", Icons.Filled.AutoStories, ZCyanDeep) {
                             Text(lesson.readingEn, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp)
-                            Spacer(Modifier.height(10.dp))
-                            Divider(color = ZBorder)
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
+                            HorizontalDivider(color = ZBorder)
+                            Spacer(Modifier.height(12.dp))
                             Text(lesson.readingAr, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 24.sp)
                         }
                     }
@@ -187,13 +187,13 @@ private fun LessonReviewDetail(vm: AppViewModel, lesson: Lesson, onDone: () -> U
                     if (words.isNotEmpty()) {
                         ReviewSection("ما الكلمات التي نسيتها؟", Icons.Filled.HighlightOff, ZRose) {
                             Text("اختر الكلمات التي لم تتذكرها لتعود لقائمة مراجعة الكلمات", color = ZTextSecondary, fontSize = 12.sp)
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             words.forEach { w ->
                                 val on = w.id in forgotten
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = if (on) ZRose.copy(alpha = 0.12f) else ZSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                     onClick = { if (on) forgotten.remove(w.id) else forgotten.add(w.id) },
                                 ) {
                                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -237,7 +237,7 @@ private fun masteryLabel(m: Float) = when {
 @Composable
 private fun ReviewSection(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))

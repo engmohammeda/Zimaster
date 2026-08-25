@@ -85,7 +85,7 @@ fun VocabularyScreen(vm: AppViewModel, onOpenMnemonics: () -> Unit = {}) {
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(list, key = { it.id }) { WordCard(it, vm) }
                     item { Spacer(Modifier.height(90.dp)) }
@@ -113,7 +113,7 @@ fun VocabularyScreen(vm: AppViewModel, onOpenMnemonics: () -> Unit = {}) {
                         Text(
                             "${vm.mnemonicMissingCount}", color = Color.White,
                             fontSize = 11.sp, fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }
@@ -152,7 +152,7 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
     var success by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(26.dp), color = ZCard, shadowElevation = 8.dp) {
+        Surface(shape = RoundedCornerShape(24.dp), color = ZCard, shadowElevation = 8.dp) {
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("إضافة كلمة جديدة", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 19.sp, modifier = Modifier.weight(1f))
@@ -163,7 +163,7 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
 
                 // Tab switch
-                Surface(shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant) {
                     Row(Modifier.padding(4.dp)) {
                         TabButton("Smart AI", aiTab, Modifier.weight(1f), Icons.Filled.AutoAwesome) { aiTab = true; error = null; success = null }
                         TabButton("يدوي", !aiTab, Modifier.weight(1f), Icons.Filled.EditNote) { aiTab = false; error = null; success = null }
@@ -189,7 +189,7 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.ErrorOutline, null, tint = ZRose, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(it, color = ZRose, fontSize = 12.sp)
                     }
                 }
@@ -197,12 +197,12 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(it, color = ZEmerald, fontSize = 12.sp)
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
 
                 if (aiTab) {
                     Button(
@@ -231,14 +231,14 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     ) {
                         if (loading) {
                             CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Text("جارٍ التوليد...", fontWeight = FontWeight.Bold, color = Color.White)
                         } else {
                             Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(8.dp))
                             Text("حفظ AI ذكي (ترجمة وتوليد جملة)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         if (vm.geminiApiKey.isBlank()) "يتطلب مفتاح Gemini API من الإعدادات" else "سيتم توليد الترجمة والمثال والنطق تلقائياً",
                         color = ZTextMuted, fontSize = 11.sp,
@@ -266,18 +266,18 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
 @Composable
 private fun TabButton(label: String, active: Boolean, modifier: Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(11.dp),
+        shape = RoundedCornerShape(12.dp),
         color = if (active) ZIndigo else Color.Transparent,
         onClick = onClick,
         modifier = modifier,
     ) {
         Row(
-            Modifier.padding(vertical = 10.dp),
+            Modifier.padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(icon, null, tint = if (active) Color.White else ZTextSecondary, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(label, color = if (active) Color.White else ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
@@ -293,7 +293,7 @@ private fun DialogField(value: String, onChange: (String) -> Unit, placeholder: 
         singleLine = minLines == 1,
         minLines = minLines,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = ZSurfaceVariant, unfocusedContainerColor = ZSurfaceVariant,
             disabledContainerColor = ZSurfaceVariant,
@@ -310,7 +310,7 @@ private fun FilterChip(selected: Boolean, label: String, onClick: () -> Unit) {
         color = if (selected) ZIndigo else ZCard,
         onClick = onClick,
     ) {
-        Text(label, color = if (selected) Color.White else ZTextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+        Text(label, color = if (selected) Color.White else ZTextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     }
 }
 
@@ -334,7 +334,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
         com.zmastery.english.data.ReviewState.REVIEWING -> ZAmber
         com.zmastery.english.data.ReviewState.SAVED -> ZEmerald
     }
-    val cardShape = RoundedCornerShape(18.dp)
+    val cardShape = RoundedCornerShape(16.dp)
 
     Surface(shape = cardShape, color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = { expanded = !expanded }) {
         Column(
@@ -355,7 +355,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
                     )
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                 }
                 com.zmastery.english.audio.AudioButton(
                     text = if (word.exampleEn.isNotBlank()) "${word.english}. ${word.exampleEn}" else word.english,
@@ -372,15 +372,15 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                 }
                 Text(word.arabic, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatePill(word.state.label, stateLabel)
                 if (isForgotten) StatePill("منسية", ZRose)
                 else if (isHard) StatePill("صعبة", ZAmber)
             }
             if (expanded) {
                 Spacer(Modifier.height(12.dp))
-                Divider(color = ZBorder)
+                HorizontalDivider(color = ZBorder)
                 Spacer(Modifier.height(12.dp))
                 Text(word.exampleEn, color = ZTextSecondary, fontSize = 14.sp)
                 Text(word.exampleAr, color = ZTextMuted, fontSize = 13.sp)
@@ -388,7 +388,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Image, null, tint = ZPurple, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(word.mentalImage, color = ZPurple, fontSize = 12.sp)
                     }
                 }
@@ -407,7 +407,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Link, null, tint = ZPurple, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(5.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text("الرابط الذهني", color = ZPurple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                             Spacer(Modifier.height(4.dp))
@@ -425,7 +425,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                     }
                 } else {
                     Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.LinkOff, null, tint = ZTextMuted, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
@@ -439,7 +439,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                 // Memory strength bar (FSRS stability based)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Bolt, null, tint = ZEmerald, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("قوة الذاكرة", color = ZTextSecondary, fontSize = 11.sp)
                     Spacer(Modifier.width(8.dp))
                     LinearProgressIndicator(
@@ -450,16 +450,16 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                     Spacer(Modifier.width(8.dp))
                     Text("${(word.strength * 100).toInt()}%", color = ZEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MiniStat("الاستقرار", if (word.stability >= 1) "${word.stability.toInt()}ي" else "<1ي")
                     MiniStat("الصعوبة", String.format("%.1f", word.difficulty))
                     MiniStat("المراجعات", "${word.totalReviews}")
                     MiniStat("التالي", if (word.dueInDays <= 0) "الآن" else "${word.dueInDays}ي")
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 // Edit / delete actions
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
                         onClick = { showEdit = true },
                         modifier = Modifier.weight(1f),
@@ -468,7 +468,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZIndigo),
                     ) {
                         Icon(Icons.Filled.Edit, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp)); Text("تعديل", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(Modifier.width(8.dp)); Text("تعديل", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     OutlinedButton(
                         onClick = { showDelete = true },
@@ -478,7 +478,7 @@ private fun WordCard(word: VocabWord, vm: AppViewModel) {
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZRose),
                     ) {
                         Icon(Icons.Filled.DeleteOutline, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp)); Text("حذف", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(Modifier.width(8.dp)); Text("حذف", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -504,7 +504,7 @@ private fun EditWordDialog(word: VocabWord, vm: AppViewModel, onDismiss: () -> U
     var error by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(26.dp), color = ZCard, shadowElevation = 8.dp) {
+        Surface(shape = RoundedCornerShape(24.dp), color = ZCard, shadowElevation = 8.dp) {
             Column(
                 Modifier
                     .padding(20.dp)
@@ -535,11 +535,11 @@ private fun EditWordDialog(word: VocabWord, vm: AppViewModel, onDismiss: () -> U
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.ErrorOutline, null, tint = ZRose, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(it, color = ZRose, fontSize = 12.sp)
                     }
                 }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = {
                         if (english.isBlank()) { error = "اكتب الكلمة الإنجليزية"; return@Button }
@@ -561,13 +561,13 @@ private fun EditWordDialog(word: VocabWord, vm: AppViewModel, onDismiss: () -> U
 @Composable
 private fun DeleteWordDialog(word: VocabWord, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(26.dp), color = ZCard, shadowElevation = 8.dp) {
-            Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(shape = RoundedCornerShape(24.dp), color = ZCard, shadowElevation = 8.dp) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier.size(60.dp).clip(RoundedCornerShape(20.dp)).background(ZRose.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.DeleteOutline, null, tint = ZRose, modifier = Modifier.size(32.dp)) }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text("حذف الكلمة؟", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -576,22 +576,22 @@ private fun DeleteWordDialog(word: VocabWord, onConfirm: () -> Unit, onDismiss: 
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
                 Spacer(Modifier.height(20.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
                     ) { Text("إلغاء", fontWeight = FontWeight.Bold) }
                     Button(
                         onClick = onConfirm,
                         modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZRose),
                     ) {
                         Icon(Icons.Filled.Delete, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp)); Text("حذف", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(8.dp)); Text("حذف", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -608,7 +608,7 @@ private fun StatePill(label: String, color: Color) {
 
 @Composable
 private fun MiniStat(label: String, value: String) {
-    Surface(shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant) {
+    Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = ZCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(label, color = ZTextMuted, fontSize = 10.sp)

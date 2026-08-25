@@ -66,6 +66,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ----- Courses (mutable so imports can add) -----
     val courses = mutableStateListOf<Course>().apply { addAll(SampleData.courses) }
+    /** المسارات التخصصية الديناميكية (id ≥ 4) — تُنشأ تلقائياً من بيانات المناهج المستوردة. */
+    val customLevels = mutableStateListOf<Level>()
+    /** كل المستويات: الأكاديمية الثلاثة + المسارات التخصصية — تُقرأ بها كل الشاشات. */
+    val allLevels: List<Level> get() = SampleData.levels + customLevels
+
+    /** يضمن وجود مستوى تخصصي (id ≥ 4) في السجل — يستدعيه الاستيراد تلقائياً. */
+    internal fun ensureCustomLevel(id: Int, name: String, emoji: String = "") {
+        if (id <= 3 || customLevels.any { it.id == id }) return
+        customLevels.add(
+            Level(
+                id = id,
+                name = name.ifBlank { "المسار التخصصي $id" },
+                description = "مسار تخصصي — مصطلحات وحوارات وأسلوب المجال",
+                emoji = emoji.ifBlank { "🎯" },
+            )
+        )
+    }
     val vocab = mutableStateListOf<VocabWord>().apply { addAll(SampleData.vocab.map { it.copy() }) }
     val lessons = mutableStateListOf<Lesson>().apply { addAll(SampleData.lessons.map { it.copy() }) }
 
@@ -155,7 +172,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             SampleData.courses.forEach { base ->
                 if (courses.none { it.id == base.id }) courses.add(base)
             }
+            // Dusk Indigo migration: built-in courses adopt the new palette accents
+            // (imported cloud courses keep their own colors).
+            for (i in courses.indices) {
+                SampleData.courses.firstOrNull { it.id == courses[i].id }?.let { base ->
+                    if (courses[i].accent != base.accent) courses[i] = courses[i].copy(accent = base.accent)
+                }
+            }
         }
+        // المسارات التخصصية (id ≥ 4)
+        customLevels.clear()
+        customLevels.addAll(s.customLevels.map { it.toDomain() })
         lessons.clear(); lessons.addAll(s.lessons.map { it.toDomain() })
         vocab.clear(); vocab.addAll(s.vocab.map { it.toDomain() })
         repairLessonRichContent()
@@ -360,6 +387,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wipe all imported content & progress, restoring the empty progress. */
     fun resetAll() {
+        // Cancel any pending debounced save — it would re-write the pre-reset
+        // state right after the wipe below (resurrection race).
+        saveJob?.cancel()
         courses.clear(); courses.addAll(SampleData.courses)
         lessons.clear(); vocab.clear()
         nextCourseId = (courses.maxOfOrNull { it.id } ?: 0) + 1
@@ -379,7 +409,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mnemonicBatch.clear()
         mnemonicPromptText = ""
         mnemonicVersion++
-        viewModelScope.launch { Persistence.clear(getApplication()) }
+        viewModelScope.launch {
+            // امسح النسخة الاحتياطية أيضاً — وإلا لاسترجعها مسار loss recovery
+            // عند الإقلاع القادم كلَّ ما حذفه المستخدم عمداً.
+            DataGuard.clearBackup(getApplication())
+            Persistence.clear(getApplication())
+            // Also clear the CLOUD copy — otherwise the next launch would merge
+            // the old cloud snapshot back in and resurrect everything the user
+            // just deleted. Push the freshly-cleared state (state is already
+            // empty in memory at this point).
+            runCatching {
+                com.zmastery.english.cloud.CloudAuth.uid?.let { uid ->
+                    // Strip API keys exactly like the normal sync push — keys
+                    // must NEVER leave the device.
+                    val safeState = KeyProtector.stripKeysForSharing(buildAppState())
+                    com.zmastery.english.cloud.CloudSync.pushProgress(
+                        uid, Persistence.encode(safeState),
+                    )
+                }
+            }
+        }
     }
 
     // ======================================================================
@@ -389,6 +438,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Build a full snapshot of the current in-memory state. */
     fun currentAppState(): AppState = AppState(
         courses = courses.map { it.toDto() },
+        customLevels = customLevels.map { it.toDto() },
         lessons = lessons.map { it.toDto() },
         vocab = vocab.map { it.toDto() },
         profile = ProfileDto(
@@ -1883,6 +1933,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     internal fun buildAppState(): AppState = AppState(
         courses = courses.map { it.toDto() },
+        customLevels = customLevels.map { it.toDto() },
         lessons = lessons.map { it.toDto() },
         vocab = vocab.map { it.toDto() },
         profile = ProfileDto(

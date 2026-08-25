@@ -123,6 +123,37 @@ object DataGuard {
         if (primary != null) {
             val health = healthOf(primary)
             if (!health.isEmpty || !hasBackup(ctx)) {
+                // ── Loss recovery ──
+                // Primary loaded fine but holds FEWER lessons than the last
+                // good backup. This is the aftermath of the cloud-restore
+                // data-loss bug (the wiped state kept only sample content
+                // while the backup still holds the learner's imports).
+                // Adopt the richer backup automatically — nothing the user
+                // did can produce this gap otherwise (resetAll clears the
+                // backup precisely to keep this branch from firing).
+                val info = backupInfo(ctx)
+                if (info != null && info.lessonCount > health.lessonCount && info.lessonCount > 0) {
+                    val backup = try { loadBackup(ctx) } catch (e: Exception) { null }
+                    val backupHealth = backup?.let { healthOf(it) }
+                    if (backupHealth != null && backupHealth.lessonCount > health.lessonCount) {
+                        Log.w(
+                            TAG,
+                            "Loss recovery: primary has ${health.lessonCount} lessons but backup has " +
+                                "${backupHealth.lessonCount} — restoring the backup",
+                        )
+                        try {
+                            Persistence.save(ctx, backup)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Could not persist recovered backup: ${e.message}")
+                        }
+                        return LoadResult(
+                            state = backup,
+                            source = LoadSource.BACKUP,
+                            health = backupHealth,
+                            recovered = true,
+                        )
+                    }
+                }
                 return LoadResult(
                     state = primary,
                     source = LoadSource.PRIMARY,
@@ -196,6 +227,17 @@ object DataGuard {
     private fun hasBackup(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.contains(KEY_BACKUP)
+    }
+
+    /**
+     * يمسح النسخة الاحتياطية — يُستدعى عند التصفير الكامل (resetAll) كي لا
+     * «يسترجع» الإقلاعُ القادم محتوى حذفه المستخدم عمداً عبر مسار loss recovery.
+     */
+    fun clearBackup(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_BACKUP).remove(KEY_BACKUP_TIME)
+            .remove(KEY_BACKUP_LESSON_COUNT).remove(KEY_BACKUP_VOCAB_COUNT).apply()
+        Log.i(TAG, "Backup cleared by explicit reset")
     }
 
     /** معلومات النسخة الاحتياطية المتاحة (للعرض في الواجهة). */

@@ -37,11 +37,11 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
     ) {
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(15.dp)).background(Color(course.accent).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(course.accent).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
                         Icon(courseIcon(course.type.icon), null, tint = Color(course.accent), modifier = Modifier.size(26.dp))
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text(course.name, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 18.sp)
                         Text(
@@ -78,7 +78,7 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = ZCard,
                     shadowElevation = 5.dp,
                     onClick = onOpenPhonetics,
@@ -88,7 +88,7 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
                             Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(course.accent).copy(alpha = 0.18f)),
                             contentAlignment = Alignment.Center,
                         ) { Text("2", color = Color(course.accent), fontWeight = FontWeight.Bold) }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text("الفرق بين أصوات A و E و I", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text("أصوات · أزواج صغرى · تدريب · اختبار", color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)
@@ -103,7 +103,7 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
             items(lessons, key = { it.id }) { lesson ->
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = ZCard,
                     shadowElevation = 5.dp,
                     onClick = { onOpenLesson(lesson.id) },
@@ -117,7 +117,7 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
                             if (lesson.isCompleted) Icon(Icons.Filled.Check, null, tint = ZEmerald)
                             else Text("${lesson.no}", color = ZTextSecondary, fontWeight = FontWeight.Bold)
                         }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(lesson.title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(lesson.summaryAr, color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)

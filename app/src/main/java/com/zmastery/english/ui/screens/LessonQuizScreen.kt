@@ -52,7 +52,7 @@ fun LessonQuizScreen(vm: AppViewModel, lessonId: Int, onBack: () -> Unit) {
                     Text("اختبار الدرس", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(4.dp))
                     Text(lesson?.title ?: "", color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text("${quiz.size} سؤال", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
                 }
             }
@@ -94,12 +94,12 @@ fun LessonQuizScreen(vm: AppViewModel, lessonId: Int, onBack: () -> Unit) {
 @Composable
 private fun QuizCard(number: Int, q: QuizItem, accent: Color) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                     Text("$number", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(q.question, color = ZTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
             }
             // audio_quiz: the learner must hear the word before choosing an answer.
@@ -114,11 +114,11 @@ private fun QuizCard(number: Int, q: QuizItem, accent: Color) {
                         audioKey = "quiz_audio_${q.audioText.hashCode()}",
                         accent = accent, size = 40.dp, iconSize = 20.dp,
                     )
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Text("استمع أولاً ثم اختر ما سمعتَه", color = ZTextSecondary, fontSize = 13.sp)
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             when (q.type) {
                 QuizType.MULTIPLE_CHOICE -> ChoiceQuiz(q.options, q.answer, q.explanationAr)
                 QuizType.TRUE_FALSE -> ChoiceQuiz(listOf("True", "False"), q.answer, q.explanationAr)
@@ -154,7 +154,7 @@ private fun ChoiceQuiz(options: List<String>, answer: String, explanation: Strin
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
                     .border(1.5.dp, border, RoundedCornerShape(12.dp))
                     .clickable(enabled = !answered) { selected = opt }
-                    .padding(14.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(opt, color = ZTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
@@ -173,7 +173,7 @@ private fun WrittenQuiz(answer: String, explanation: String) {
     var input by remember { mutableStateOf("") }
     var checked by remember { mutableStateOf(false) }
     val correct = input.trim().trim('.').equals(answer.trim().trim('.'), ignoreCase = true)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = input,
             onValueChange = { input = it; checked = false },

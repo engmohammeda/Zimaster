@@ -43,16 +43,16 @@ internal fun LazyListScope.phoneticsBlock(content: PhContent) {
 @Composable
 private fun PhCard(title: String, icon: ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.14f)),
+                    Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center,
                 ) { Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp)) }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             content()
         }
     }
@@ -62,19 +62,19 @@ private fun PhCard(title: String, icon: ImageVector, accent: Color, content: @Co
 private fun FocusSoundsCard(content: PhContent) {
     PhCard("الأصوات المستهدفة", Icons.Filled.RecordVoiceOver, ZAmber) {
         content.focusSounds.forEachIndexed { i, s ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Box(
-                    Modifier.size(62.dp).clip(RoundedCornerShape(18.dp))
+                    Modifier.size(62.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFD98324)))),
                     contentAlignment = Alignment.Center,
                 ) { Text(s.symbol, color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp) }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(s.description, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 22.sp)
                 }
             }
             if (i < content.focusSounds.size - 1) {
-                Divider(color = ZBorder, modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(vertical = 4.dp))
             }
         }
     }
@@ -87,8 +87,8 @@ private fun MinimalPairsCard(content: PhContent) {
         Spacer(Modifier.height(12.dp))
         content.minimalPairs.forEach { p ->
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PairChip(p.word1, Modifier.weight(1f))
@@ -113,9 +113,9 @@ private fun PairChip(word: String, modifier: Modifier) {
 private fun PracticeScriptsCard(scripts: List<String>) {
     PhCard("جُمل التدريب (Shadowing)", Icons.Filled.Repeat, ZEmerald) {
         scripts.forEachIndexed { i, s ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(ZEmerald.copy(alpha = 0.14f)),
+                    Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(ZEmerald.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center,
                 ) { Text("${i + 1}", color = ZEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 Spacer(Modifier.width(12.dp))

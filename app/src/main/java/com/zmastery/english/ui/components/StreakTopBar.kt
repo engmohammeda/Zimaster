@@ -82,7 +82,7 @@ fun StreakTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 // ── Status Indicator & Label ──
                 Row(
@@ -97,7 +97,7 @@ fun StreakTopBar(
                             .clip(RoundedCornerShape(50))
                             .background(if (dayEarned) ZEmerald else ZAmber),
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         if (dayEarned) "يومك مؤمَّن ✓" else conditionLabel,
                         color = if (dayEarned) ZEmerald else ZTextSecondary,
@@ -107,7 +107,7 @@ fun StreakTopBar(
                     )
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
 
                 // ── Compact Action Capsule ──
                 Surface(
@@ -128,11 +128,11 @@ fun StreakTopBar(
                                 .alpha(if (streak == 0) 0.35f else 1f)
                                 .scale(flamePulse),
                         )
-                        Spacer(Modifier.width(3.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             "$streak",
                             color = if (streak > 0) ZAmber else ZTextMuted,
-                            fontSize = 12.5.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                         )
 
@@ -142,11 +142,11 @@ fun StreakTopBar(
 
                         // XP Bolt
                         Icon(Icons.Filled.Bolt, null, tint = ZIndigo, modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(2.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             compact(xp),
                             color = ZIndigo,
-                            fontSize = 12.5.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                         )
 
@@ -155,11 +155,11 @@ fun StreakTopBar(
                             Box(Modifier.width(1.dp).height(12.dp).background(ZBorder))
                             Spacer(Modifier.width(8.dp))
                             Icon(Icons.Filled.Shield, null, tint = ZCyanDeep, modifier = Modifier.size(13.dp))
-                            Spacer(Modifier.width(2.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 "$shields",
                                 color = ZCyanDeep,
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black,
                             )
                         }
@@ -171,12 +171,12 @@ fun StreakTopBar(
                                 .background(
                                     androidx.compose.ui.graphics.Brush.linearGradient(listOf(ZIndigo, ZPurple))
                                 )
-                                .padding(horizontal = 7.dp, vertical = 2.dp),
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
                         ) {
                             Text(
                                 cefr,
                                 color = Color.White,
-                                fontSize = 10.5.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                             )
                         }

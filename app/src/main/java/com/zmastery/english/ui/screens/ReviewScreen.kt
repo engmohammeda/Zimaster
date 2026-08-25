@@ -167,7 +167,7 @@ fun ReviewScreen(vm: AppViewModel) {
 
         LinearProgressIndicator(
             progress = { index.toFloat() / queue.size },
-            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(6.dp)),
+            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)),
             color = ZIndigo, trackColor = ZBorder,
         )
         Spacer(Modifier.height(8.dp))
@@ -176,11 +176,11 @@ fun ReviewScreen(vm: AppViewModel) {
             Spacer(Modifier.weight(1f))
             StageIndicator(stage)
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
 
         Surface(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(24.dp),
             color = ZCard,
             shadowElevation = 6.dp,
         ) {
@@ -205,7 +205,7 @@ fun ReviewScreen(vm: AppViewModel) {
                                 AudioBubble(listens, manualReplays, isPlaying) { playNow(true) }
                                 Spacer(Modifier.height(20.dp))
                                 StageBadge("المرحلة 1", "استمع وتذكّر", ZIndigo)
-                                Spacer(Modifier.height(10.dp))
+                                Spacer(Modifier.height(12.dp))
                                 Text(
                                     "استمع للنطق وحاول تذكّر معنى الكلمة.\nإن تذكّرتها الآن اضغط «تذكرتها» فوراً.",
                                     color = ZTextMuted, fontSize = 13.sp,
@@ -216,17 +216,17 @@ fun ReviewScreen(vm: AppViewModel) {
                                 AudioBubble(listens, manualReplays, isPlaying, size = 72) { playNow(true) }
                                 Spacer(Modifier.height(16.dp))
                                 MnemonicView(tilePath, word.mentalImage, big = true)
-                                Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(16.dp))
                                 StageBadge("المرحلة 2", "الصورة الذهنية", ZAmber)
                             }
                             3 -> {
                                 // Compact header keeps the word + example fully visible.
                                 CompactAudioRow(listens, manualReplays, isPlaying, ZCyanDeep) { playNow(true) }
                                 if (tilePath != null) {
-                                    Spacer(Modifier.height(14.dp))
+                                    Spacer(Modifier.height(16.dp))
                                     MnemonicView(tilePath, word.mentalImage, big = false)
                                 }
-                                Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(16.dp))
                                 Text(
                                     word.english, color = ZTextPrimary, fontSize = 34.sp,
                                     fontWeight = FontWeight.Black, textAlign = TextAlign.Center,
@@ -237,12 +237,12 @@ fun ReviewScreen(vm: AppViewModel) {
                                     Text(word.phonetic, color = ZCyanDeep, fontSize = 15.sp, textAlign = TextAlign.Center)
                                 }
                                 if (word.exampleEn.isNotBlank()) {
-                                    Spacer(Modifier.height(14.dp))
-                                    Surface(shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant) {
+                                    Spacer(Modifier.height(16.dp))
+                                    Surface(shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant) {
                                         Text(
                                             word.exampleEn, color = ZTextSecondary, fontSize = 15.sp,
                                             textAlign = TextAlign.Center, lineHeight = 24.sp,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                         )
                                     }
                                 }
@@ -250,16 +250,16 @@ fun ReviewScreen(vm: AppViewModel) {
                                     Spacer(Modifier.height(12.dp))
                                     HintChip(word.mentalImage)
                                 }
-                                Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(16.dp))
                                 StageBadge("المرحلة 3", "الكلمة والمثال (بدون ترجمة)", ZCyanDeep)
                             }
                             else -> {
                                 CompactAudioRow(listens, manualReplays, isPlaying, ZEmerald) { playNow(true) }
                                 if (tilePath != null) {
-                                    Spacer(Modifier.height(14.dp))
+                                    Spacer(Modifier.height(16.dp))
                                     MnemonicView(tilePath, word.mentalImage, big = false)
                                 }
-                                Spacer(Modifier.height(14.dp))
+                                Spacer(Modifier.height(16.dp))
                                 Text(
                                     word.english, color = ZTextPrimary, fontSize = 30.sp,
                                     fontWeight = FontWeight.Black, textAlign = TextAlign.Center,
@@ -269,13 +269,13 @@ fun ReviewScreen(vm: AppViewModel) {
                                     Spacer(Modifier.height(4.dp))
                                     Text(word.phonetic, color = ZCyanDeep, fontSize = 14.sp, textAlign = TextAlign.Center)
                                 }
-                                Spacer(Modifier.height(10.dp))
-                                Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.12f)) {
+                                Spacer(Modifier.height(12.dp))
+                                Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f)) {
                                     Text(
                                         word.arabic, color = ZEmerald, fontSize = 24.sp,
                                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                                         lineHeight = 32.sp,
-                                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                                     )
                                 }
                                 if (word.exampleEn.isNotBlank() || word.exampleAr.isNotBlank()) {
@@ -303,7 +303,7 @@ fun ReviewScreen(vm: AppViewModel) {
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         StageActions(
             stage = stage,
             recalledInterval = vm.formatInterval(vm.previewStageIntervalDays(word.id, stage)),
@@ -356,7 +356,7 @@ private fun RescueTimerBar(vm: AppViewModel) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = accent.copy(alpha = 0.14f),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -405,7 +405,7 @@ private fun StageActions(
     onNextStage: () -> Unit,
 ) {
     Column {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             // ── Primary: recalled it (grade derived from the current stage) ──
             Surface(
                 modifier = Modifier.weight(1f).height(58.dp),
@@ -432,7 +432,7 @@ private fun StageActions(
                 ) {
                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(Icons.Filled.NavigateBefore, null, tint = ZIndigo, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 when (stage) {
@@ -486,7 +486,7 @@ private fun HintChip(text: String) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.Lightbulb, null, tint = ZAmber, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(text, color = ZTextSecondary, fontSize = 12.sp, maxLines = 2, lineHeight = 18.sp)
         }
     }
@@ -498,7 +498,7 @@ private fun StageBadge(stage: String, title: String, color: Color) {
         Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = 0.14f)) {
             Text(stage, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text(title, color = ZTextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
@@ -508,7 +508,7 @@ private fun StageIndicator(stage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (1..4).forEach { s ->
             Box(
-                Modifier.size(width = 22.dp, height = 6.dp).clip(RoundedCornerShape(3.dp))
+                Modifier.size(width = 22.dp, height = 6.dp).clip(RoundedCornerShape(4.dp))
                     .background(if (s <= stage) ZIndigo else ZBorder)
             )
         }
@@ -569,7 +569,7 @@ private fun CompactAudioRow(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(
             modifier = Modifier.size(52.dp).scale(pulse),
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(24.dp),
             color = Color.Transparent,
             onClick = onPlay,
         ) {
@@ -583,7 +583,7 @@ private fun CompactAudioRow(
                 )
             }
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         ListenCaption(listens, manualReplays, isPlaying, accent)
     }
 }
@@ -624,7 +624,7 @@ private fun MnemonicView(tilePath: String?, fallbackText: String, big: Boolean) 
                 modifier = Modifier.size(side).clip(RoundedCornerShape(20.dp)),
             )
             if (big && fallbackText.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 HintChip(fallbackText)
             }
         }
@@ -660,7 +660,7 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
     ) {
         Spacer(Modifier.height(12.dp))
         Box(
-            Modifier.size(100.dp).clip(RoundedCornerShape(30.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
+            Modifier.size(100.dp).clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Filled.Psychology, null, tint = Color.White, modifier = Modifier.size(56.dp)) }
         Spacer(Modifier.height(20.dp))
@@ -670,18 +670,18 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
             "قيّم الكلمة فور تذكّرها — لا حاجة لإكمال كل المراحل",
             color = ZTextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
         Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(20.dp)) {
                 StageHint("1", "الصوت فقط", "تذكّرتها؟ اضغط «تذكرتها» ← أقوى تثبيت", ZIndigo)
                 StageHint("2", "الصورة الذهنية", "تذكّرتها هنا؟ تثبيت جيد", ZAmber)
                 StageHint("3", "الكلمة + المثال", "دون الترجمة — تثبيت أقصر", ZCyanDeep)
                 StageHint("4", "الكشف الكامل", "الترجمة وكل شيء — أو «نسيتها»", ZEmerald)
-                Spacer(Modifier.height(10.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.10f)) {
+                Spacer(Modifier.height(12.dp))
+                Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.10f)) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.AutoAwesome, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             "زر واحد فقط: «تذكرتها». يحتسب المحرك تقييمك تلقائياً حسب المرحلة التي تذكّرت فيها.",
                             color = ZTextSecondary, fontSize = 12.sp, lineHeight = 19.sp,
@@ -689,10 +689,10 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZIndigo.copy(alpha = 0.10f)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZIndigo.copy(alpha = 0.10f)) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.VolumeUp, null, tint = ZIndigo, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             if (vm.reviewAutoPlay) "النطق يعمل تلقائياً في كل مرحلة"
                             else "التشغيل التلقائي مُعطّل — فعّله من الإعدادات › التعلم",
@@ -702,7 +702,7 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         val empty = vm.activeVocab.isEmpty()
         Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -714,7 +714,7 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
                 )
             }
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
         Button(
             onClick = onStart,
             enabled = !empty,
@@ -731,8 +731,8 @@ private fun ReviewIntro(vm: AppViewModel, onStart: () -> Unit) {
 
 @Composable
 private fun StageHint(num: String, title: String, sub: String, color: Color) {
-    Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(color.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+    Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(30.dp).clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(num, color = color, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.width(12.dp))
@@ -783,7 +783,7 @@ private fun ReviewComplete(count: Int, recalled: Int, listens: Int, vm: AppViewM
 @Composable
 private fun InsightChip(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 4.dp) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = ZIndigo, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Column {

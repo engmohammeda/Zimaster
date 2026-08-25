@@ -5,8 +5,24 @@ import subprocess
 import json
 import time
 
-BOT_TOKEN = "8459296920:AAGq6b6sguUQx0Abk7jbWFDma30v7Ncfbhc"
-CHAT_ID = "5926222376"
+# SECURITY: credentials are read from the environment — NEVER hardcode them.
+# The previously committed token must be considered COMPROMISED and revoked at
+# @BotFather before this script is used again.
+#   export TELEGRAM_BOT_TOKEN="123456:ABC..."
+#   export TELEGRAM_CHAT_ID="123456789"
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+def require_credentials():
+    """Fail fast with a clear message instead of leaking or silently doing nothing."""
+    missing = [name for name, value in (
+        ("TELEGRAM_BOT_TOKEN", BOT_TOKEN),
+        ("TELEGRAM_CHAT_ID", CHAT_ID),
+    ) if not value]
+    if missing:
+        print(f"ERROR: missing environment variable(s): {', '.join(missing)}")
+        print("Set them before running, e.g.: export TELEGRAM_BOT_TOKEN='...' TELEGRAM_CHAT_ID='...'")
+        sys.exit(1)
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -90,6 +106,7 @@ def find_or_build_apk():
     return None
 
 def main():
+    require_credentials()
     print("Starting Telegram sync bridge...")
     
     # 1. Zip the source code

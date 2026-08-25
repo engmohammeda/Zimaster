@@ -134,7 +134,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     Surface(shape = RoundedCornerShape(50), color = pg.colors.first().copy(alpha = 0.14f)) {
                         Text(
                             pg.kicker, color = pg.colors.first(), fontSize = 12.sp, fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                     }
                     Spacer(Modifier.height(16.dp))
@@ -142,7 +142,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         pg.title, color = ZTextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Black,
                         textAlign = TextAlign.Center, lineHeight = 36.sp,
                     )
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         pg.body, color = ZTextSecondary, fontSize = 15.sp,
                         textAlign = TextAlign.Center, lineHeight = 27.sp,
@@ -160,13 +160,13 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     shadowElevation = 5.dp,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Column(Modifier.padding(18.dp)) {
+                    Column(Modifier.padding(20.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.FormatQuote, null, tint = ZIndigo, modifier = Modifier.size(22.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("تعهّدك", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 14.sp)
                         }
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
                             "\"سأدرس كل يوم — ولو قليلاً. الانتظام أهم من الكمّية، " +
                                 "والاستمرار أهم من الحماس.\"",
@@ -188,7 +188,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Dots
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pages.indices.forEach { i ->
                     val active = i == page
                     val w by animateFloatAsState(if (active) 26f else 8f, tween(280), label = "dot")
@@ -271,7 +271,7 @@ fun SplashScreen(onTimeout: () -> Unit = {}) {
         AnimatedVisibility(visible, enter = fadeIn(tween(600))) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    Modifier.size(96.dp).clip(RoundedCornerShape(30.dp))
+                    Modifier.size(96.dp).clip(RoundedCornerShape(24.dp))
                         .background(Color.White.copy(alpha = 0.20f)),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.School, null, tint = Color.White, modifier = Modifier.size(52.dp)) }
@@ -282,7 +282,7 @@ fun SplashScreen(onTimeout: () -> Unit = {}) {
                     "لا تعلّم بدون استمرارية",
                     color = Color.White.copy(alpha = 0.92f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                 )
-                Spacer(Modifier.height(26.dp))
+                Spacer(Modifier.height(28.dp))
                 CircularProgressIndicator(
                     color = Color.White.copy(alpha = 0.85f),
                     strokeWidth = 2.5.dp,

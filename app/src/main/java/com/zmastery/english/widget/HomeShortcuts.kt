@@ -15,7 +15,7 @@ import com.zmastery.english.R
 /**
  * Home-screen integration.
  *
- *  • Dynamic shortcuts  — long-press the app icon for "مراجعة / القاموس / استيراد".
+ *  • Dynamic shortcuts  — long-press the app icon for "مراجعة / القاموس / المستويات".
  *  • Pinned shortcut    — a standalone "مراجعة سريعة" icon on the home screen.
  *  • Pinned widget      — the full stats widget.
  *
@@ -28,7 +28,7 @@ object HomeShortcuts {
 
     private const val ID_REVIEW = "sc_review"
     private const val ID_VOCAB = "sc_vocab"
-    private const val ID_IMPORT = "sc_import"
+    private const val ID_LEVELS = "sc_levels"
 
     private fun routeIntent(ctx: Context, route: String, id: String): Intent =
         Intent(ctx, MainActivity::class.java).apply {
@@ -55,11 +55,11 @@ object HomeShortcuts {
                     .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
                     .setIntent(routeIntent(ctx, "vocab", ID_VOCAB))
                     .build(),
-                ShortcutInfoCompat.Builder(ctx, ID_IMPORT)
-                    .setShortLabel("استيراد")
-                    .setLongLabel("استيراد كورس أو درس")
+                ShortcutInfoCompat.Builder(ctx, ID_LEVELS)
+                    .setShortLabel("المستويات")
+                    .setLongLabel("المستويات والمناهج")
                     .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
-                    .setIntent(routeIntent(ctx, "import", ID_IMPORT))
+                    .setIntent(routeIntent(ctx, "levels", ID_LEVELS))
                     .build(),
             )
             ShortcutManagerCompat.setDynamicShortcuts(ctx, list)

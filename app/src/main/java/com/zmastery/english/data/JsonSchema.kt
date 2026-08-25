@@ -92,6 +92,14 @@ data class LessonMeta(
     @SerialName("course_id") val courseId: String = "",
     @SerialName("course_name_ar") val courseNameAr: String = "",
     val level: Int = 1,
+    /** اسم المستوى التخصصي (level ≥ 4) — ينشئ المسار تلقائياً عند أول استيراد. */
+    @SerialName("level_name") val levelName: String = "",
+    /** أيقونة المستوى التخصصي (إيموجي واحد). */
+    @SerialName("level_emoji") val levelEmoji: String = "",
+    /** نوع الكورس للمسارات الجديدة (vocabulary/grammar/reading/listening/conversation/phonetics/writing). */
+    @SerialName("course_type") val courseType: String = "",
+    /** نمط العرض (نفس مفاتيح LessonStyle مثل conversation). */
+    val style: String = "",
     @SerialName("lesson_no") val lessonNo: Int = 1,
     val title: String = "",
 )

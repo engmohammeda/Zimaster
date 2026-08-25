@@ -37,14 +37,14 @@ fun AiSettingsScreen(vm: AppViewModel) {
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item { AiHeader() }
         item { ApiKeysCard(vm) }
         item { FetchModelsCard(vm) }
         item {
-            Text("عملاء الذكاء الاصطناعي", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.padding(top = 6.dp))
+            Text("عملاء الذكاء الاصطناعي", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
             Text("لكل ميزة إعداداتها: النموذج · الشخصية · الصوت · الأسلوب · المطالبة", color = ZTextSecondary, fontSize = 12.sp)
         }
         items(vm.aiAgents, key = { it.id }) { agent ->
@@ -63,10 +63,10 @@ private fun AiHeader() {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text("مركز الذكاء الاصطناعي", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text("أدر النماذج والمفاتيح والأصوات وشخصيات ومطالبات كل ميزة من مكان واحد", color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 19.sp)
         }
     }
@@ -81,7 +81,7 @@ private fun ApiKeysCard(vm: AppViewModel) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Key, null, tint = ZAmber)
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("مفاتيح API", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
@@ -92,15 +92,15 @@ private fun ApiKeysCard(vm: AppViewModel) {
                 }
                 TextButton(onClick = { showAdd = true }) {
                     Icon(Icons.Filled.Add, null, tint = ZIndigo, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(2.dp)); Text("إضافة", color = ZIndigo)
+                    Spacer(Modifier.width(4.dp)); Text("إضافة", color = ZIndigo)
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
             vm.apiKeys.forEach { key ->
                 val busy = vm.verifyingKeyId == key.id
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = if (key.active) ZIndigo.copy(alpha = 0.10f) else ZSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     onClick = { vm.activateKey(key.id) },
@@ -111,7 +111,7 @@ private fun ApiKeysCard(vm: AppViewModel) {
                                 if (key.active) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                                 null, tint = if (key.active) ZEmerald else ZTextMuted, modifier = Modifier.size(20.dp),
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(key.label, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 Text(
@@ -132,7 +132,7 @@ private fun ApiKeysCard(vm: AppViewModel) {
                         }
                         // Verification badge
                         if (key.verified || key.hasError) {
-                            Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = (if (key.verified) ZEmerald else ZRose).copy(alpha = 0.14f),
@@ -146,7 +146,7 @@ private fun ApiKeysCard(vm: AppViewModel) {
                                         null, tint = if (key.verified) ZEmerald else ZRose,
                                         modifier = Modifier.size(13.dp),
                                     )
-                                    Spacer(Modifier.width(5.dp))
+                                    Spacer(Modifier.width(4.dp))
                                     Text(
                                         if (key.verified) "تم التحقق — يعمل" else key.status,
                                         color = if (key.verified) ZEmerald else ZRose,
@@ -194,11 +194,11 @@ private fun ApiKeysCard(vm: AppViewModel) {
                         color = ZTextSecondary, fontSize = 14.sp,
                     )
                     Spacer(Modifier.height(8.dp))
-                    Surface(shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
                         Text(
                             "${key.providerEnum.label} · ${key.maskedKey}",
                             color = ZTextMuted, fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
                     if (key.active && vm.apiKeys.size > 1) {
@@ -250,16 +250,16 @@ private fun AddKeyDialog(vm: AppViewModel, onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("المزوّد", color = ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 AiProvider.values().forEach { p ->
                     val active = p == provider
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (active) ZIndigo.copy(alpha = 0.13f) else Color.Transparent,
                         onClick = { provider = p; touchedProvider = true },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     ) {
-                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (active) Icons.Filled.RadioButtonChecked else Icons.Filled.RadioButtonUnchecked,
                                 null, tint = if (active) ZIndigo else ZTextMuted, modifier = Modifier.size(16.dp),
@@ -269,11 +269,11 @@ private fun AddKeyDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(p.label, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                     if (p.freeTier) {
-                                        Spacer(Modifier.width(6.dp))
-                                        Surface(shape = RoundedCornerShape(6.dp), color = ZEmerald.copy(alpha = 0.16f)) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Surface(shape = RoundedCornerShape(8.dp), color = ZEmerald.copy(alpha = 0.16f)) {
                                             Text(
                                                 "مجاني", color = ZEmerald, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                             )
                                         }
                                     }
@@ -283,7 +283,7 @@ private fun AddKeyDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = raw, onValueChange = { raw = it },
                     label = { Text("المفتاح", color = ZTextMuted, fontSize = 12.sp) },
@@ -310,11 +310,11 @@ private fun AddKeyDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     )
                 }
                 if (provider.keyUrl.isNotBlank()) {
-                    Spacer(Modifier.height(10.dp))
-                    Surface(shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant) {
-                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.height(12.dp))
+                    Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.OpenInNew, null, tint = ZCyanDeep, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text(
                                 "احصل على مفتاحك من:\n${provider.keyUrl}",
                                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 15.sp,
@@ -345,7 +345,7 @@ private fun FetchModelsCard(vm: AppViewModel) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.CloudSync, null, tint = ZCyanDeep)
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("النماذج المتاحة", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
@@ -372,7 +372,7 @@ private fun FetchModelsCard(vm: AppViewModel) {
                     Text("جلب كل النماذج (v1beta + v1alpha)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "يجلب كل نموذج يسمح به مفتاحك دون استثناء — بما فيها التجريبية والمعاينة (TTS · Live · صور · فيديو).",
                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
@@ -380,11 +380,11 @@ private fun FetchModelsCard(vm: AppViewModel) {
             vm.fetchModelsMessage?.let {
                 Spacer(Modifier.height(8.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = (if (vm.fetchModelsFailed) ZRose else ZEmerald).copy(alpha = 0.13f),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             if (vm.fetchModelsFailed) Icons.Filled.ErrorOutline else Icons.Filled.CheckCircle,
                             null, tint = if (vm.fetchModelsFailed) ZRose else ZEmerald, modifier = Modifier.size(16.dp),
@@ -443,13 +443,13 @@ private fun FetchModelsCard(vm: AppViewModel) {
                 Spacer(Modifier.height(8.dp))
                 grouped.forEach { (kind, list) ->
                     Row(
-                        Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp),
+                        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(kindColor(kind)))
-                        Spacer(Modifier.width(7.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(kind.label, color = ZTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("(${list.size})", color = ZTextMuted, fontSize = 11.sp)
                     }
                     list.forEach { m -> ModelInfoRow(m) }
@@ -457,7 +457,7 @@ private fun FetchModelsCard(vm: AppViewModel) {
                 if (grouped.isEmpty()) {
                     Text(
                         "لا توجد نماذج مطابقة — أوقف فلتر «المجانية فقط» أو اجلب القائمة.",
-                        color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 10.dp),
+                        color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp),
                     )
                 }
             }
@@ -471,12 +471,12 @@ private fun ModelInfoRow(m: AiModel) {
     var open by remember { mutableStateOf(false) }
     val quota = GeminiQuotas.forModel(m.id)
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = ZSurfaceVariant.copy(alpha = 0.45f),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         onClick = { open = !open },
     ) {
-        Column(Modifier.padding(10.dp)) {
+        Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     m.displayName, color = ZTextPrimary, fontSize = 12.sp,
@@ -492,18 +492,18 @@ private fun ModelInfoRow(m: AiModel) {
                     else -> TinyTag("مدفوع", ZRose)
                 }
             }
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(4.dp))
             Text(m.id, color = ZTextMuted, fontSize = 9.sp, maxLines = 1)
             if (quota != null && quota.free) {
                 Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (quota.rpm > 0) TinyTag(quota.rpmLabel, ZCyanDeep)
                     if (quota.rpd > 0) TinyTag(quota.rpdLabel, ZIndigo)
                     if (quota.tpm > 0) TinyTag(quota.tpmLabel, ZPurple)
                 }
             }
             if (open) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 if (m.description.isNotBlank()) {
                     Text(m.description, color = ZTextSecondary, fontSize = 10.sp, lineHeight = 16.sp)
                     Spacer(Modifier.height(4.dp))
@@ -515,7 +515,7 @@ private fun ModelInfoRow(m: AiModel) {
                     Text("الإصدار: ${m.apiVersions.joinToString(" · ")}", color = ZTextMuted, fontSize = 9.sp)
                 }
                 if (m.methods.isNotEmpty()) {
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(m.methods.joinToString(" · "), color = ZTextMuted, fontSize = 9.sp, lineHeight = 14.sp)
                 }
             }
@@ -525,10 +525,10 @@ private fun ModelInfoRow(m: AiModel) {
 
 @Composable
 private fun TinyTag(text: String, color: Color) {
-    Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
+    Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.15f)) {
         Text(
             text, color = color, fontSize = 8.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
         )
     }
 }
@@ -545,10 +545,10 @@ private fun kindColor(kind: ModelKind): Color = when (kind) {
 
 @Composable
 private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onEdit) {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onEdit) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(agentColor(agent.kind).copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(16.dp)).background(agentColor(agent.kind).copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                     Icon(agentIcon(agent.icon), null, tint = agentColor(agent.kind), modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.width(12.dp))
@@ -558,8 +558,8 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
                 }
                 Icon(Icons.Filled.Tune, null, tint = ZTextMuted)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(Icons.Filled.Memory, vm.modelName(agent.modelId))
                 if (agent.kind == ModelKind.TTS) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
             }
@@ -586,9 +586,9 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
     var modelId by remember { mutableStateOf(agent.modelId) }
     var voiceId by remember { mutableStateOf(agent.voiceId) }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        TextButton(onClick = onBack) { Icon(Icons.Filled.ArrowForward, null, tint = ZIndigo); Spacer(Modifier.width(6.dp)); Text("رجوع", color = ZIndigo) }
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(20.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        TextButton(onClick = onBack) { Icon(Icons.Filled.ArrowForward, null, tint = ZIndigo); Spacer(Modifier.width(8.dp)); Text("رجوع", color = ZIndigo) }
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(agentIcon(agent.icon), null, tint = Color.White, modifier = Modifier.size(30.dp))
                 Spacer(Modifier.width(12.dp))
@@ -622,12 +622,12 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = if (vm.showFreeModelsOnly) ZEmerald.copy(alpha = 0.15f) else ZSurfaceVariant,
                     onClick = { vm.showFreeModelsOnly = !vm.showFreeModelsOnly },
                 ) {
                     Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
@@ -635,7 +635,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                             null, tint = if (vm.showFreeModelsOnly) ZEmerald else ZTextMuted,
                             modifier = Modifier.size(15.dp),
                         )
-                        Spacer(Modifier.width(5.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             "المجانية فقط",
                             color = if (vm.showFreeModelsOnly) ZEmerald else ZTextSecondary,
@@ -670,18 +670,18 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 colors = fieldColors(),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
             // Currently selected model always stays visible, even if filtered out.
             val selectedModel = vm.modelById(modelId)
             if (selectedModel == null && modelId.isNotBlank()) {
                 Surface(
                     shape = RoundedCornerShape(12.dp), color = ZAmber.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.CheckCircle, null, tint = ZAmber, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column {
                             Text(modelId, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             Text("مختار حالياً · غير موجود في القائمة المجلوبة", color = ZTextMuted, fontSize = 10.sp)
@@ -692,16 +692,16 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
 
             filteredGroups.forEach { (kind, list) ->
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 3.dp),
+                    Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(kindColor(kind)))
-                    Spacer(Modifier.width(6.dp))
+                    Box(Modifier.size(6.dp).clip(RoundedCornerShape(4.dp)).background(kindColor(kind)))
+                    Spacer(Modifier.width(8.dp))
                     Text(kind.label, color = ZTextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text("(${list.size})", color = ZTextMuted, fontSize = 9.sp)
                     if (kind == agent.kind) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         TinyTag("موصى به", ZEmerald)
                     }
                 }
@@ -711,7 +711,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (sel) ZIndigo.copy(alpha = 0.13f) else ZSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         onClick = { modelId = m.id },
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -719,7 +719,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                                 if (sel) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                                 null, tint = if (sel) ZEmerald else ZTextMuted, modifier = Modifier.size(18.dp),
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -727,7 +727,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                                         fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
                                         modifier = Modifier.weight(1f, fill = false), maxLines = 1,
                                     )
-                                    if (m.isPreview) { Spacer(Modifier.width(5.dp)); TinyTag("تجريبي", ZAmber) }
+                                    if (m.isPreview) { Spacer(Modifier.width(4.dp)); TinyTag("تجريبي", ZAmber) }
                                     when {
                                         quota == null -> {}
                                         quota.free -> { Spacer(Modifier.width(4.dp)); TinyTag("مجاني", ZEmerald) }
@@ -748,7 +748,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             if (filteredGroups.isEmpty()) {
                 Text(
                     "لا توجد نماذج مطابقة — جرّب بحثاً آخر أو أوقف فلتر «المجانية فقط».",
-                    color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 10.dp),
+                    color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp),
                 )
             }
         }
@@ -761,12 +761,12 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (sel) ZCyanDeep.copy(alpha = 0.10f) else ZSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         onClick = { voiceId = v.id },
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (sel) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, null, tint = if (sel) ZEmerald else ZTextMuted, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(v.displayName, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                 Text("${v.gender} · ${v.accent} · ${v.sample}", color = ZTextSecondary, fontSize = 10.sp)
@@ -786,7 +786,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
         }
         EditorCard("المطالبة (System Prompt)", Icons.Filled.Terminal) {
             EditorField(prompt, { prompt = it }, "اكتب المطالبة التي توجّه التوليد...", minLines = 5)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text("يمكنك استخدام متغيرات مثل {WORDS} و {LEVEL} و {DIALOGUE} و {SOUND} و {STATS}.", color = ZTextMuted, fontSize = 10.sp)
         }
 
@@ -796,7 +796,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                 onBack()
             },
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
         ) {
             Icon(Icons.Filled.Save, null); Spacer(Modifier.width(8.dp)); Text("حفظ الإعدادات", fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -807,14 +807,14 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
 
 @Composable
 private fun EditorCard(title: String, icon: ImageVector, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = ZIndigo, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             content()
         }
     }

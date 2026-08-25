@@ -1,164 +1,190 @@
-# 🌟 Zimaster (Z-Mastery) — إتقان الإنجليزية بالتكرار المتباعد والذكاء الاصطناعي
+<div align="center">
 
-<p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="Zimaster Logo" width="110" height="110" />
-</p>
+<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="Zimaster Logo" width="120" height="120" />
 
-<p align="center">
-  <b>تطبيق أندرويد متقدّم لتعلّم وإتقان اللغة الإنجليزية، مبنيّ بـ Jetpack Compose
-  وخوارزمية FSRS للذاكرة طويلة المدى، مدعوماً بنماذج الذكاء الاصطناعي التوليدي،
-  مع معماريّة نظيفة قائمة على وحدات (Controllers) منفصلة قابلة للاختبار.</b>
-</p>
+# 🌟 Zimaster — Z-Mastery
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-green.svg" alt="Platform" />
-  <img src="https://img.shields.io/badge/Kotlin-2.2.21-purple.svg" alt="Kotlin" />
-  <img src="https://img.shields.io/badge/Jetpack_Compose-Material_3-blue.svg" alt="Compose" />
-  <img src="https://img.shields.io/badge/Min_SDK-24-orange.svg" alt="Min SDK" />
-  <img src="https://img.shields.io/badge/Target_SDK-36-red.svg" alt="Target SDK" />
-  <img src="https://img.shields.io/badge/FSRS-v4.5-teal.svg" alt="FSRS" />
-  <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF.svg" alt="GitHub Actions" />
-</p>
+**إتقان الإنجليزية بالتكرار المتباعد والذكاء الاصطناعي**
 
----
+تطبيق أندرويد متكامل لتعلّم اللغة الإنجليزية من الصفر حتى الاحتراف — مبنيّ بـ **Jetpack Compose**،
+يعمل بمحرك ذاكرة **FSRS** من الجيل الأحدث، ومعلم ذكاء اصطناعي متعدد المزوّدين،
+ونموذج محتوى سحابي: **المعلم ينشر ← الطالب يدرس فوراً**.
 
-## 📑 جدول المحتويات
-1. [المميزات الرئيسية](#-المميزات-الرئيسية)
-2. [الهندسة المعمارية](#-الهندسة-المعمارية)
-3. [خوارزمية التكرار المتباعد (FSRS)](#-خوارزمية-التكرار-المتباعد-fsrs)
-4. [تكامل الذكاء الاصطناعي](#-تكامل-الذكاء-الاصطناعي-multi-provider-ai)
-5. [الودجت وعبارات التحفيز](#-الودجت-وعبارات-التحفيز)
-6. [البناء والتثبيت (CI/CD)](#-البناء-والتثبيت-cicd)
-7. [طريقة البناء محلياً](#-طريقة-البناء-محليا)
-8. [الأمان والخصوصية](#-الأمان-والخصوصية)
+<img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
+<img src="https://img.shields.io/badge/Kotlin-2.2-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
+<img src="https://img.shields.io/badge/Jetpack_Compose-Material_3-4285F4?style=for-the-badge" alt="Compose" />
+<img src="https://img.shields.io/badge/FSRS-Memory_Engine-14B8A6?style=for-the-badge" alt="FSRS" />
+<br />
+<img src="https://img.shields.io/badge/API-24%2B-f97316?style=for-the-badge" alt="minSdk 24" />
+<img src="https://img.shields.io/badge/%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-%D8%A3%D9%88%D9%84%D8%A7%D9%8B-8B5CF6?style=for-the-badge" alt="RTL First" />
+<img src="https://github.com/engmohammeda/Zimaster/actions/workflows/android-release.yml/badge.svg?style=for-the-badge" alt="CI" />
+<img src="https://img.shields.io/badge/License-All_Rights_Reserved-0F172A?style=for-the-badge" alt="License" />
+
+**[المميزات](#-المميزات) · [المعمارية](#%EF%B8%8F-المعمارية) · [نموذج المحتوى](#%EF%B8%8F-نموذج-المحتوى) · [البناء](#-البناء-والتثبيت) · [الأمان](#-الأمان-والخصوصية)**
+
+</div>
 
 ---
 
-## 🚀 المميزات الرئيسية
+## 📱 لمحة عن التطبيق
 
-- 🧠 **نظام مراجعة ذكي (FSRS v4.5)**: حساب دقيق لقوة الاسترجاع والصعوبة واستقرار الذاكرة، بهدف احتفاظ 90%.
-- 🤖 **معلم ذكاء اصطناعي متعدّد المزوّدين**: Gemini، OpenAI، Anthropic Claude، Groq، DeepSeek، Cerebras، OpenRouter.
-- 🎙️ **تدريب صوتي وتوليد أصوات دائمة (Gemini TTS)**: مخزَّنة محلياً بصفّ متوازٍ لا يجمد الواجهة.
-- 📱 **ودجت شاشة رئيسية بتصميم محوره «يوم الحماسة»**: شعلة السلسلة + حالة اليوم (مؤمَّن/في خطر) + شريط هدف يومي + عبارة تحفيزية يومية.
-- 💬 **عبارات تحفيزية ديناميكية سحابية**: عبارة عشوائية واحدة يومياً لكل متعلم (من مزيج مكتبة مدمجة + عبارات يضيفها المسؤول)، تتزامن عبر الأجهزة.
-- 🧩 **شاشة درس موحّدة قائمة على البُلوكات (Block-Based)**: Hero، مفردات، قواعد، قراءة، حوار، كتابة، صوتيات.
-- 💾 **Offline-First + مزامنة سحابية**: قاعدة بيانات محلية + Firestore + نسخ احتياطي/استعادة كامل.
-- 🔒 **تشفير مفاتيح الـ API**: لا تُرسل لأي خادم وسيط، ولا تُسجَّل ولا تُشارَك.
+رحلة تعلّم مكتملة من ثلاثة مستويات (**المبتدئ · المتوسط · المتقدم**) تضم عشرات الكورسات:
+مفردات، قواعد، قراءة، استماع، محادثة، صوتيات، كتابة، قصص، أخبار وثقافة — تُدار كاملةً من
+سحابة واحدة، ويستقبلها المتعلّم تلقائياً دون أي خطوة تثبيت يدوية.
+
+> **الفلسفة:** لا تعلّم بلا استمرارية. كل عنصر في التطبيق — من الودجت إلى الإشعارات إلى
+> صناديق المكافآت — مصمّم لهدف واحد: **أن تعود غداً**.
 
 ---
 
-## 🏗 الهندسة المعمارية
+## ✨ المميزات
 
-التطبيق يتبع معايير أندرويد الحديثة، مع **فصل صارم بين الحالة والمنطق**:
-`AppViewModel` هو محور الحالة + التنسيق + الواجهة (façade)، بينما كل منطق الميزات
-موزّع في **15 وحدة Controller مستقلّة قابلة للاختبار**.
+### 🧠 محرك الذاكرة والمراجعة
+| الميزة | الوصف |
+|--------|-------|
+| خوارزمية **FSRS** | حساب دقيق لقوة الاسترجاع والصعوبة واستقرار الذاكرة، بجدولة تستهدف احتفاظاً بنسبة 90% |
+| مراجعة متدرّجة بأربع مراحل | صوت ← صورة ذهنية ← نص ← كشف كامل — تلتقط صعوبة الاسترجاع الحقيقية |
+| مراجعة الدروس والكلمات | جدولان مستقلان: تثبيت المفردات وتثبيت الدروس |
+| محرك اختبارات شامل | اختيار متعدد، صح/خطأ، اختبار سماعي، مع تحليل فجوات وتكرار مستهدف للأخطاء |
+
+### 🤖 الذكاء الاصطناعي
+| الميزة | الوصف |
+|--------|-------|
+| معلم متعدد المزوّدين | **Gemini · OpenAI · Claude · Groq · DeepSeek · Cerebras · OpenRouter** — بمفتاحك الخاص |
+| شرح فوري | القواعد، توليد الأمثلة، التصحيح اللغوي، وتحليل الأداء |
+| استوديو الروابط الذهنية | توليد صور ذهنية تثبّت الكلمات الصعبة في الذاكرة البصرية |
+| المدرب الذكي | تقارير دورية: ما الذي نجح، نقاط الضعف، وخطة علاج محددة |
+| مرآة الإدراك | تحليل سلوكي لتوقيتك وسرعتك وأنماط استرجاعك |
+
+### 🎙️ الصوتيات والتدريب الصوتي
+- توليد نطق دائم بجودة طبيعية (**Gemini TTS**) لكل كلمة ومثال ومقطع — يُخزَّن على الجهاز ويعمل دون اتصال
+- دروس صوتيات متخصصة: الأصوات، الأزواج المتضادة، تمارين التكرار والظل (Shadowing)
+- زر صوت واحد في كل مكان — كل دقيقة استماع تُحتسب في تحليلاتك
+
+### 📱 تجربة الاستخدام
+| الميزة | الوصف |
+|--------|-------|
+| ودجت الشاشة الرئيسية | «يوم الحماسة»: شعلة السلسلة 🔥، حالة اليوم (مؤمَّن/في خطر)، شريط الهدف، وعبارة تحفيزية يومية |
+| شاشة درس موحّدة قائمة على البلوكات | 13 بلوكاً ذكياً يظهر كلٌّ منها حسب محتوى الدرس: Hero، مفردات، جمل، قواعد، أمثلة، حوار، تعبيرات، قراءة، صوتيات، كتابة، ملاحظات، اختبار، إجراءات |
+| تصميم **Dusk Indigo** | نظام تصميم متكامل بوضعين فاتح/غامق، رموز أقطار ومسافات موحّدة، ودعم RTL أصيل |
+| زخم الالتزام | سلسلة بدرجات، دروع حماية، صناديق غامضة، مهام إنقاذ، ولوحة صدارة عامة |
+| خطة يومية ذكية | مهام مولّدة من محتواك الفعلي مع تبرير واضح لكل مهمة |
+| أرشيف القصص | قصة يومية مولّدة من كلماتك + قصص دروس القراءة |
+
+### ☁️ المحتوى والمزامنة
+- **نموذج «المعلم ينشر ← الطالب يدرس»**: أدوات نشر سحابية للمسؤول، واستلام تلقائي صامت للمتعلّم
+- مزامنة تقدّم آمنة بالدمج (لا تُفقد بيانات جهاز أبداً) عبر **Firebase Auth + Firestore**
+- نسخ احتياطي كامل بالتصدير/الاستيراد مع تحقق سلامة (Checksum)
+- **Offline-First**: كل شيء يعمل دون اتصال ويُزامن عند عودته
+
+---
+
+## 🏗️ المعمارية
 
 ```
 app/src/main/java/com/zmastery/english/
-├── data/              # النماذج، FSRS، التخزين، الاستيراد، التشفير، العبارات (QuoteStore)
-├── domain/usecases/   # حالات الاستخدام المستقلّة (AiService, StreakManager, BackupCoordinator…)
-├── viewmodel/         # AppViewModel + 15 Controller (منطق مُفكَّك لكل ميزة)
-├── ui/                # Jetpack Compose + شاشات الدروس (blocks/) + السمات
+├── data/              # النماذج · FSRS · التخزين · الاستيراد · التشفير · الدمج الآمن
+├── domain/
+│   ├── usecases/      # منطق أعمال نقي قابل للاختبار (FSRS · السلسلة · المزامنة · الأداء)
+│   └── repositories/  # تجريد التخزين
+├── viewmodel/         # AppViewModel + 15 وحدة Controller مستقلة لكل ميزة
+├── ui/
+│   ├── screens/       # شاشات Compose + نظام بلوكات الدروس الموحّد
+│   ├── components/    # مكونات مشتركة
+│   └── theme/         # نظام Dusk Indigo: الألوان · الخطوط · رموز الأبعاد
 ├── audio/             # محرك TTS والتشغيل الفوري
-├── cloud/             # Firebase Auth + Firestore (دروس/عبارات/مستخدمون/إشعارات)
-├── widget/            # ودجت الشاشة الرئيسية (RemoteViews)
+├── cloud/             # المصادقة · مزامنة المحتوى والتقدّم · النشر للمسؤول
+├── widget/            # ودجت الشاشة الرئيسية
 └── notify/            # الإشعارات والتنبيهات المجدولة
 ```
 
-### وحدات الـ Controllers (المنطق المُفكَّك)
-`ExamsController` · `StoryController` · `AudioController` · `CloudController` ·
-`AiConfigController` · `CurriculumController` · `StudyPlanController` ·
-`CoachController` · `MnemonicController` · `ImportController` ·
-`LessonReviewController` · `WordReviewController` · `TelemetryController` ·
-`GamificationController` · `DailyPlanController`
+**المبادئ:** فصل صارم بين الحالة والمنطق — `AppViewModel` منسّق خفيف، وكل ميزة في
+Controller مستقل يمر عبر حالات استخدام نقية قابلة للاختبار (200+ اختبار وحدة).
 
-> كل وحدة تستقبل مرجعاً للـ `AppViewModel` وتصل للحالة عبر أسماء مستعارة محلية،
-> مع إبقاء الواجهة العامة للـ ViewModel كما هي (لا شاشة تحتاج تعديلاً عند إعادة الهيكلة).
-
-### التقنيات الأساسية
-- **UI**: Jetpack Compose + Material Design 3.
-- **اللغة**: Kotlin 2.2.21 + Coroutines/StateFlow.
-- **الاستمرارية**: ملف حالة محلي مشفّر + SharedPreferences + kotlinx.serialization.
-- **السحابة**: Firebase (Auth + Firestore) عبر CredentialManager و Google Sign-In.
-- **الشبكة**: Ktor / OkHttp لاستجابات الـ AI.
+### التقنيات
+| الطبقة | الأدوات |
+|--------|---------|
+| الواجهة | Jetpack Compose · Material 3 · Navigation Compose |
+| اللغة | Kotlin 2.2 · Coroutines · StateFlow |
+| الاستمرارية | DataStore · kotlinx.serialization (نسخ مشفّرة + حرس بيانات) |
+| السحابة | Firebase Auth (Google/بريد/مجهول) · Cloud Firestore |
+| الوسائط | Gemini TTS · MediaPlayer |
+| الجودة | JUnit · GitHub Actions (بناء APK/AAB تلقائي مع كل دفعة) |
 
 ---
 
-## 📐 خوارزمية التكرار المتباعد (FSRS)
+## ☁️ نموذج المحتوى
 
-يستخدم التطبيق **Free Spaced Repetition Scheduler** بدلاً من SM-2 التقليدية:
-- حساب قوة الاسترجاع $R$ بدلّة الوقت المنقضي واستقرار الذاكرة $S$.
-- تحديث الصعوبة $D$ والاستقرار $S$ بعد كل مراجعة.
-- جدولة الفواصل وفق نسبة الحفظ المستهدفة (90%)، وتقييم مُكيّف بـ«مرحلة الكشف»
-  (صوت ↔ صورة ذهنية ↔ نص ↔ كشف كامل) لالتقاط صعوبة الاسترجاع بدقّة.
+```
+👑 المعلم (مسؤول)                      📱 المتعلّم
+أدوات المطور ← رفع دروس JSON/ZIP        يفتح التطبيق ← مزامنة صامتة
+        «👑 نشر سحابياً لجميع الطلاب»  ────────►  الدروس تظهر فوراً
+```
 
----
-
-## 🤖 تكامل الذكاء الاصطناعي (Multi-Provider AI)
-
-يستخدم المتعلّم مفتاحه الخاص للاتصال بأي من: **Google Gemini** · **OpenAI** ·
-**Anthropic Claude** · **Groq** · **Cerebras** · **DeepSeek** · **OpenRouter**،
-لشرح القواعد، توليد الأمثلة، التصحيح اللغوي، وتحليل أداء المتعلّم (المدرب الذكي).
+- أدوات الاستيراد والنشر **تظهر للمسؤول فقط** — المتعلّم لا يرى ولا يستطيع استيراد أي ملف
+- تحديث درس منشور = إعادة نشره، فيصل للجميع في أول فتح
+- دليل الإعداد السحابي الكامل: **[docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)**
 
 ---
 
-## 📱 الودجت وعبارات التحفيز
-
-### الودجت
-ودجت Material 3 متوافق مع كل المشغّلات (Samsung/Xiaomi/Pixel/…). تصميمه محوره
-**يوم الحماسة**: شعلة 🔥 كبيرة + حالة اليوم (مؤمَّن ✓ / في خطر ⚠️ / ابدأ)، شريط الهدف
-اليومي، وعبارة تحفيزية. الخلفية تتغيّر تلقائياً عند خطر السلسلة (تصدّع/إنقاذ).
-
-### العبارات الديناميكية
-- عبارة **عشوائية واحدة يومياً لكل جهاز** (بذرة فريدة لكل جهاز + رقم اليوم).
-- تُدمج مع **عبارات سحابية يضيفها المسؤول** (مجموعة Firestore `/quotes`) وتتزامن
-  تلقائياً عبر الأجهزة وتظهر في الودجت والشاشة الرئيسية.
-- يعمل الودجت **دون اتصال** (العبارات السحابية تُخزَّن محلياً).
-
----
-
-## ⚙️ البناء والتثبيت (CI/CD)
-
-سير عمل **GitHub Actions** (`.github/workflows/android-release.yml`) يبني عند كل Push:
-1. **Debug APK** (`Zimaster-v...-debug.apk`) للتثبيت المباشر.
-2. **Release APK** (`Zimaster-v...-release.apk`) — **مُحسَّنة ومضغوطة عبر R8/ProGuard**.
-3. **Release AAB** (`Zimaster-v...-release.aab`) جاهزة للنشر على Google Play.
-4. رفع كل الملفات تلقائياً إلى **Releases** و **Artifacts**.
-
-> **R8 مفعّل** على نسخة الإصدار (`isMinifyEnabled` + `isShrinkResources`) مع قواعد
-> ProGuard تحافظ على سطح الانعكاس (نماذج التسلسل، بناء `AppViewModel`، الودجت،
-> Firestore). إن حدث انهيار في الـ release فقط، فهو نقص قاعدة keep يُعالج بسهولة.
-
----
-
-## 💻 طريقة البناء محلياً
+## 💻 البناء والتثبيت
 
 ```bash
-# استنساخ المستودع
 git clone https://github.com/engmohammeda/Zimaster.git
 cd Zimaster
 
-# الاختبارات الأحادية
-./gradlew testDebugUnitTest
-
-# بناء الـ Debug
-./gradlew assembleDebug
-
-# بناء الـ Release (مع R8) + حزمة AAB
-./gradlew assembleRelease bundleRelease
+./gradlew testDebugUnitTest     # الاختبارات الأحادية
+./gradlew assembleDebug         # نسخة التطوير
+./gradlew assembleRelease bundleRelease   # نسخة الإصدار (R8) + حزمة Play
 ```
 
-> يتطلّب Android Studio أو JDK 17 + Android SDK (compileSdk 36).
+**المتطلبات:** JDK 17 · Android SDK (compileSdk 36) · ملف `app/google-services.json`
+(من Firebase Console ← إعدادات المشروع ← تطبيقات Android).
+
+> سير عمل **GitHub Actions** يبني تلقائياً مع كل دفعة: Debug APK + Release APK (مُحسَّن
+> بـ R8) + AAB جاهزة للنشر، ويرفعها إلى Releases.
 
 ---
 
 ## 🔐 الأمان والخصوصية
 
-- مفاتيح الـ API **مشفّرة على الجهاز فقط** ولا تُرسل لأي خادم وسيط.
-- نسخة الإصدار **مُعتمِدة على العمل Offline** بالكامل لحماية بيانات التعلم.
-- قواعد `firestore.rules` تضمن: قراءة المحتوى العام للمستخدمين فقط، وكتابة
-  العبارات/الدروس للمسؤول فقط، وتقييد كل مستخدم ببياناته الخاصة.
+- مفاتيح الـ API **مشفّرة داخل Android Keystore** ولا تغادر الجهاز أبداً — تُستبعد حتى من
+  النسخ الاحتياطية والمزامنة السحابية
+- قواعد Firestore تضمن: قراءة المحتوى العام للموقّعين فقط · النشر للمسؤول فقط ·
+  **استحالة انتحال صلاحيات** (الدور يوثَّق من Firebase ID Token) · كل مستخدم ببياناته حصراً
+- لوحة الصدارة العامة لا تحمل إيميلات أو بيانات خاصة
+- حرس بيانات ثلاثي: نسخة احتياطية تلقائية قبل كل حفظ + استشفاء ذاتي + كشف الفقدان
 
 ---
 
-<p align="center">صُنِع بـ ❤️ بواسطة <b>محمد البخيتي</b></p>
+## 📂 وثائق المشروع
+
+| الملف | المحتوى |
+|-------|---------|
+| [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) | إعداد Firebase ونشر الدروس — من الصفر خطوة بخطوة |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | دليل المعمارية وحالات الاستخدام |
+| [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) | الخطة المرجعية للمشروع |
+| [UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md](UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md) | الصيغة الموحدة لملفات الدروس |
+
+---
+
+## 🤝 المساهمة
+
+المساهمات مرحّب بها عبر Pull Requests — يُرجى فتح Issue أولاً لمناقشة التغييرات الكبيرة،
+والتأكد من نجاح `./gradlew testDebugUnitTest` قبل الإرسال.
+
+---
+
+## 📄 الترخيص وحقوق المطور
+
+هذا المشروع **مملوك بالكامل** لمطوّره ومحمي بموجب ملف [LICENSE](LICENSE).
+
+© 2026 **محمد البخيتي** — جميع الحقوق محفوظة.
+
+<div align="center">
+
+**صُنع بشغف لتعليم العربية إتقان الإنجليزية** 🌙
+
+[⬆ أعلى الصفحة](#-zimaster--z-mastery)
+
+</div>

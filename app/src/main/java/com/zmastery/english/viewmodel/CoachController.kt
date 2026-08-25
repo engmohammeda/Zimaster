@@ -46,7 +46,7 @@ internal class CoachController(internal val vm: AppViewModel) {
     private fun coachFacts(scope: CoachScope): CoachFacts {
         val plan = effectivePlan
         val summary = planSummary
-        val levelName = SampleData.levels.firstOrNull { it.id == plan.targetLevel }?.name
+        val levelName = vm.allLevels.firstOrNull { it.id == plan.targetLevel }?.name
             ?: "المستوى ${plan.targetLevel}"
         return CoachFacts(
             scope = scope,

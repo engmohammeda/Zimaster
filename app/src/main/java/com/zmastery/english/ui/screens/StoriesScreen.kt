@@ -71,7 +71,7 @@ fun StoriesScreen(vm: AppViewModel, focusStoryId: Int? = null) {
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item { ArchiveHeader(vm) }
@@ -128,13 +128,13 @@ fun StoriesScreen(vm: AppViewModel, focusStoryId: Int? = null) {
 private fun ArchiveHeader(vm: AppViewModel) {
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFEA580C))))
+            .background(Brush.linearGradient(listOf(ZAmber, ZRoseDeep)))
             .padding(20.dp)
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.AutoStories, null, tint = Color.White, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text("أرشيف القصص", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
             }
             Spacer(Modifier.height(8.dp))
@@ -142,7 +142,7 @@ private fun ArchiveHeader(vm: AppViewModel) {
                 "قصة اليوم من كلماتك، وقصص كل درس قراءة — في مكان واحد تعود إليه دائماً.",
                 color = Color.White.copy(alpha = 0.93f), fontSize = 13.sp, lineHeight = 21.sp,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HeaderPill(Icons.Filled.Today, "${vm.dailyStoryCount} يومية")
                 HeaderPill(Icons.Filled.MenuBook, "${vm.lessonStoryCount} درس")
@@ -156,11 +156,11 @@ private fun ArchiveHeader(vm: AppViewModel) {
 private fun HeaderPill(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.22f)) {
         Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(5.dp))
+            Spacer(Modifier.width(4.dp))
             Text(text, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -177,7 +177,7 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
+                    Modifier.size(42.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -203,18 +203,18 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
             if (vm.isMakingStory) {
                 // ---- Live AI progress, including the "waiting for network" park ----
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     color = (if (vm.isWaitingForAi) ZAmber else ZIndigo).copy(alpha = 0.10f),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Column(Modifier.padding(14.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (vm.isWaitingForAi) {
                                 Icon(Icons.Filled.CloudOff, null, tint = ZAmber, modifier = Modifier.size(19.dp))
                             } else {
                                 CircularProgressIndicator(color = ZIndigo, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                             }
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     if (vm.isWaitingForAi) "بانتظار الاتصال بالنموذج"
@@ -232,26 +232,26 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (vm.storyRetryIn > 0) {
                                     Icon(Icons.Filled.Timer, null, tint = ZTextMuted, modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(5.dp))
+                                    Spacer(Modifier.width(4.dp))
                                     Text(
                                         "إعادة المحاولة بعد ${vm.storyRetryIn} ثانية",
                                         color = ZTextMuted, fontSize = 11.sp,
                                     )
                                 } else {
                                     CircularProgressIndicator(color = ZAmber, strokeWidth = 2.dp, modifier = Modifier.size(13.dp))
-                                    Spacer(Modifier.width(6.dp))
+                                    Spacer(Modifier.width(8.dp))
                                     Text("جارٍ إعادة المحاولة…", color = ZTextMuted, fontSize = 11.sp)
                                 }
                                 Spacer(Modifier.weight(1f))
                                 Text("محاولة ${vm.storyAttempt}", color = ZTextMuted, fontSize = 10.sp)
                             }
-                            Spacer(Modifier.height(6.dp))
+                            Spacer(Modifier.height(8.dp))
                             Text(
                                 "قصة اليوم تُكتب بالذكاء الاصطناعي فقط — لن نولّد نصاً جاهزاً بدون إنترنت.",
                                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
                             )
                         }
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         OutlinedButton(
                             onClick = { vm.cancelStoryGeneration() },
                             modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -260,7 +260,7 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
                         ) {
                             Icon(Icons.Filled.Close, null, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("إلغاء", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
@@ -271,7 +271,7 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
                     onClick = { vm.generateTodayStory { s -> s?.let { onOpen(it.id) } } },
                     enabled = canGenerate,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ZIndigo, disabledContainerColor = ZBorder),
                 ) {
                     Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(18.dp))
@@ -282,7 +282,7 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Key, null, tint = ZAmber, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             "أضف مفتاح Gemini من إعدادات الذكاء الاصطناعي لتفعيل التوليد",
                             color = ZAmber, fontSize = 11.sp, lineHeight = 17.sp,
@@ -301,26 +301,26 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
                     }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = { onOpen(today.id) },
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                     ) {
                         Icon(Icons.Filled.MenuBook, null, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("اقرأها", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     OutlinedButton(
                         onClick = { vm.generateTodayStory(force = true) { s -> s?.let { onOpen(it.id) } } },
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
                     ) {
                         Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("جدّدها", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
@@ -341,7 +341,7 @@ private fun ArchiveChip(active: Boolean, label: String, accent: Color, onClick: 
             label,
             color = if (active) Color.White else ZTextSecondary,
             fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }
@@ -383,7 +383,7 @@ private fun StoryCard(
                         null, tint = accent, modifier = Modifier.size(19.dp),
                     )
                 }
-                Spacer(Modifier.width(11.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         story.title, color = ZTextPrimary, fontWeight = FontWeight.Black,
@@ -408,10 +408,10 @@ private fun StoryCard(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // ---- Meta pills ----
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 MetaPill(story.level.label, levelColor)
                 MetaPill("${story.readMinutes} د", ZTextSecondary)
                 MetaPill("${story.wordCount} كلمة", ZTextSecondary)
@@ -430,7 +430,7 @@ private fun StoryCard(
             AnimatedVisibility(expanded && showAr && story.ar.isNotBlank(), enter = fadeIn(tween(220)), exit = fadeOut()) {
                 Column {
                     Spacer(Modifier.height(12.dp))
-                    Divider(color = ZBorder)
+                    HorizontalDivider(color = ZBorder)
                     Spacer(Modifier.height(12.dp))
                     Text(story.ar, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 25.sp)
                 }
@@ -441,10 +441,10 @@ private fun StoryCard(
                 Spacer(Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(story.words) { w ->
-                        Surface(shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = 0.14f)) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.14f)) {
                             Text(
                                 w, color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             )
                         }
                     }
@@ -455,7 +455,7 @@ private fun StoryCard(
             AnimatedVisibility(expanded, enter = fadeIn(tween(220)), exit = fadeOut()) {
                 Column {
                     Spacer(Modifier.height(12.dp))
-                    Divider(color = ZBorder)
+                    HorizontalDivider(color = ZBorder)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         // Listen to the whole story
@@ -466,7 +466,7 @@ private fun StoryCard(
                             size = 38.dp,
                             iconSize = 19.dp,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         // Generate a natural AI narration for this story (Gemini),
                         // permanently cached — sounds far more natural than the
                         // local device TTS used by the button above.
@@ -474,7 +474,7 @@ private fun StoryCard(
                             Surface(shape = RoundedCornerShape(8.dp), color = ZEmerald.copy(alpha = 0.15f)) {
                                 Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.AutoAwesome, null, tint = ZEmerald, modifier = Modifier.size(13.dp))
-                                    Spacer(Modifier.width(3.dp))
+                                    Spacer(Modifier.width(4.dp))
                                     Text("صوت AI جاهز", color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
@@ -485,7 +485,7 @@ private fun StoryCard(
                                 Text("صوت طبيعي AI", color = ZPurple, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                             }
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         if (story.ar.isNotBlank()) {
                             TextButton(onClick = { showAr = !showAr }) {
                                 Icon(
@@ -551,7 +551,7 @@ private fun EmptyArchive(totallyEmpty: Boolean, vm: AppViewModel) {
             if (totallyEmpty) "الأرشيف فارغ" else "لا توجد نتائج",
             color = ZTextSecondary, fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             if (totallyEmpty)
                 "ولّد قصة اليوم من كلماتك، أو استورد كورس قراءة لتظهر قصص دروسه هنا"
