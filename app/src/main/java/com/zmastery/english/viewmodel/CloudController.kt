@@ -113,6 +113,25 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
+     * استرجاع لقطة تقدّم سحابية **بالدمج لا بالاستبدال** — عبر [StateMerger].
+     *
+     * هذا هو دواء خلل فقدان البيانات: الاستبدال المباشر (restoreFrom وحدها)
+     * كان يمسح الدروس المستوردة حديثاً بلقطة سحابية قديمة عند كل إقلاع.
+     * الدمج يستحيل أن يحذف شيئاً محلياً؛ السحابة تُضيف فقط (دروس جديدة،
+     * إكمال أُنجز على جهاز آخر، كلمات جديدة، أعلى سلسلة/XP).
+     */
+    private fun adoptCloudProgress(cloudJson: String?) {
+        if (cloudJson.isNullOrBlank()) return
+        val cloud = Persistence.decode(cloudJson) ?: return
+        val local = vm.buildAppState()
+        val merged = StateMerger.merge(local, cloud)
+        if (merged != local) {
+            vm.restoreFrom(merged)
+            vm.persist()
+        }
+    }
+
+    /**
      * Auto-provision or update user profile and progress in Firestore under /users/{uid}
      */
     fun syncUserProfileToCloud() {
@@ -251,18 +270,15 @@ internal class CloudController(internal val vm: AppViewModel) {
             runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
             refreshCloudAuthState()
             val uid = cloudUid ?: return@launch
-            // Pull progress FIRST (only if the cloud copy is newer than anything
-            // we have locally — a fresh install has nothing to lose by adopting
-            // it; an existing install keeps its own state, since local writes
-            // always win once this device has been used at all).
-            if (lastCloudLessonSyncMillis == 0L) {
-                runCatching {
-                    com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
-                }.getOrNull()?.let { cloudJson ->
-                    if (cloudJson != null) {
-                        Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
-                    }
-                }
+            // Pull the cloud snapshot and MERGE it in — never replace. Local
+            // content always survives; cloud-only items join in. (The old
+            // `lastCloudLessonSyncMillis == 0L` gate + full restoreFrom was
+            // the data-loss bug: a stale cloud snapshot wiped freshly
+            // imported lessons on every launch.)
+            runCatching {
+                com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
+            }.getOrNull()?.let { cloudJson ->
+                adoptCloudProgress(cloudJson)
             }
             syncCloudLessons(silent = true)
             syncQuotes()
@@ -377,13 +393,12 @@ internal class CloudController(internal val vm: AppViewModel) {
                         learnerEmail = email
                     }
                     refreshCloudAuthState()
-                    // Restore progress from cloud if present
+                    // Merge any cloud progress for this account — never replace
+                    // (a stale/smaller cloud snapshot must not wipe local data).
                     runCatching {
                         com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
                     }.getOrNull()?.let { cloudJson ->
-                        if (!cloudJson.isNullOrBlank()) {
-                            Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
-                        }
+                        adoptCloudProgress(cloudJson)
                     }
                     vm.persist()
                     cloudSyncMessage = "تم تسجيل الدخول بحساب Google بنجاح ✓"
@@ -418,13 +433,12 @@ internal class CloudController(internal val vm: AppViewModel) {
                         learnerEmail = user.email!!
                     }
                     refreshCloudAuthState()
-                    // Restore progress from cloud if present
+                    // Merge any cloud progress for this account — never replace
+                    // (a stale/smaller cloud snapshot must not wipe local data).
                     runCatching {
                         com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
                     }.getOrNull()?.let { cloudJson ->
-                        if (!cloudJson.isNullOrBlank()) {
-                            Persistence.decode(cloudJson)?.let { vm.restoreFrom(it) }
-                        }
+                        adoptCloudProgress(cloudJson)
                     }
                     vm.persist()
                     cloudSyncMessage = "تم تسجيل الدخول بالبريد الإلكتروني بنجاح ✓"

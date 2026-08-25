@@ -269,17 +269,24 @@ internal class ImportController(internal val vm: AppViewModel) {
         // Runs ONE time for the whole batch, not once per lesson.
         vm.syncLessonStories()
         vm.persist()
+        if (imported > 0) {
+            // Keep the cloud snapshot fresh IMMEDIATELY. Before this, the push
+            // only happened on the next sync — leaving a stale (pre-import)
+            // snapshot in the cloud that could shadow this import on the next
+            // launch (the data-loss bug).
+            vm.cloud.pushProgressToCloud()
+        }
         return summary
     }
 
     private fun accentFor(type: CourseType): Long = when (type) {
-        CourseType.VOCABULARY -> 0xFFE07856   // terracotta
-        CourseType.GRAMMAR -> 0xFFCB5F41      // sienna
-        CourseType.READING -> 0xFF6B9080      // sage
-        CourseType.LISTENING -> 0xFF52796F    // pine
-        CourseType.PHONETICS -> 0xFFE0A34E    // gold
-        CourseType.CONVERSATION -> 0xFFD9776A // coral
-        CourseType.WRITING -> 0xFF5E9C76      // green
+        CourseType.VOCABULARY -> 0xFF5B62D6   // indigo — Dusk Indigo palette
+        CourseType.GRAMMAR -> 0xFF8B5CF6      // violet
+        CourseType.READING -> 0xFF2E9E8F      // teal
+        CourseType.LISTENING -> 0xFF1F7A6E    // deep teal
+        CourseType.PHONETICS -> 0xFFE8A23D    // amber
+        CourseType.CONVERSATION -> 0xFFD66060 // rose
+        CourseType.WRITING -> 0xFF2FA36B      // green
     }
 
     private fun styleFor(key: String, type: CourseType): LessonStyle {

@@ -367,6 +367,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wipe all imported content & progress, restoring the empty progress. */
     fun resetAll() {
+        // Cancel any pending debounced save — it would re-write the pre-reset
+        // state right after the wipe below (resurrection race).
+        saveJob?.cancel()
         courses.clear(); courses.addAll(SampleData.courses)
         lessons.clear(); vocab.clear()
         nextCourseId = (courses.maxOfOrNull { it.id } ?: 0) + 1
@@ -386,7 +389,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mnemonicBatch.clear()
         mnemonicPromptText = ""
         mnemonicVersion++
-        viewModelScope.launch { Persistence.clear(getApplication()) }
+        viewModelScope.launch {
+            Persistence.clear(getApplication())
+            // Also clear the CLOUD copy — otherwise the next launch would merge
+            // the old cloud snapshot back in and resurrect everything the user
+            // just deleted. Push the freshly-cleared state (state is already
+            // empty in memory at this point).
+            runCatching {
+                com.zmastery.english.cloud.CloudAuth.uid?.let { uid ->
+                    // Strip API keys exactly like the normal sync push — keys
+                    // must NEVER leave the device.
+                    val safeState = KeyProtector.stripKeysForSharing(buildAppState())
+                    com.zmastery.english.cloud.CloudSync.pushProgress(
+                        uid, Persistence.encode(safeState),
+                    )
+                }
+            }
+        }
     }
 
     // ======================================================================
