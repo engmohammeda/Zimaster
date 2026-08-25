@@ -74,10 +74,10 @@ fun NotificationSection(vm: AppViewModel) {
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.NotificationsActive, null, tint = Color.White, modifier = Modifier.size(26.dp))
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column {
                         Text("ابقَ على المسار الصحيح", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
                         Text("تذكيرات ذكية بأصوات مميزة تحافظ على حماستك", color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp)
@@ -89,17 +89,17 @@ fun NotificationSection(vm: AppViewModel) {
         // ===== Permission gate =====
         if (!granted) {
             SettingsGroup("الإذن مطلوب") {
-                Column(Modifier.padding(14.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Lock, null, tint = ZRose)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text("فعّل إذن الإشعارات لتلقّي التذكيرات", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = { requestPerm() },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                     ) {
                         Icon(Icons.Filled.NotificationsActive, null); Spacer(Modifier.width(8.dp))
@@ -126,7 +126,7 @@ fun NotificationSection(vm: AppViewModel) {
         // ===== Daily reminder time =====
         SettingsGroup("التذكير اليومي") {
             Surface(color = Color.Transparent, onClick = { if (enabled && granted) showTimePicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Schedule, null, tint = ZCyanDeep)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -134,7 +134,7 @@ fun NotificationSection(vm: AppViewModel) {
                         Text("يُذكّرك يومياً في هذا الوقت", color = ZTextSecondary, fontSize = 12.sp)
                     }
                     Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
-                        Text(formatTime(hour, minute), color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                        Text(formatTime(hour, minute), color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                     }
                 }
             }
@@ -160,7 +160,7 @@ fun NotificationSection(vm: AppViewModel) {
             Surface(color = Color.Transparent, onClick = {
                 if (!granted) requestPerm() else NotifScheduler.fireTest(ctx)
             }, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Send, null, tint = ZIndigo)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -175,7 +175,7 @@ fun NotificationSection(vm: AppViewModel) {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
                 runCatching { ctx.startActivity(intent) }
             }, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Tune, null, tint = ZTextSecondary)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -233,7 +233,7 @@ private fun TimePickerDialogN(initialHour: Int, initialMinute: Int, onConfirm: (
 
 @Composable
 private fun ToggleRowN(icon: ImageVector, title: String, sub: String, checked: Boolean, onCheck: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = ZIndigo)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -256,8 +256,8 @@ private fun SoundPreviewRow(label: String, soundRes: Int, tint: Color) {
             }
         }
     }, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(tint.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.VolumeUp, null, tint = tint, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(12.dp))

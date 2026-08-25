@@ -40,19 +40,19 @@ internal fun LessonHeroBlock(
 ) {
     val (badge, badgeIcon) = styleBadgeOf(style)
     Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.72f))))
             .drawBehind {
                 drawCircle(Color.White.copy(alpha = 0.10f), radius = size.minDimension * 0.5f, center = Offset(size.width * 0.88f, size.height * 0.1f))
                 drawCircle(Color.White.copy(alpha = 0.07f), radius = size.minDimension * 0.32f, center = Offset(size.width * 0.1f, size.height))
             }
-            .padding(22.dp),
+            .padding(24.dp),
     ) {
         Column {
             Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.2f)) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(badgeIcon, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                    Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text("$badge · الدرس ${lesson.no}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -72,7 +72,7 @@ internal fun LessonHeroBlock(
                 if (lesson.quiz.isNotEmpty()) add(Icons.Filled.Quiz to "${lesson.quiz.size} سؤال")
             }.take(4)
             if (stats.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     stats.forEach { (icon, label) -> HeroPill(icon, label) }
                 }
@@ -84,9 +84,9 @@ internal fun LessonHeroBlock(
 @Composable
 private fun HeroPill(icon: ImageVector, label: String) {
     Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(5.dp))
+            Spacer(Modifier.width(4.dp))
             Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
     }

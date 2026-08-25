@@ -64,7 +64,7 @@ fun SectionTitle(title: String, subtitle: String? = null, modifier: Modifier = M
     Column(modifier) {
         Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
         if (subtitle != null) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

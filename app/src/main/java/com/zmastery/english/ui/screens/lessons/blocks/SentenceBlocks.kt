@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,11 +27,11 @@ internal fun LazyListScope.keySentencesBlock(sentences: List<Sentence>, accent: 
     item { SectionHeader(Icons.Filled.FormatQuote, "الجمل الأساسية", accent) }
     item {
         SoftCard(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(6.dp)) {
+            Column(Modifier.padding(8.dp)) {
                 sentences.forEachIndexed { i, s ->
                     KeySentenceRow(s, accent)
                     if (i != sentences.lastIndex) {
-                        Divider(color = ZBorder, modifier = Modifier.padding(horizontal = 12.dp))
+                        HorizontalDivider(color = ZBorder, modifier = Modifier.padding(horizontal = 12.dp))
                     }
                 }
             }
@@ -41,7 +41,7 @@ internal fun LazyListScope.keySentencesBlock(sentences: List<Sentence>, accent: 
 
 @Composable
 private fun KeySentenceRow(s: Sentence, accent: Color) {
-    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(s.en, color = ZTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp)
             Spacer(Modifier.height(4.dp))

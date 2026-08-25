@@ -32,10 +32,10 @@ import com.zmastery.english.ui.theme.*
 internal fun SectionHeader(icon: ImageVector, title: String, accent: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.14f)),
+            Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp)) }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
     }
 }
@@ -54,26 +54,33 @@ internal fun BlockHeader(
     title: String,
     accent: Color,
     onPlay: (() -> Unit)? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            Modifier.fillMaxWidth().padding(bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.15f)),
+                Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text("$number", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Text(
                 title,
                 color = ZTextPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (trailing != null) {
+                trailing()
+                Spacer(Modifier.width(8.dp))
+            }
             if (onPlay != null) {
                 Box(
                     Modifier
@@ -87,7 +94,7 @@ internal fun BlockHeader(
                 }
             }
         }
-        Divider(color = ZBorder, thickness = 1.dp)
+        HorizontalDivider(color = ZBorder, thickness = 1.dp)
     }
 }
 
@@ -98,12 +105,12 @@ internal fun LazyListScope.notesBlock(notes: List<String>, title: String = "مل
         SoftCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 notes.forEachIndexed { i, note ->
-                    Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                    Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
                         Box(
-                            Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(ZAmber.copy(alpha = 0.15f)),
+                            Modifier.size(22.dp).clip(RoundedCornerShape(8.dp)).background(ZAmber.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) { Text("${i + 1}", color = ZAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(note, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 22.sp)
                     }
                 }
@@ -119,9 +126,9 @@ internal fun LazyListScope.keyPointsBlock(points: List<String>, accent: Color) {
         SoftCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 points.forEach { point ->
-                    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(7.dp).clip(RoundedCornerShape(4.dp)).background(ZAmber))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(point, color = ZTextPrimary, fontSize = 14.sp)
                     }
                 }
@@ -136,11 +143,11 @@ internal fun QuizLauncherCard(count: Int, accent: Color, onOpenQuiz: () -> Unit)
     SoftCard(modifier = Modifier.fillMaxWidth(), onClick = onOpenQuiz) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(listOf(ZCyanDeep, ZCyan))),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Filled.Quiz, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text("اختبار الدرس", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text("$count سؤال · اضغط للبدء", color = ZTextSecondary, fontSize = 12.sp)
@@ -156,11 +163,11 @@ internal fun MentalLinkCard(onGenerateMentalLink: () -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), onClick = onGenerateMentalLink) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(listOf(ZPurple, ZIndigo))),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Filled.AutoAwesome, null, tint = Color.White) }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text("توليد رابط ذهني", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text("انسخ مطالبة الذكاء الاصطناعي لتوليد الصور", color = ZTextSecondary, fontSize = 12.sp)

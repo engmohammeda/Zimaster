@@ -31,10 +31,10 @@ private data class Skill(val key: String, val title: String, val desc: String, v
 
 private val skills = listOf(
     Skill("reading", "القراءة", "اقرأ القطع وسجل قراءتك وقارنها بالنموذج", Icons.Filled.AutoStories, listOf(ZCyanDeep, ZCyan)),
-    Skill("listening", "الاستماع", "قصص صوتية مبنية على كلمات دروسك", Icons.Filled.Headphones, listOf(ZEmerald, Color(0xFF059669))),
+    Skill("listening", "الاستماع", "قصص صوتية مبنية على كلمات دروسك", Icons.Filled.Headphones, listOf(ZEmerald, ZEmeraldDeep)),
     Skill("speaking", "التحدث", "محادثة تستند لحوارات الدروس", Icons.Filled.RecordVoiceOver, listOf(ZRose, Color(0xFFE11D48))),
     Skill("writing", "الكتابة", "تدريبات كتابة يدوية ولوحة داخلية", Icons.Filled.Edit, listOf(ZCyanDeep, ZIndigo)),
-    Skill("phonetics", "الصوتيات", "تدريبات نطق الحروف من كورس الصوتيات", Icons.Filled.GraphicEq, listOf(ZAmber, Color(0xFFEA580C))),
+    Skill("phonetics", "الصوتيات", "تدريبات نطق الحروف من كورس الصوتيات", Icons.Filled.GraphicEq, listOf(ZAmber, ZRoseDeep)),
 )
 
 @Composable
@@ -46,7 +46,7 @@ fun SkillsScreen(vm: AppViewModel) {
     }
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item {
@@ -59,7 +59,7 @@ fun SkillsScreen(vm: AppViewModel) {
                     Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Brush.linearGradient(skill.colors)), contentAlignment = Alignment.Center) {
                         Icon(skill.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text(skill.title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(skill.desc, color = ZTextSecondary, fontSize = 12.sp)
@@ -76,11 +76,11 @@ fun SkillsScreen(vm: AppViewModel) {
 private fun SkillDetail(key: String, vm: AppViewModel, onBack: () -> Unit) {
     val skill = skills.first { it.key == key }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        TextButton(onClick = onBack) { Icon(Icons.Filled.ArrowForward, null, tint = ZCyan); Spacer(Modifier.width(6.dp)); Text("الرجوع", color = ZCyan) }
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(skill.colors)).padding(22.dp)) {
+        TextButton(onClick = onBack) { Icon(Icons.Filled.ArrowForward, null, tint = ZCyan); Spacer(Modifier.width(8.dp)); Text("الرجوع", color = ZCyan) }
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(skill.colors)).padding(24.dp)) {
             Column {
                 Icon(skill.icon, null, tint = Color.White, modifier = Modifier.size(38.dp))
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(skill.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                 Text(skill.desc, color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
             }
@@ -99,7 +99,7 @@ private fun SkillDetail(key: String, vm: AppViewModel, onBack: () -> Unit) {
 @Composable
 private fun SkillCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             Spacer(Modifier.height(12.dp))
             content()
@@ -113,18 +113,18 @@ private fun ReadingSkill(vm: AppViewModel) {
     var recording by remember { mutableStateOf(false) }
     SkillCard("قطعة القراءة") {
         Text(lesson?.readingEn ?: "لا توجد قطعة", color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         Button(
             onClick = { recording = !recording },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (recording) ZRose else ZIndigo),
         ) {
             Icon(if (recording) Icons.Filled.Stop else Icons.Filled.Mic, null); Spacer(Modifier.width(8.dp))
             Text(if (recording) "جارٍ التسجيل... اضغط للإيقاف" else "سجل قراءتك", fontWeight = FontWeight.Bold)
         }
         if (!recording) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text("ستتم مقارنة تسجيلك بالنموذج لتقييم النطق", color = ZTextMuted, fontSize = 12.sp)
         }
     }
@@ -141,15 +141,15 @@ private fun ListeningSkill() {
         Text(story.title, color = ZCyan, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(story.en, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 24.sp)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(56.dp).clip(RoundedCornerShape(28.dp)).background(Brush.linearGradient(listOf(ZEmerald, ZCyan))), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(56.dp).clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(ZEmerald, ZCyan))), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(30.dp))
             }
             Spacer(Modifier.width(12.dp))
             LinearProgressIndicator(progress = { 0.35f }, modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(4.dp)), color = ZEmerald, trackColor = ZBorder)
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Text("مبنية على الكلمات والقواعد من الدروس المكتملة", color = ZTextMuted, fontSize = 12.sp)
     }
 }
@@ -171,8 +171,8 @@ private fun SpeakingSkill(vm: AppViewModel) {
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
-            Button(onClick = { vm.completeTask("speak") }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = ZRose)) {
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = { vm.completeTask("speak") }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = ZRose)) {
                 Icon(Icons.Filled.Mic, null); Spacer(Modifier.width(8.dp)); Text("تدرّب على الرد", fontWeight = FontWeight.Bold)
             }
         } else {
@@ -187,19 +187,19 @@ private fun WritingSkill(vm: AppViewModel) {
     val targetWord = vm.vocab.firstOrNull()?.english
     SkillCard("تدريب الكتابة") {
         Text(if (targetWord != null) "اكتب جملة تستخدم فيها كلمة: $targetWord" else "اكتب جملة قصيرة بالإنجليزية للتدريب", color = ZTextSecondary, fontSize = 13.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = text, onValueChange = { text = it },
             modifier = Modifier.fillMaxWidth().height(120.dp),
             placeholder = { Text("اكتب هنا...", color = ZTextMuted) },
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = ZSurfaceVariant, unfocusedContainerColor = ZSurfaceVariant,
                 focusedBorderColor = ZIndigo, unfocusedBorderColor = ZBorder,
                 focusedTextColor = ZTextPrimary, unfocusedTextColor = ZTextPrimary,
             ),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Text("عدد الكلمات: ${if (text.isBlank()) 0 else text.trim().split(" ").size}", color = ZCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
@@ -241,24 +241,24 @@ private fun PhoneticsSkill() {
         Button(
             onClick = { if (playingAll) stopAll() else playAll() },
             modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (playingAll) ZRose else ZAmber),
         ) {
             Icon(if (playingAll) Icons.Filled.Stop else Icons.Filled.PlaylistPlay, null)
             Spacer(Modifier.width(8.dp))
             Text(if (playingAll) "إيقاف التشغيل" else "تشغيل كل الأزواج تباعاً", fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Text("يمكنك أيضاً تشغيل كل زوج على حدة بالنقر عليه", color = ZTextMuted, fontSize = 11.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
         sounds.forEachIndexed { i, pair ->
             val (sym, ex) = pair
             val active = currentIndex == i
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = if (active) ZAmber.copy(alpha = 0.16f) else Color.Transparent,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 onClick = { if (!playingAll) currentIndex = i },
             ) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {

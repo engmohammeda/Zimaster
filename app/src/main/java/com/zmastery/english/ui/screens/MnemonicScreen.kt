@@ -155,11 +155,11 @@ fun MnemonicScreen(vm: AppViewModel, onBack: () -> Unit) {
 private fun StepRail(step: Int) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         (0..3).forEach { s ->
             Box(
-                Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp))
+                Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(4.dp))
                     .background(if (s <= step) ZIndigo else ZBorder)
             )
         }
@@ -208,11 +208,11 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Hero
         Surface(
-            shape = RoundedCornerShape(22.dp), color = Color.Transparent,
+            shape = RoundedCornerShape(24.dp), color = Color.Transparent,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -220,7 +220,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
             ) {
                 Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.22f)) {
                     Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.Bolt, null, tint = Color.White, modifier = Modifier.size(13.dp))
@@ -230,7 +230,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 Text("الروابط الذهنية", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "ولّد صورة واحدة مركّبة تدمج كل كلمة مع مثالها، ثم يقصّها التطبيق تلقائياً " +
                         "ويربط كل جزء بكلمته لتظهر في بطاقات المراجعة.",
@@ -278,14 +278,14 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
                     Text(
                         "${spec.count}", color = ZIndigo, fontSize = 28.sp, fontWeight = FontWeight.Black,
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("كلمة", color = ZTextSecondary, fontSize = 13.sp)
                     Spacer(Modifier.weight(1f))
-                    Surface(shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
                         Text(
                             "شبكة ${spec.cols}×${spec.rows}",
                             color = ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                         )
                     }
                 }
@@ -305,7 +305,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
             // Art style
             StudioCard {
                 CardTitle(Icons.Filled.Palette, "نمط الرسم", ZAmber)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -326,7 +326,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
                     "ظهور نفس الشخصية في كل الصور يقوّي الترابط الذهني",
                     color = ZTextMuted, fontSize = 11.sp,
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -342,21 +342,21 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
             // Model
             StudioCard {
                 CardTitle(Icons.Filled.AutoAwesome, "مولّد الصور المستهدف", ZPurple)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 MnemonicModel.values().forEach { m ->
                     val active = m == vm.mnemonicModel
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = if (active) ZPurple.copy(alpha = 0.14f) else Color.Transparent,
                         onClick = { vm.mnemonicModel = m; vm.refreshMnemonicPrompt(); vm.persist() },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (active) Icons.Filled.RadioButtonChecked else Icons.Filled.RadioButtonUnchecked,
                                 null, tint = if (active) ZPurple else ZTextMuted, modifier = Modifier.size(18.dp),
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(m.label, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 Text(m.hint, color = ZTextSecondary, fontSize = 11.sp)
@@ -364,7 +364,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
                         }
                     }
                 }
-                Divider(color = ZBorder, modifier = Modifier.padding(vertical = 6.dp))
+                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(vertical = 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("أرقام دلالية في الصورة", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -381,7 +381,7 @@ private fun SetupStep(vm: AppViewModel, onStart: (Int) -> Unit) {
             // How it works
             StudioCard {
                 CardTitle(Icons.Filled.Route, "كيف تعمل؟", ZTextSecondary)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 HowRow("1", Icons.Filled.EditNote, "ولّد المطالبة الدقيقة بمقاسات مضبوطة", ZIndigo)
                 HowRow("2", Icons.Filled.Image, "الصقها في مولّد الصور واحصل على صورة واحدة", ZAmber)
                 HowRow("3", Icons.Filled.ContentCut, "ارفعها — يقصّها التطبيق لكل كلمة تلقائياً", ZPurple)
@@ -405,7 +405,7 @@ private fun StatBox(modifier: Modifier, icon: androidx.compose.ui.graphics.vecto
     Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 3.dp) {
         Column(Modifier.padding(12.dp)) {
             Box(
-                Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(accent.copy(alpha = 0.15f)),
+                Modifier.size(30.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp)) }
             Spacer(Modifier.height(8.dp))
@@ -426,19 +426,19 @@ private fun ChoiceChip(label: String, active: Boolean, accent: Color, onClick: (
             label,
             color = if (active) Color.White else ZTextSecondary,
             fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }
 
 @Composable
 private fun HowRow(num: String, icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, accent: Color) {
-    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.16f)),
+            Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) { Text(num, color = accent, fontWeight = FontWeight.Black, fontSize = 12.sp) }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(text, color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.weight(1f))
@@ -455,7 +455,7 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Grid map
         StudioCard {
@@ -467,22 +467,22 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             // Visual grid preview, filled left→right / top→bottom
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (r in 0 until spec.rows) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         for (c in 0 until spec.cols) {
                             val i = r * spec.cols + c
                             val w = vm.mnemonicBatch.getOrNull(i)
                             Surface(
                                 modifier = Modifier.weight(1f).aspectRatio(1f),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = if (w == null) ZSurfaceVariant.copy(alpha = 0.4f) else ZSurfaceVariant,
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp, if (w == null) ZBorder.copy(alpha = 0.4f) else ZIndigo.copy(alpha = 0.3f),
                                 ),
                             ) {
                                 Column(
-                                    Modifier.fillMaxSize().padding(3.dp),
+                                    Modifier.fillMaxSize().padding(4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                 ) {
@@ -502,10 +502,10 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Info, null, tint = ZTextMuted, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
                     "الترتيب من اليسار لليمين ثم للأسفل — سيقصّها التطبيق بنفس الترتيب",
                     color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
@@ -519,7 +519,7 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
                 CardTitle(Icons.Filled.Description, "نص المطالبة", ZPurple)
                 Spacer(Modifier.weight(1f))
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = if (copied) ZEmerald.copy(alpha = 0.16f) else ZIndigo.copy(alpha = 0.14f),
                     onClick = {
                         clipboard.setText(AnnotatedString(vm.mnemonicPromptText))
@@ -534,7 +534,7 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
                             if (copied) Icons.Filled.Check else Icons.Filled.ContentCopy,
                             null, tint = if (copied) ZEmerald else ZIndigo, modifier = Modifier.size(15.dp),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             if (copied) "تم النسخ" else "نسخ",
                             color = if (copied) ZEmerald else ZIndigo,
@@ -545,7 +545,7 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
             Surface(
-                shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant,
+                shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
             ) {
                 Text(
@@ -565,7 +565,7 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
         // Word list in this batch
         StudioCard {
             CardTitle(Icons.Filled.FormatListNumbered, "كلمات الدفعة (${vm.mnemonicBatch.size})", ZCyanDeep)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             vm.mnemonicBatch.forEachIndexed { i, w -> BatchWordRow(i, w) }
         }
 
@@ -576,12 +576,12 @@ private fun PromptStep(vm: AppViewModel, onNext: () -> Unit) {
 
 @Composable
 private fun BatchWordRow(index: Int, w: VocabWord) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).background(ZIndigo.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) { Text("${index + 1}", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 11.sp) }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(w.english, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             if (w.exampleEn.isNotBlank()) {
@@ -608,18 +608,18 @@ private fun UploadStep(
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Drop zone
         StudioCard {
             Surface(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = ZSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onPick,
             ) {
                 Column(
-                    Modifier.fillMaxWidth().padding(26.dp),
+                    Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
@@ -628,7 +628,7 @@ private fun UploadStep(
                         tint = if (pickedUri == null) ZIndigo else ZEmerald,
                         modifier = Modifier.size(48.dp),
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         if (pickedUri == null) "ارفع الصورة المركّبة" else "تم اختيار الصورة",
                         color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp,
@@ -647,7 +647,7 @@ private fun UploadStep(
                     model = pickedUri,
                     contentDescription = "الصورة المركّبة",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(14.dp)),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(16.dp)),
                 )
             }
         }
@@ -673,7 +673,7 @@ private fun UploadStep(
                 previews.forEachIndexed { i, bmp ->
                     val w = vm.mnemonicBatch.getOrNull(i)
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Image(
@@ -685,10 +685,10 @@ private fun UploadStep(
                         )
                         Spacer(Modifier.width(12.dp))
                         Box(
-                            Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(ZIndigo.copy(alpha = 0.16f)),
+                            Modifier.size(22.dp).clip(RoundedCornerShape(8.dp)).background(ZIndigo.copy(alpha = 0.16f)),
                             contentAlignment = Alignment.Center,
                         ) { Text("${i + 1}", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 10.sp) }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(w?.english ?: "—", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text(w?.arabic ?: "", color = ZTextSecondary, fontSize = 11.sp)
@@ -700,17 +700,17 @@ private fun UploadStep(
             // Target words list before an upload exists
             StudioCard {
                 CardTitle(Icons.Filled.FormatListNumbered, "سيتم ربط ${vm.mnemonicBatch.size} كلمة", ZCyanDeep)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 vm.mnemonicBatch.forEachIndexed { i, w -> BatchWordRow(i, w) }
             }
         }
 
         result?.let { r ->
             if (!r.success) {
-                Surface(shape = RoundedCornerShape(14.dp), color = ZRose.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZRose.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.ErrorOutline, null, tint = ZRose, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(r.message, color = ZRose, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -758,9 +758,9 @@ private fun DoneStep(vm: AppViewModel, onAnother: () -> Unit, onFinish: () -> Un
                         .background(Brush.linearGradient(listOf(ZEmerald, ZCyanDeep))),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Link, null, tint = Color.White, modifier = Modifier.size(54.dp)) }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Text("تم ربط الصور!", color = ZTextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     vm.mnemonicMessage ?: "الصور جاهزة في بطاقات المراجعة",
                     color = ZTextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center,
@@ -807,12 +807,12 @@ private fun DoneStep(vm: AppViewModel, onAnother: () -> Unit, onFinish: () -> Un
 
         if (remaining > 0) {
             PrimaryButton("دفعة أخرى ($remaining متبقية)", Icons.Filled.Refresh) { onAnother() }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
         }
         OutlinedButton(
             onClick = onFinish,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextPrimary),
         ) { Text("العودة للقاموس", fontWeight = FontWeight.Bold, fontSize = 15.sp) }

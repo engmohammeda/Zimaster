@@ -94,13 +94,15 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
     }
     val vocabNumber = (blocks.indexOf(LessonBlockKind.VOCAB_WORDS) + 1).coerceAtLeast(1)
 
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item { LessonProgressBar(lessonProgress, accent) }
+    // شريط التقدّم مثبّت أعلى الشاشة — لا يتمرّر ويختفي مع البلوكات.
+    Column(Modifier.fillMaxSize()) {
+        LessonProgressBar(lessonProgress, accent)
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
         blocks.forEach { kind ->
             when (kind) {
                 LessonBlockKind.HERO -> item {
@@ -164,7 +166,8 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
                 }
             }
         }
-        item { Spacer(Modifier.height(80.dp)) }
+            item { Spacer(Modifier.height(80.dp)) }
+        }
     }
 
     LessonDialogs(
@@ -215,9 +218,9 @@ fun LessonScreen(vm: AppViewModel, lessonId: Int, onOpenQuiz: (Int) -> Unit = {}
                         "أضاف هذا الدرس ${undoWords.size} كلمة للقاموس. هل تريد حذفها أيضاً؟",
                         color = ZTextSecondary, fontSize = 14.sp, lineHeight = 21.sp,
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp)) {
+                        Column(Modifier.padding(12.dp)) {
                             undoWords.take(6).forEach { w ->
                                 Text("• ${w.english} — ${w.arabic}", color = ZTextMuted, fontSize = 12.sp, lineHeight = 19.sp)
                             }
@@ -309,7 +312,7 @@ private fun LessonDialogs(
             text = {
                 Column {
                     Text("انسخ هذه المطالبة والصقها في نموذج توليد الصور الخارجي. الصورة المركبة الناتجة ستُقص تلقائياً وتُربط بالكلمات.", color = ZTextSecondary, fontSize = 12.sp)
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Surface(shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
                         Text(prompt, color = ZTextPrimary, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
                     }
@@ -362,7 +365,7 @@ private fun WordApprovalDialog(words: List<VocabWord>, onConfirm: (Set<Int>) -> 
                     val w = words[i]
                     val isOn = w.id in approved
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = if (isOn) ZEmerald.copy(alpha = 0.08f) else ZSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
                         border = androidx.compose.foundation.BorderStroke(1.dp, if (isOn) ZEmerald.copy(alpha = 0.4f) else ZBorder),
@@ -375,12 +378,12 @@ private fun WordApprovalDialog(words: List<VocabWord>, onConfirm: (Set<Int>) -> 
                                 accent = ZCyanDeep,
                                 size = 38.dp, iconSize = 18.dp,
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(w.english, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                     if (w.phonetic.isNotBlank()) {
-                                        Spacer(Modifier.width(6.dp))
+                                        Spacer(Modifier.width(8.dp))
                                         Text(w.phonetic, color = ZCyanDeep, fontSize = 11.sp)
                                     }
                                 }

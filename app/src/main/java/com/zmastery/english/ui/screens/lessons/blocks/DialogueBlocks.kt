@@ -58,7 +58,7 @@ private fun TranslationToggle(showing: Boolean, onToggle: () -> Unit) {
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (showing) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null, tint = ZCyanDeep, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(5.dp))
+            Spacer(Modifier.width(4.dp))
             Text(if (showing) "الترجمة ظاهرة" else "الترجمة مخفية", color = ZCyanDeep, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -69,7 +69,7 @@ private fun TranslationToggle(showing: Boolean, onToggle: () -> Unit) {
 private fun PlayAllDialogueCard(dialogue: List<Dialogue>, accent: Color, vm: AppViewModel) {
     val fullText = dialogue.joinToString(". ") { it.en }
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             com.zmastery.english.audio.AudioButton(
                 text = fullText, audioKey = "dlg_all_${fullText.hashCode()}", accent = accent, size = 44.dp, iconSize = 22.dp,
                 // Listening to the whole dialogue counts as every turn.
@@ -103,7 +103,7 @@ private fun ChatBubble(d: Dialogue, isRight: Boolean, accent: Color, showTransla
                 color = if (isRight) accent else ZTextMuted,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
             Surface(
                 shape = RoundedCornerShape(
@@ -120,16 +120,16 @@ private fun ChatBubble(d: Dialogue, isRight: Boolean, accent: Color, showTransla
                             text = d.en, audioKey = "dlg_${d.hashCode()}", accent = accent, size = 34.dp, iconSize = 17.dp,
                             onPlayed = { vm.trackConversationTurn() },
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                     }
                     Column(Modifier.weight(1f, fill = false)) {
                         Text(d.en, color = textColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp)
                         AnimatedVisibility(showTranslation && d.ar.isNotBlank()) {
-                            Text(d.ar, color = subColor, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
+                            Text(d.ar, color = subColor, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
                     if (isRight) {
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         com.zmastery.english.audio.AudioButton(
                             text = d.en, audioKey = "dlg_${d.hashCode()}", accent = Color.White.copy(alpha = 0.25f), size = 34.dp, iconSize = 17.dp,
                             onPlayed = { vm.trackConversationTurn() },
@@ -167,7 +167,7 @@ private fun ExpressionRow(exp: KeyExpression, accent: Color) {
                 }
             }
             if (exp.usageAr.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ZAmber.copy(alpha = 0.08f)).padding(12.dp),
                 ) {

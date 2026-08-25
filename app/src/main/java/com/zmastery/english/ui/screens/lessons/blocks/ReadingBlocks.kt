@@ -76,10 +76,10 @@ private fun ReadingControls(
     onToggleAr: () -> Unit,
     hasSegments: Boolean,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (hasSegments) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = ZSurfaceVariant,
                 modifier = Modifier.weight(1f),
             ) {
@@ -92,13 +92,13 @@ private fun ReadingControls(
             Spacer(Modifier.weight(1f))
         }
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             color = if (showAllAr) accent else ZSurfaceVariant,
             onClick = onToggleAr,
         ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Translate, null, tint = if (showAllAr) Color.White else accent, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(if (showAllAr) "إخفاء" else "الترجمة", color = if (showAllAr) Color.White else ZTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -108,7 +108,7 @@ private fun ReadingControls(
 @Composable
 private fun ModeTab(label: String, selected: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     val bg by animateColorAsState(if (selected) accent else Color.Transparent, tween(200), label = "tab")
-    Surface(shape = RoundedCornerShape(11.dp), color = bg, modifier = modifier, onClick = onClick) {
+    Surface(shape = RoundedCornerShape(12.dp), color = bg, modifier = modifier, onClick = onClick) {
         Box(Modifier.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
             Text(label, color = if (selected) Color.White else ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
@@ -120,9 +120,9 @@ private fun SegmentRow(seg: Sentence, index: Int, accent: Color, forceAr: Boolea
     var revealed by remember { mutableStateOf(false) }
     val show = revealed || forceAr
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
             Box(
-                Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.14f)),
+                Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) { Text("$index", color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             Spacer(Modifier.width(12.dp))
@@ -130,7 +130,7 @@ private fun SegmentRow(seg: Sentence, index: Int, accent: Color, forceAr: Boolea
                 Text(seg.en, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Medium)
                 AnimatedVisibility(show) {
                     Column {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(seg.ar, color = accent, fontSize = 14.sp, lineHeight = 23.sp)
                     }
                 }
@@ -139,7 +139,7 @@ private fun SegmentRow(seg: Sentence, index: Int, accent: Color, forceAr: Boolea
                     Text(
                         if (revealed) "إخفاء الترجمة" else "اضغط لإظهار الترجمة",
                         color = ZTextMuted, fontSize = 11.sp,
-                        modifier = Modifier.clip(RoundedCornerShape(6.dp)),
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)),
                     )
                 }
             }
@@ -147,7 +147,7 @@ private fun SegmentRow(seg: Sentence, index: Int, accent: Color, forceAr: Boolea
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 AudioButton(text = seg.en, audioKey = "seg_${index}_${seg.en.hashCode()}", accent = accent, size = 38.dp, iconSize = 18.dp)
                 if (seg.ar.isNotBlank() && !forceAr) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = accent.copy(alpha = 0.10f),
@@ -167,7 +167,7 @@ private fun SegmentRow(seg: Sentence, index: Int, accent: Color, forceAr: Boolea
 @Composable
 private fun FullTextCard(en: String, ar: String, accent: Color, showAr: Boolean, vm: AppViewModel, lessonId: Int, audioReady: Boolean) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AudioButton(text = en, audioKey = "fulltext_${en.hashCode()}", accent = accent, size = 44.dp, iconSize = 22.dp)
                 Spacer(Modifier.width(12.dp))
@@ -178,7 +178,7 @@ private fun FullTextCard(en: String, ar: String, accent: Color, showAr: Boolean,
                     Surface(shape = RoundedCornerShape(8.dp), color = ZEmerald.copy(alpha = 0.15f)) {
                         Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.AutoAwesome, null, tint = ZEmerald, modifier = Modifier.size(13.dp))
-                            Spacer(Modifier.width(3.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text("صوت AI جاهز", color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -190,13 +190,13 @@ private fun FullTextCard(en: String, ar: String, accent: Color, showAr: Boolean,
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Text(en, color = ZTextPrimary, fontSize = 17.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium)
             AnimatedVisibility(showAr && ar.isNotBlank()) {
                 Column {
-                    Spacer(Modifier.height(14.dp))
-                    Divider(color = ZBorder)
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = ZBorder)
+                    Spacer(Modifier.height(16.dp))
                     Text(ar, color = accent, fontSize = 15.sp, lineHeight = 28.sp)
                 }
             }

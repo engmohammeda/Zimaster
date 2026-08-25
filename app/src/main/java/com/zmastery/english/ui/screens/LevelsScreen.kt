@@ -55,7 +55,7 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item { OverallHeader(vm) }
@@ -124,10 +124,10 @@ private fun OverallHeader(vm: AppViewModel) {
                     Text("$doneLessons من $totalLessons درساً", color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp)
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { animated },
-                modifier = Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(8.dp)),
                 color = Color.White, trackColor = Color.White.copy(alpha = 0.25f),
             )
         }
@@ -159,7 +159,7 @@ private fun LevelAccordion(
                                 .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
                             contentAlignment = Alignment.Center,
                         ) { Text(emoji, fontSize = 26.sp) }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(title, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp)
                             Text(
@@ -176,13 +176,13 @@ private fun LevelAccordion(
                             )
                             Text("إنجاز", color = ZTextMuted, fontSize = 9.sp)
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Icon(
                             Icons.Filled.ChevronLeft, null, tint = ZTextMuted,
                             modifier = Modifier.rotate(-arrow),
                         )
                     }
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     // Completion (what really counts)
                     DualBar(
                         label = "الإنجاز",
@@ -215,10 +215,10 @@ private fun LevelAccordion(
                 exit = shrinkVertically(tween(200)) + fadeOut(tween(140)),
             ) {
                 Column {
-                    Divider(color = ZBorder)
+                    HorizontalDivider(color = ZBorder)
                     Column(
                         Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         content = content,
                     )
                 }
@@ -238,7 +238,7 @@ private fun DualBar(label: String, value: String, progress: Float, accent: Color
         Spacer(Modifier.height(4.dp))
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(if (thin) 5.dp else 8.dp).clip(RoundedCornerShape(5.dp)),
+            modifier = Modifier.fillMaxWidth().height(if (thin) 5.dp else 8.dp).clip(RoundedCornerShape(4.dp)),
             color = if (thin) accent.copy(alpha = 0.65f) else accent,
             trackColor = ZBorder,
         )
@@ -271,10 +271,10 @@ private fun CourseAccordion(
     ) {
         Column {
             Surface(color = Color.Transparent, onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(44.dp).clip(RoundedCornerShape(13.dp))
+                            Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
                                 .background(accent.copy(alpha = 0.20f)),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -284,7 +284,7 @@ private fun CourseAccordion(
                                 Icon(courseIcon(course.type.icon), null, tint = accent)
                             }
                         }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(course.name, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(
@@ -297,13 +297,13 @@ private fun CourseAccordion(
                             color = if (done > 0) accent else ZTextMuted,
                             fontWeight = FontWeight.Black, fontSize = 14.sp,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Icon(
                             Icons.Filled.ChevronLeft, null, tint = ZTextMuted,
                             modifier = Modifier.size(18.dp).rotate(-arrow),
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     LinearProgressIndicator(
                         progress = { anim },
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)),
@@ -318,7 +318,7 @@ private fun CourseAccordion(
                 exit = shrinkVertically(tween(180)) + fadeOut(tween(130)),
             ) {
                 Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                    Divider(color = ZBorder.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 10.dp))
+                    HorizontalDivider(color = ZBorder.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 12.dp))
                     val lessons = vm.lessons.filter { it.courseId == course.id }.sortedBy { it.no }
                     if (lessons.isEmpty()) {
                         Row(
@@ -344,7 +344,7 @@ private fun CourseAccordion(
                             )
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = onOpenCourse,
                         modifier = Modifier.fillMaxWidth().height(44.dp),
@@ -352,7 +352,7 @@ private fun CourseAccordion(
                         colors = ButtonDefaults.buttonColors(containerColor = accent),
                     ) {
                         Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("افتح الكورس", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
@@ -366,11 +366,11 @@ private const val MAX_INLINE_LESSONS = 8
 @Composable
 private fun LessonRow(lesson: Lesson, accent: Color) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(26.dp).clip(RoundedCornerShape(9.dp))
+            Modifier.size(26.dp).clip(RoundedCornerShape(8.dp))
                 .background(if (lesson.isCompleted) accent else ZBorder.copy(alpha = 0.55f)),
             contentAlignment = Alignment.Center,
         ) {
@@ -380,7 +380,7 @@ private fun LessonRow(lesson: Lesson, accent: Color) {
                 Text("${lesson.no}", color = ZTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Text(
             lesson.title,
             color = if (lesson.isCompleted) ZTextSecondary else ZTextPrimary,

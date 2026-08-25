@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 controller.isAppearanceLightNavigationBars = !dark
             }
             val startRoute = pendingRoute ?: intent?.getStringExtra("nav_route")
-            AgonAppTheme(darkTheme = dark) {
+            ZMasteryTheme(darkTheme = dark) {
                 // Provide the TTS engine + a telemetry sink so EVERY audio
                 // button in the app contributes to listening-time analytics.
                 com.zmastery.english.audio.ProvideAudio(
@@ -451,7 +451,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
         Box(
             Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(ZIndigo, ZPurple)))
                 .drawBehind {
                     drawCircle(
@@ -465,7 +465,7 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                         center = androidx.compose.ui.geometry.Offset(size.width * 0.05f, size.height * 1.05f),
                     )
                 }
-                .padding(horizontal = 22.dp, vertical = 24.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Column {
                 Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
@@ -474,24 +474,24 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("مركز التحكم", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "كل أدواتك في مكان واحد",
                     color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black, lineHeight = 28.sp,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "الدراسة، التقدّم، والإعداد — منظّمة لتصل لما تريد بأقل عدد لمسات",
-                    color = Color.White.copy(alpha = 0.88f), fontSize = 12.5.sp, lineHeight = 18.sp,
+                    color = Color.White.copy(alpha = 0.88f), fontSize = 12.sp, lineHeight = 18.sp,
                 )
             }
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ── Spotlight hero card: Import (the critical first action) ──
         Box(Modifier.padding(horizontal = 16.dp)) {
@@ -516,16 +516,16 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                Modifier.size(54.dp).clip(RoundedCornerShape(17.dp))
+                                Modifier.size(54.dp).clip(RoundedCornerShape(16.dp))
                                     .background(Color.White.copy(alpha = 0.22f))
-                                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), RoundedCornerShape(17.dp)),
+                                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)), RoundedCornerShape(16.dp)),
                                 contentAlignment = Alignment.Center,
                             ) { Icon(Icons.Filled.UploadFile, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
-                            Spacer(Modifier.width(14.dp))
+                            Spacer(Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 Text("استيراد الدروس", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                                Spacer(Modifier.height(2.dp))
-                                Text("أضف كورساتك عبر JSON أو ZIP أو لصق مباشر", color = Color.White.copy(alpha = 0.85f), fontSize = 11.5.sp, lineHeight = 16.sp)
+                                Spacer(Modifier.height(4.dp))
+                                Text("أضف كورساتك عبر JSON أو ZIP أو لصق مباشر", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, lineHeight = 16.sp)
                             }
                         }
                         Spacer(Modifier.height(16.dp))
@@ -534,8 +534,8 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
                             ) {
-                                Text("ابدأ الآن", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 12.5.sp)
-                                Spacer(Modifier.width(6.dp))
+                                Text("ابدأ الآن", color = ZIndigo, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                Spacer(Modifier.width(8.dp))
                                 Icon(Icons.Filled.ArrowBackIosNew, null, tint = ZIndigo, modifier = Modifier.size(12.dp))
                             }
                         }
@@ -546,13 +546,13 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
 
         // ── Grouped destinations — one elevated "settings-style" card per group ──
         moreGroups.forEach { group ->
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 group.title, color = ZTextSecondary,
                 fontWeight = FontWeight.Black, fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 22.dp),
+                modifier = Modifier.padding(horizontal = 24.dp),
             )
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(8.dp))
             Box(Modifier.padding(horizontal = 16.dp)) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
@@ -568,24 +568,24 @@ private fun MoreSheetContent(onImport: () -> Unit, onNavigate: (String) -> Unit)
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Row(
-                                    Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                                    Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                        Modifier.size(42.dp).clip(RoundedCornerShape(13.dp))
+                                        Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
                                             .background(Brush.linearGradient(item.colors)),
                                         contentAlignment = Alignment.Center,
                                     ) { Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(21.dp)) }
-                                    Spacer(Modifier.width(13.dp))
+                                    Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(item.label, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Text(item.desc, color = ZTextSecondary, fontSize = 11.5.sp, maxLines = 1)
+                                        Text(item.desc, color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)
                                     }
                                     Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted, modifier = Modifier.size(20.dp))
                                 }
                             }
                             if (idx < group.items.lastIndex) {
-                                Divider(color = ZBorder, modifier = Modifier.padding(start = 69.dp, end = 14.dp))
+                                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(start = 69.dp, end = 14.dp))
                             }
                         }
                     }
@@ -622,11 +622,11 @@ private fun TopBar(route: String?, onImport: () -> Unit) {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(30.dp).clip(RoundedCornerShape(9.dp))
+                    Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
                         .background(Brush.linearGradient(listOf(ZIndigo, ZCyan))),
                     contentAlignment = Alignment.Center,
                 ) { Text("Z", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp) }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },

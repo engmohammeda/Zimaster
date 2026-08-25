@@ -99,7 +99,7 @@ fun MomentumIndicatorsCard(
                     Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted, modifier = Modifier.size(18.dp))
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             // ── 🔥 الشعلة + 🌱 الاستمرارية جنباً إلى جنب ──
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -107,7 +107,7 @@ fun MomentumIndicatorsCard(
                 ContinuitySproutTile(Modifier.weight(1f), m)
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             // ── ⭐ شريط الإتقان المتدرّج ──
             MasteryGradientBar(m)
@@ -115,13 +115,13 @@ fun MomentumIndicatorsCard(
             // ── الدرع النفسي عند انكسار السلسلة ──
             if (m.shieldMessage.isNotBlank()) {
                 Spacer(Modifier.height(12.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.12f)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f)) {
                     Row(
                         Modifier.fillMaxWidth().padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.Shield, null, tint = ZEmerald, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(9.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             m.shieldMessage, color = ZTextSecondary,
                             fontSize = 11.sp, lineHeight = 17.sp,
@@ -149,11 +149,11 @@ private fun StreakFlameTile(modifier: Modifier, m: MomentumMetrics) {
         animationSpec = infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "glow",
     )
-    val hot = Color(0xFFF97316)
-    val core = Color(0xFFFBBF24)
+    val hot = ZAmber
+    val core = ZAmber
 
-    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = ZSurfaceVariant.copy(alpha = 0.55f)) {
-        Column(Modifier.padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant.copy(alpha = 0.55f)) {
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.Center) {
                 if (alive) {
                     Box(
@@ -167,14 +167,14 @@ private fun StreakFlameTile(modifier: Modifier, m: MomentumMetrics) {
                     modifier = Modifier.scale(flicker).alpha(if (alive) 1f else 0.35f),
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     "${m.dailyStreak}",
                     color = if (alive) hot else ZTextMuted,
                     fontWeight = FontWeight.Black, fontSize = 26.sp,
                 )
-                Spacer(Modifier.width(3.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
                     "يوم", color = if (alive) core else ZTextMuted,
                     fontWeight = FontWeight.Bold, fontSize = 12.sp,
@@ -203,10 +203,10 @@ private fun ContinuitySproutTile(modifier: Modifier, m: MomentumMetrics) {
         animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "sway",
     )
-    val green = Color(0xFF10B981)
+    val green = ZEmerald
 
-    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = ZSurfaceVariant.copy(alpha = 0.55f)) {
-        Column(Modifier.padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant.copy(alpha = 0.55f)) {
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(contentAlignment = Alignment.Center) {
                 // حلقة تقدّم دائرية حول البرعم
                 CircularProgressIndicator(
@@ -218,7 +218,7 @@ private fun ContinuitySproutTile(modifier: Modifier, m: MomentumMetrics) {
                 )
                 Text("\uD83C\uDF31", fontSize = 22.sp, modifier = Modifier.rotate(sway))
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     "${m.continuityPercent}",
@@ -253,7 +253,7 @@ private fun MasteryGradientBar(m: MomentumMetrics) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("\u2B50", fontSize = 15.sp)
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 m.masteryHeadline, color = ZTextPrimary,
                 fontWeight = FontWeight.Bold, fontSize = 13.sp,
@@ -266,13 +266,13 @@ private fun MasteryGradientBar(m: MomentumMetrics) {
         }
         Spacer(Modifier.height(8.dp))
         Box(
-            Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(7.dp)).background(ZBorder)
+            Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(8.dp)).background(ZBorder)
         ) {
             Box(
                 Modifier
                     .fillMaxWidth(anim.coerceAtLeast(0.02f))
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(7.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.horizontalGradient(
                             listOf(
@@ -285,22 +285,22 @@ private fun MasteryGradientBar(m: MomentumMetrics) {
                     )
             )
         }
-        Spacer(Modifier.height(7.dp))
+        Spacer(Modifier.height(8.dp))
         // مكوّنات المعادلة الموزونة — شفافية كاملة للمتعلّم
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MasteryChip(Modifier.weight(1f), "كلمات", m.masteredWordsRatio, "40%", Color(0xFF6366F1))
             MasteryChip(Modifier.weight(1f), "دروس", m.completedLessonsRatio, "30%", Color(0xFF06B6D4))
             MasteryChip(Modifier.weight(1f), "اختبارات", m.avgExamScore, "20%", Color(0xFF8B5CF6))
-            MasteryChip(Modifier.weight(1f), "التزام", m.continuityRatio, "10%", Color(0xFF10B981))
+            MasteryChip(Modifier.weight(1f), "التزام", m.continuityRatio, "10%", ZEmerald)
         }
     }
 }
 
 @Composable
 private fun MasteryChip(modifier: Modifier, label: String, value: Float, weight: String, accent: Color) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = 0.10f)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.10f)) {
         Column(
-            Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
+            Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -364,7 +364,7 @@ fun MysteryChestCard(
     ) {
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg)) {
             Row(
-                Modifier.fillMaxWidth().padding(15.dp),
+                Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // ── أيقونة الصندوق ──
@@ -379,7 +379,7 @@ fun MysteryChestCard(
                         Modifier
                             .offset(y = hover.dp)
                             .size(56.dp)
-                            .clip(RoundedCornerShape(17.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(
                                 if (reward.isDormant) {
                                     Brush.linearGradient(listOf(ZBorder, ZSurfaceVariant))
@@ -405,7 +405,7 @@ fun MysteryChestCard(
                     }
                     if (reward.isDormant) {
                         Box(
-                            Modifier.size(56.dp).clip(RoundedCornerShape(17.dp))
+                            Modifier.size(56.dp).clip(RoundedCornerShape(16.dp))
                                 .background(Color.Black.copy(alpha = 0.22f)),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -418,7 +418,7 @@ fun MysteryChestCard(
                     }
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
 
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -428,7 +428,7 @@ fun MysteryChestCard(
                             fontWeight = FontWeight.Black, fontSize = 15.sp,
                             maxLines = 1,
                         )
-                        Spacer(Modifier.width(7.dp))
+                        Spacer(Modifier.width(8.dp))
                         RarityPill(rarity, dim = reward.isDormant)
                     }
                     Spacer(Modifier.height(4.dp))
@@ -448,15 +448,15 @@ fun MysteryChestCard(
 
                     // شريط تقدّم للصندوق الخامل
                     if (reward.isDormant && reward.requiredDay > 0) {
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(8.dp))
                         val frac = (currentStreak.toFloat() / reward.requiredDay).coerceIn(0f, 1f)
                         LinearProgressIndicator(
                             progress = { frac },
-                            modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                            modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(4.dp)),
                             color = accent.copy(alpha = 0.65f),
                             trackColor = ZBorder,
                         )
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             "$currentStreak / ${reward.requiredDay} يوم",
                             color = ZTextMuted, fontSize = 9.sp,
@@ -469,11 +469,11 @@ fun MysteryChestCard(
                 when {
                     reward.isSealed -> Surface(shape = RoundedCornerShape(12.dp), color = accent) {
                         Column(
-                            Modifier.padding(horizontal = 11.dp, vertical = 8.dp),
+                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Icon(Icons.Filled.LockOpen, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text("اكسر", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                     }
@@ -496,8 +496,8 @@ private fun RarityPill(rarity: RewardRarity, dim: Boolean = false) {
         Text(
             rarity.label,
             color = if (dim) ZTextMuted else c,
-            fontSize = 8.5.sp, fontWeight = FontWeight.Black,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+            fontSize = 8.sp, fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
         )
     }
 }
@@ -623,7 +623,7 @@ fun ChestBreakDialog(
                 ConfettiBurst(
                     count = reward.rarity.confetti,
                     seed = reward.id.hashCode(),
-                    palette = listOf(accent, glow, Color(0xFFFBBF24), Color(0xFF10B981), Color(0xFFF43F5E)),
+                    palette = listOf(accent, glow, ZAmber, ZEmerald, Color(0xFFF43F5E)),
                 )
             }
 
@@ -631,12 +631,12 @@ fun ChestBreakDialog(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 22.dp, vertical = 30.dp),
+                    .padding(horizontal = 24.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 RarityPill(reward.rarity)
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // ── الصندوق نفسه ──
                 Box(contentAlignment = Alignment.Center) {
@@ -649,7 +649,7 @@ fun ChestBreakDialog(
                         Modifier
                             .offset(x = shake.value.dp)
                             .size(132.dp)
-                            .clip(RoundedCornerShape(30.dp))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(Brush.linearGradient(listOf(accent, glow))),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -670,13 +670,13 @@ fun ChestBreakDialog(
                     }
                 }
 
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(24.dp))
                 Text(
                     reward.title,
                     color = Color.White, fontWeight = FontWeight.Black, fontSize = 23.sp,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     when (phase) {
                         BreakPhase.SEALED -> "صندوق مختوم — المحتوى مجهول تماماً"
@@ -703,16 +703,16 @@ fun ChestBreakDialog(
                             accent = glow,
                         )
                         if (r.xpAwarded > 0) {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             RevealPanel(
                                 icon = Icons.Filled.Bolt,
                                 title = "نقاط الخبرة",
                                 body = "+${r.xpAwarded} XP أُضيفت لرصيدك",
-                                accent = Color(0xFFFBBF24),
+                                accent = ZAmber,
                             )
                         }
                         r.privilegeAr?.let {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             RevealPanel(
                                 icon = Icons.Filled.WorkspacePremium,
                                 title = "الصلاحية السيادية",
@@ -721,7 +721,7 @@ fun ChestBreakDialog(
                             )
                         }
                         r.themeUnlockKey?.let {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             RevealPanel(
                                 icon = Icons.Filled.Palette,
                                 title = "سمة مفتوحة",
@@ -733,7 +733,7 @@ fun ChestBreakDialog(
                         // تلقائياً بتقرير Gemini المخصّص فور وصوله.
                         val live = vm.mysteryRewards.firstOrNull { it.id == r.id } ?: r
                         if (live.descriptionHtmlAr.isNotBlank()) {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             HtmlReportPanel(
                                 html = live.descriptionHtmlAr,
                                 accent = glow,
@@ -744,7 +744,7 @@ fun ChestBreakDialog(
                     }
                 }
 
-                Spacer(Modifier.height(26.dp))
+                Spacer(Modifier.height(28.dp))
 
                 when (phase) {
                     BreakPhase.SEALED -> {
@@ -756,10 +756,10 @@ fun ChestBreakDialog(
                             colors = ButtonDefaults.buttonColors(containerColor = accent),
                         ) {
                             Icon(Icons.Filled.LockOpen, null, tint = Color.White)
-                            Spacer(Modifier.width(9.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("اكسر الختم", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
                         }
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         TextButton(onClick = onDismiss) {
                             Text("لاحقاً", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
                         }
@@ -797,7 +797,7 @@ private fun RevealPanel(
         color = Color.White.copy(alpha = 0.07f),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.20f)),
                 contentAlignment = Alignment.Center,
@@ -805,7 +805,7 @@ private fun RevealPanel(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(body, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp)
             }
         }
@@ -832,10 +832,10 @@ private fun HtmlReportPanel(
         color = Color.White.copy(alpha = 0.055f),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(15.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.AutoAwesome, null, tint = accent, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(8.dp))
                 Text("مرآة الإدراك", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.weight(1f))
                 if (loading) {
@@ -843,7 +843,7 @@ private fun HtmlReportPanel(
                         color = accent, strokeWidth = 1.6.dp,
                         modifier = Modifier.size(13.dp),
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("يُحلَّل بالذكاء…", color = accent.copy(alpha = 0.8f), fontSize = 10.sp)
                 } else if (onRegenerate != null) {
                     Surface(
@@ -852,7 +852,7 @@ private fun HtmlReportPanel(
                         onClick = onRegenerate,
                     ) {
                         Row(
-                            Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Filled.Refresh, null, tint = accent, modifier = Modifier.size(11.dp))
@@ -862,7 +862,7 @@ private fun HtmlReportPanel(
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             com.zmastery.english.ui.components.HtmlText(
                 html = html,
                 modifier = Modifier.fillMaxWidth(),
@@ -997,7 +997,7 @@ fun SealedRewardTeaser(reward: MysteryReward, onOpen: () -> Unit) {
                     )
                 )
         ) {
-            Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(contentAlignment = Alignment.Center) {
                     Box(
                         Modifier.size(54.dp).blur(16.dp).clip(RoundedCornerShape(50))
@@ -1005,17 +1005,17 @@ fun SealedRewardTeaser(reward: MysteryReward, onOpen: () -> Unit) {
                     )
                     Text("\uD83C\uDF81", fontSize = 32.sp, modifier = Modifier.offset(y = bob.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "صندوق غامض ينتظرك!",
                             color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp,
                         )
-                        Spacer(Modifier.width(7.dp))
+                        Spacer(Modifier.width(8.dp))
                         RarityPill(reward.rarity)
                     }
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "${reward.title} — اكسر الختم لتكتشف الجائزة",
                         color = ZTextSecondary, fontSize = 11.sp, maxLines = 1,

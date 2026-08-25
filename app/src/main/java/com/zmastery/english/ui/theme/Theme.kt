@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 private val White = Color(0xFFFFFFFF)
 
 @Composable
-fun AgonAppTheme(
+fun ZMasteryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
@@ -20,16 +20,20 @@ fun AgonAppTheme(
     SideEffect { ZThemeState.isDark = darkTheme }
     ZThemeState.isDark = darkTheme
 
+    // On-colors tuned for the Dusk Indigo palette: dark text on the lighter
+    // accent colors in light mode (teal/amber), dark-navy text on the
+    // lightened accents in dark mode — both guarantee readable contrast.
+    val onAccentDark = Color(0xFF12131C)
     val colorScheme = if (darkTheme) {
         darkColorScheme(
             primary = ZIndigo,
-            onPrimary = White,
+            onPrimary = Color.White,
             primaryContainer = ZPurple,
-            onPrimaryContainer = White,
+            onPrimaryContainer = Color.White,
             secondary = ZCyan,
-            onSecondary = Color(0xFF1A1613),
+            onSecondary = onAccentDark,
             tertiary = ZAmber,
-            onTertiary = Color(0xFF1A1613),
+            onTertiary = onAccentDark,
             background = ZBackground,
             onBackground = ZTextPrimary,
             surface = ZSurface,
@@ -38,18 +42,18 @@ fun AgonAppTheme(
             onSurfaceVariant = ZTextSecondary,
             outline = ZBorder,
             error = ZRose,
-            onError = Color(0xFF1A1613),
+            onError = onAccentDark,
         )
     } else {
         lightColorScheme(
             primary = ZIndigo,
-            onPrimary = White,
+            onPrimary = Color.White,
             primaryContainer = ZPurple,
-            onPrimaryContainer = White,
+            onPrimaryContainer = Color.White,
             secondary = ZCyan,
-            onSecondary = White,
+            onSecondary = Color.White,
             tertiary = ZAmber,
-            onTertiary = White,
+            onTertiary = Color.White,
             background = ZBackground,
             onBackground = ZTextPrimary,
             surface = ZSurface,
@@ -58,7 +62,7 @@ fun AgonAppTheme(
             onSurfaceVariant = ZTextSecondary,
             outline = ZBorder,
             error = ZRose,
-            onError = White,
+            onError = Color.White,
         )
     }
 
@@ -68,3 +72,12 @@ fun AgonAppTheme(
         content = content,
     )
 }
+
+/** Legacy template name — the app theme is now [ZMasteryTheme]. */
+@Deprecated("Renamed to ZMasteryTheme", ReplaceWith("ZMasteryTheme(darkTheme, dynamicColor, content)"))
+@Composable
+fun AgonAppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit,
+) = ZMasteryTheme(darkTheme, dynamicColor, content)

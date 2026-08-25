@@ -151,7 +151,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Column(Modifier.padding(20.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Edit, null, tint = ZIndigo)
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             "تعديل البيانات",
                             color = ZTextPrimary,
@@ -240,7 +240,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                         )
                         if (vm.isAdmin) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = ZAmber.copy(alpha = 0.2f),
                             ) {
                                 Text(
@@ -248,7 +248,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                                     color = ZAmber,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 )
                             }
                         }
@@ -301,7 +301,7 @@ private fun StatCard(
         modifier = modifier,
     ) {
         Column(
-            Modifier.padding(14.dp),
+            Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(icon, null, tint = color, modifier = Modifier.size(28.dp))
@@ -319,11 +319,11 @@ private fun InfoRow(
     value: String,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = ZTextSecondary, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Text(label, color = ZTextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
         Text(value, color = ZTextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }

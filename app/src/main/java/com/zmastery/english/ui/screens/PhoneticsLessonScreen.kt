@@ -71,22 +71,22 @@ fun PhoneticsLessonScreen(
 @Composable
 private fun PhHeader(lesson: PhoneticsLesson) {
     Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFD98324))))
             .drawBehind {
                 drawCircle(Color.White.copy(alpha = 0.10f), radius = size.minDimension * 0.4f, center = androidx.compose.ui.geometry.Offset(size.width * 0.9f, size.height * 0.2f))
             }
-            .padding(22.dp)
+            .padding(24.dp)
     ) {
         Column {
             Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.2f)) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.GraphicEq, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("${lesson.metadata.courseNameAr} · الدرس ${lesson.metadata.lessonNo}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Text(lesson.metadata.title, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black, lineHeight = 29.sp)
         }
     }
@@ -95,15 +95,15 @@ private fun PhHeader(lesson: PhoneticsLesson) {
 @Composable
 private fun SectionCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                     Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             content()
         }
     }
@@ -113,19 +113,19 @@ private fun SectionCard(title: String, icon: androidx.compose.ui.graphics.vector
 private fun FocusSoundsSection(sounds: List<PhSound>) {
     SectionCard("الأصوات المستهدفة", Icons.Filled.RecordVoiceOver, ZAmber) {
         sounds.forEachIndexed { i, s ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 // Big phonetic symbol badge with a play affordance
                 Box(
-                    Modifier.size(62.dp).clip(RoundedCornerShape(18.dp))
+                    Modifier.size(62.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFD98324)))),
                     contentAlignment = Alignment.Center,
                 ) { Text(s.symbol, color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp) }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(s.description, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 22.sp)
                 }
             }
-            if (i < sounds.size - 1) Divider(color = ZBorder, modifier = Modifier.padding(vertical = 4.dp))
+            if (i < sounds.size - 1) HorizontalDivider(color = ZBorder, modifier = Modifier.padding(vertical = 4.dp))
         }
     }
 }
@@ -138,8 +138,8 @@ private fun MinimalPairsSection(pairs: List<PhPair>) {
         pairs.chunked(1).forEach { /* keep vertical list of pairs */ }
         pairs.forEach { p ->
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PairChip(p.word1, Modifier.weight(1f))
@@ -164,8 +164,8 @@ private fun PairChip(word: String, modifier: Modifier) {
 private fun PracticeScriptsSection(scripts: List<String>) {
     SectionCard("جُمل التدريب (Shadowing)", Icons.Filled.Repeat, ZEmerald) {
         scripts.forEachIndexed { i, s ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(ZEmerald.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(ZEmerald.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
                     Text("${i + 1}", color = ZEmerald, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
                 Spacer(Modifier.width(12.dp))
@@ -180,7 +180,7 @@ private fun PracticeScriptsSection(scripts: List<String>) {
 private fun VocabSection(vocab: List<PhVocab>) {
     SectionCard("مفردات الدرس", Icons.Filled.Style, ZIndigo) {
         vocab.forEach { v ->
-            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(v.word, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
                     Spacer(Modifier.width(8.dp))
@@ -202,9 +202,9 @@ private fun VocabSection(vocab: List<PhVocab>) {
 private fun NotesSection(notes: List<String>) {
     SectionCard("ملاحظات الأستاذ", Icons.Filled.Lightbulb, ZAmber) {
         notes.forEach { n ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
-                Box(Modifier.padding(top = 7.dp).size(7.dp).clip(RoundedCornerShape(4.dp)).background(ZAmber))
-                Spacer(Modifier.width(10.dp))
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Box(Modifier.padding(top = 8.dp).size(7.dp).clip(RoundedCornerShape(4.dp)).background(ZAmber))
+                Spacer(Modifier.width(12.dp))
                 Text(n, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 23.sp)
             }
         }
@@ -226,7 +226,7 @@ private fun QuizSection(quiz: List<PhQuiz>, onComplete: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text("$correct / ${quiz.size}", color = ZEmerald, fontWeight = FontWeight.Black, fontSize = 30.sp)
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = onComplete, shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = ZAmber)) {
+                Button(onClick = onComplete, shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = ZAmber)) {
                     Icon(Icons.Filled.CheckCircle, null); Spacer(Modifier.width(8.dp)); Text("إنهاء الدرس", fontWeight = FontWeight.Bold)
                 }
             }
@@ -242,23 +242,23 @@ private fun QuizSection(quiz: List<PhQuiz>, onComplete: () -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         Text("سؤال ${index + 1} من ${quiz.size}", color = ZTextMuted, fontSize = 11.sp)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
 
         if (q.type == "audio_quiz") {
             // Audio prompt bubble
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Surface(shape = RoundedCornerShape(50), color = ZRose.copy(alpha = 0.12f), onClick = { }) {
-                    Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.VolumeUp, null, tint = ZRose)
                         Spacer(Modifier.width(8.dp))
                         Text("استمع للكلمة", color = ZRose, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
         }
         Text(q.question, color = ZTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
 
         val opts = q.options ?: listOf("True", "False")
         val optLabels = if (q.options == null) listOf("صحيح ✓", "خطأ ✗") else opts
@@ -279,12 +279,12 @@ private fun QuizSection(quiz: List<PhQuiz>, onComplete: () -> Unit) {
                 else -> ZBorder
             }
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = bg,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).border(1.5.dp, border, RoundedCornerShape(14.dp)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).border(1.5.dp, border, RoundedCornerShape(16.dp)),
                 onClick = { if (!answered) selected = opt },
             ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(optLabels[i], color = ZTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                     if (answered && isCorrect) Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald)
                     else if (answered && opt == selected) Icon(Icons.Filled.Cancel, null, tint = ZRose)
@@ -315,7 +315,7 @@ private fun QuizSection(quiz: List<PhQuiz>, onComplete: () -> Unit) {
             },
             enabled = selected != null,
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = ZAmber, disabledContainerColor = ZBorder),
         ) {
             Text(

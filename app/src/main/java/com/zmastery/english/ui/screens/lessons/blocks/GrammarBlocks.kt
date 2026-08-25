@@ -29,7 +29,7 @@ internal fun LazyListScope.grammarRuleBlock(explanationAr: String, logicAr: Stri
         item { SectionHeader(Icons.Filled.MenuBook, "القاعدة", accent) }
         item {
             SoftCard(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(18.dp)) {
+                Column(Modifier.padding(20.dp)) {
                     Text(
                         explanationAr,
                         color = ZTextPrimary,
@@ -50,7 +50,7 @@ internal fun LazyListScope.grammarRuleBlock(explanationAr: String, logicAr: Stri
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Box(
-                        Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.18f)),
+                        Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Psychology, null, tint = accent, modifier = Modifier.size(20.dp)) }
                     Spacer(Modifier.width(12.dp))
@@ -76,7 +76,7 @@ internal fun LazyListScope.examplesBlock(examples: List<Sentence>, accent: Color
 @Composable
 private fun ExampleRow(ex: Sentence, accent: Color) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             com.zmastery.english.audio.AudioButton(
                 text = ex.en, audioKey = "gex_${ex.en.hashCode()}", accent = accent, size = 40.dp, iconSize = 20.dp,
             )
@@ -84,7 +84,7 @@ private fun ExampleRow(ex: Sentence, accent: Color) {
             Column(Modifier.weight(1f)) {
                 Text(ex.en, color = ZTextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 24.sp)
                 if (ex.ar.isNotBlank()) {
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(ex.ar, color = ZTextSecondary, fontSize = 14.sp, lineHeight = 20.sp)
                 }
             }

@@ -155,6 +155,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             SampleData.courses.forEach { base ->
                 if (courses.none { it.id == base.id }) courses.add(base)
             }
+            // Dusk Indigo migration: built-in courses adopt the new palette accents
+            // (imported cloud courses keep their own colors).
+            for (i in courses.indices) {
+                SampleData.courses.firstOrNull { it.id == courses[i].id }?.let { base ->
+                    if (courses[i].accent != base.accent) courses[i] = courses[i].copy(accent = base.accent)
+                }
+            }
         }
         lessons.clear(); lessons.addAll(s.lessons.map { it.toDomain() })
         vocab.clear(); vocab.addAll(s.vocab.map { it.toDomain() })

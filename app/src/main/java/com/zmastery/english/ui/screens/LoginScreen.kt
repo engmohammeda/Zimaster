@@ -142,9 +142,10 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF0F172A), // Slate 900
-                        Color(0xFF1E1B4B), // Indigo 950
-                        Color(0xFF022C22), // Emerald 950 deep
+                        // خلفية البطل تتكيّف مع الثيم: ورق نيلي ناعم نهاراً / كحلي عميق ليلاً
+                        if (ZThemeState.isDark) Color(0xFF12131C) else Color(0xFFEDF0FA),
+                        if (ZThemeState.isDark) Color(0xFF1B1D2A) else Color(0xFFE4E8F6),
+                        if (ZThemeState.isDark) Color(0xFF12131C) else Color(0xFFEDF0FA),
                     )
                 )
             ),
@@ -156,7 +157,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                 .align(Alignment.TopEnd)
                 .offset(x = 80.dp, y = (-40).dp)
                 .clip(CircleShape)
-                .background(Color(0xFF38BDF8).copy(alpha = 0.08f))
+                .background(ZIndigo.copy(alpha = 0.08f))
         )
         Box(
             Modifier
@@ -164,7 +165,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                 .align(Alignment.BottomStart)
                 .offset(x = (-60).dp, y = 60.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF10B981).copy(alpha = 0.08f))
+                .background(ZCyan.copy(alpha = 0.08f))
         )
 
         Column(
@@ -184,25 +185,25 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.1f),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White.copy(alpha = 0.25f)),
+                    color = ZIndigo.copy(alpha = 0.10f),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, ZIndigo.copy(alpha = 0.25f)),
                     modifier = Modifier.size(76.dp),
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Filled.AutoStories,
                             contentDescription = "Logo",
-                            tint = Color(0xFF67E8F9),
+                            tint = ZIndigo,
                             modifier = Modifier.size(38.dp),
                         )
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 Text(
                     "Z-Mastery",
-                    color = Color.White,
+                    color = ZTextPrimary,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp,
@@ -210,7 +211,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "منصتك الذكية لتعلم وإتقان الإنجليزية",
-                    color = Color(0xFFCBD5E1),
+                    color = ZTextSecondary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                 )
@@ -221,8 +222,8 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             // Central Action Card
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color(0xFF1E293B).copy(alpha = 0.88f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                color = ZCard,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                 shadowElevation = 16.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -233,8 +234,8 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                     // Auth Method Tabs
                     TabRow(
                         selectedTabIndex = selectedAuthTab,
-                        containerColor = Color(0xFF0F172A).copy(alpha = 0.6f),
-                        contentColor = Color.White,
+                        containerColor = ZSurfaceVariant.copy(alpha = 0.6f),
+                        contentColor = ZTextPrimary,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .fillMaxWidth(),
@@ -242,7 +243,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             if (selectedAuthTab < tabPositions.size) {
                                 TabRowDefaults.SecondaryIndicator(
                                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedAuthTab]),
-                                    color = Color(0xFF38BDF8),
+                                    color = ZIndigo,
                                     height = 3.dp,
                                 )
                             }
@@ -268,7 +269,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                         )
                     }
 
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(20.dp))
 
                     // Error Message Display
                     AnimatedVisibility(
@@ -278,20 +279,20 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                     ) {
                         error?.let {
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFEF4444).copy(alpha = 0.18f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(12.dp),
+                                color = ZRose.copy(alpha = 0.14f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ZRose.copy(alpha = 0.45f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 14.dp),
+                                    .padding(bottom = 16.dp),
                             ) {
                                 Row(
-                                    Modifier.padding(10.dp),
+                                    Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Filled.ErrorOutline, null, tint = Color(0xFFF87171), modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Filled.ErrorOutline, null, tint = ZRose, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text(it, color = Color(0xFFFCA5A5), fontSize = 12.sp, lineHeight = 16.sp)
+                                    Text(it, color = ZRoseDeep, fontSize = 12.sp, lineHeight = 16.sp)
                                 }
                             }
                         }
@@ -305,20 +306,20 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                     ) {
                         successMsg?.let {
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFF10B981).copy(alpha = 0.18f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(12.dp),
+                                color = ZEmerald.copy(alpha = 0.18f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ZEmerald.copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 14.dp),
+                                    .padding(bottom = 16.dp),
                             ) {
                                 Row(
-                                    Modifier.padding(10.dp),
+                                    Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF34D399), modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text(it, color = Color(0xFFA7F3D0), fontSize = 12.sp)
+                                    Text(it, color = ZEmeraldDeep, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -328,16 +329,16 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                         // ── TAB 0: GOOGLE SIGN-IN ──
                         Text(
                             "سجّل دخولك بلمسة واحدة بحساب Google لمزامنة دروسك وتقدمك",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.5.sp,
+                            color = ZTextSecondary,
+                            fontSize = 12.sp,
                             textAlign = TextAlign.Center,
                             lineHeight = 18.sp,
                         )
 
-                        Spacer(Modifier.height(18.dp))
+                        Spacer(Modifier.height(20.dp))
 
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             color = Color.White,
                             shadowElevation = 4.dp,
                             modifier = Modifier
@@ -368,12 +369,12 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                         strokeWidth = 2.5.dp,
                                         modifier = Modifier.size(20.dp),
                                     )
-                                    Spacer(Modifier.width(10.dp))
+                                    Spacer(Modifier.width(12.dp))
                                     Text(
                                         "جارٍ تسجيل الدخول…",
-                                        color = Color(0xFF1E293B),
+                                        color = Color(0xFF2A2C38),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp,
+                                        fontSize = 14.sp,
                                     )
                                 } else {
                                     Surface(
@@ -385,23 +386,23 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                             Text("G", color = Color(0xFF4285F4), fontWeight = FontWeight.Black, fontSize = 15.sp)
                                         }
                                     }
-                                    Spacer(Modifier.width(10.dp))
+                                    Spacer(Modifier.width(12.dp))
                                     Text(
                                         "تسجيل الدخول بحساب Google",
-                                        color = Color(0xFF1E293B),
+                                        color = Color(0xFF2A2C38),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.5.sp,
+                                        fontSize = 14.sp,
                                     )
                                 }
                             }
                         }
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
 
                         TextButton(onClick = { showWebClientConfigDialog = true }) {
-                            Icon(Icons.Filled.Settings, null, tint = Color(0xFF64748B), modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("إعدادات معرّف Web Client ID", color = Color(0xFF94A3B8), fontSize = 11.5.sp)
+                            Icon(Icons.Filled.Settings, null, tint = ZTextMuted, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("إعدادات معرّف Web Client ID", color = ZTextSecondary, fontSize = 12.sp)
                         }
                     } else {
                         // ── TAB 1: EMAIL & PASSWORD ──
@@ -410,38 +411,38 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 value = nameInput,
                                 onValueChange = { nameInput = it; error = null },
                                 label = { Text("الاسم الكامل") },
-                                leadingIcon = { Icon(Icons.Filled.Person, null, tint = Color(0xFF94A3B8)) },
+                                leadingIcon = { Icon(Icons.Filled.Person, null, tint = ZTextSecondary) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                             )
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                         }
 
                         OutlinedTextField(
                             value = emailInput,
                             onValueChange = { emailInput = it; error = null },
                             label = { Text("البريد الإلكتروني") },
-                            leadingIcon = { Icon(Icons.Filled.Email, null, tint = Color(0xFF94A3B8)) },
+                            leadingIcon = { Icon(Icons.Filled.Email, null, tint = ZTextSecondary) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                         )
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
 
                         OutlinedTextField(
                             value = passwordInput,
                             onValueChange = { passwordInput = it; error = null },
                             label = { Text("كلمة المرور") },
-                            leadingIcon = { Icon(Icons.Filled.Lock, null, tint = Color(0xFF94A3B8)) },
+                            leadingIcon = { Icon(Icons.Filled.Lock, null, tint = ZTextSecondary) },
                             trailingIcon = {
                                 IconButton(onClick = { showPassword = !showPassword }) {
                                     Icon(
                                         if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                         null,
-                                        tint = Color(0xFF94A3B8),
+                                        tint = ZTextSecondary,
                                     )
                                 }
                             },
@@ -461,22 +462,22 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                     resetEmailInput = emailInput
                                     showForgotPassDialog = true
                                 }) {
-                                    Text("نسيت كلمة المرور؟", color = Color(0xFF38BDF8), fontSize = 11.5.sp)
+                                    Text("نسيت كلمة المرور؟", color = ZIndigo, fontSize = 12.sp)
                                 }
                             }
                         } else {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             // تأكيد كلمة المرور — يمنع أخطاء الطباعة قبل إنشاء الحساب
                             OutlinedTextField(
                                 value = confirmPasswordInput,
                                 onValueChange = { confirmPasswordInput = it; error = null },
                                 label = { Text("تأكيد كلمة المرور") },
-                                leadingIcon = { Icon(Icons.Filled.Lock, null, tint = Color(0xFF94A3B8)) },
+                                leadingIcon = { Icon(Icons.Filled.Lock, null, tint = ZTextSecondary) },
                                 singleLine = true,
                                 isError = confirmPasswordInput.isNotBlank() && confirmPasswordInput != passwordInput,
                                 supportingText = {
                                     if (confirmPasswordInput.isNotBlank() && confirmPasswordInput != passwordInput) {
-                                        Text("كلمتا المرور غير متطابقتين", color = Color(0xFFF87171), fontSize = 11.sp)
+                                        Text("كلمتا المرور غير متطابقتين", color = ZRose, fontSize = 11.sp)
                                     }
                                 },
                                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -521,7 +522,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             },
                             enabled = !isSigningIn && emailInput.isNotBlank() && passwordInput.isNotBlank()
                                 && (!isSignUpMode || confirmPasswordInput == passwordInput),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -533,7 +534,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 Text(
                                     if (isSignUpMode) "إنشاء حساب جديد" else "تسجيل الدخول",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.5.sp,
+                                    fontSize = 14.sp,
                                 )
                             }
                         }
@@ -547,15 +548,15 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                         }) {
                             Text(
                                 if (isSignUpMode) "لديك حساب بالفعل؟ تسجيل الدخول" else "ليس لديك حساب؟ إنشاء حساب جديد",
-                                color = Color(0xFFCBD5E1),
+                                color = ZTextSecondary,
                                 fontSize = 12.sp,
                             )
                         }
                     }
 
-                    Spacer(Modifier.height(10.dp))
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(ZBorder))
+                    Spacer(Modifier.height(16.dp))
 
                     // Guest Button
                     OutlinedButton(
@@ -570,12 +571,12 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             .fillMaxWidth()
                             .height(46.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFCBD5E1)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                     ) {
                         Icon(Icons.Filled.PersonOutline, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("متابعة كضيف بدون تسجيل", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                        Text("متابعة كضيف بدون تسجيل", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 }
             }
@@ -596,13 +597,13 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                     Icon(
                         Icons.Filled.AdminPanelSettings,
                         contentDescription = "Admin",
-                        tint = if (vm.isAdmin) Color(0xFFFBBF24) else Color(0xFF64748B),
+                        tint = if (vm.isAdmin) ZAmber else ZTextMuted,
                         modifier = Modifier.size(16.dp),
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         if (vm.isAdmin) "👑 وضع المطور والمسؤول مفعّل" else "الدخول كمسؤول / مطور",
-                        color = if (vm.isAdmin) Color(0xFFFBBF24) else Color(0xFF94A3B8),
+                        color = if (vm.isAdmin) ZAmber else ZTextSecondary,
                         fontSize = 12.sp,
                         fontWeight = if (vm.isAdmin) FontWeight.Bold else FontWeight.Normal,
                     )
@@ -612,7 +613,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
 
                 Text(
                     "Z-Mastery v1.1.0 · منصة تعليمية متكاملة",
-                    color = Color.White.copy(alpha = 0.4f),
+                    color = ZTextMuted,
                     fontSize = 11.sp,
                 )
             }
@@ -630,7 +631,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Security, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(24.dp))
+                    Icon(Icons.Filled.Security, null, tint = ZAmber, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("صلاحيات المطور والمسؤول 👑", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
@@ -660,15 +661,15 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 Icon(
                                     if (showAdminPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                     contentDescription = if (showAdminPassword) "إخفاء الرمز" else "إظهار الرمز",
-                                    tint = Color(0xFF94A3B8),
+                                    tint = ZTextSecondary,
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                     )
                     adminError?.let {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(it, color = ZRose, fontSize = 11.sp)
                     }
                 }
@@ -684,7 +685,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             adminError = "الرمز السري غير صحيح، يرجى التحقق والمحاولة مجدداً"
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
+                    colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
                 ) {
                     Text("تفعيل صلاحيات المطور", fontWeight = FontWeight.Bold)
                 }
@@ -706,7 +707,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                 Column {
                     Text(
                         "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور فوراً عبر Firebase:",
-                        fontSize = 12.5.sp,
+                        fontSize = 12.sp,
                         color = ZTextSecondary,
                         lineHeight = 18.sp,
                     )
@@ -717,7 +718,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                         label = { Text("البريد الإلكتروني") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                     )
                     resetMessage?.let {
                         Spacer(Modifier.height(8.dp))
@@ -735,7 +736,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                    colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                 ) {
                     Text("إرسال رابط الاستعادة", fontWeight = FontWeight.Bold)
                 }
@@ -767,7 +768,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                         onValueChange = { customWebClientId = it },
                         label = { Text("Web Client ID") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
                     )
                 }
             },

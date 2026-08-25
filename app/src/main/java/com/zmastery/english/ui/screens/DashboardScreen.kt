@@ -235,9 +235,9 @@ private fun todayLabel(): String {
  */
 @Composable
 private fun GetStartedCard(vm: AppViewModel, onNavigate: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(ZIndigo, ZPurple)))
                 .drawDecor()
                 .padding(24.dp)
@@ -249,11 +249,11 @@ private fun GetStartedCard(vm: AppViewModel, onNavigate: (String) -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.WavingHand, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("لنبدأ الإعداد", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "مرحباً بك في Z-Mastery",
                     color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp,
@@ -271,7 +271,7 @@ private fun GetStartedCard(vm: AppViewModel, onNavigate: (String) -> Unit) {
                 Text("خطوات البداية", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
                 Spacer(Modifier.height(4.dp))
                 Text("أكمل أي خطوة لتفعيل لوحة القيادة", color = ZTextSecondary, fontSize = 11.sp)
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 StartStep(
                     1, Icons.Filled.UploadFile, "استورد كورساً",
                     "ملف JSON أو لصق مباشر", ZIndigo,
@@ -309,13 +309,13 @@ private fun StartStep(
 ) {
     Surface(
         color = Color.Transparent,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (done) ZEmerald.copy(alpha = 0.16f) else accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -353,7 +353,7 @@ private fun MascotBanner(eng: Engagement) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(eng.emoji, fontSize = 32.sp)
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(eng.title, color = accent, fontWeight = FontWeight.Black, fontSize = 15.sp, lineHeight = 21.sp)
                 Text(eng.subtitle, color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
@@ -375,12 +375,12 @@ private fun MascotBanner(eng: Engagement) {
 @Composable
 private fun NoTasksYet(onNavigate: (String) -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 18.dp) {
-        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(ZAmber.copy(alpha = 0.15f)),
+                Modifier.size(42.dp).clip(RoundedCornerShape(16.dp)).background(ZAmber.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Filled.PlaylistAdd, null, tint = ZAmber, modifier = Modifier.size(22.dp)) }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text("لا توجد مهام متاحة اليوم", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(
@@ -402,7 +402,7 @@ private fun NoTasksYet(onNavigate: (String) -> Unit) {
 @Composable
 private fun TaskRow(task: DailyTask, onStart: () -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (task.done) ZEmerald.copy(alpha = 0.18f) else ZSurfaceVariant),
@@ -421,15 +421,15 @@ private fun TaskRow(task: DailyTask, onStart: () -> Unit) {
                 )
                 Text(task.subtitle, color = ZTextSecondary, fontSize = 11.sp)
                 if (task.target > 1) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { (task.progress.toFloat() / task.target).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(3.dp)),
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)),
                         color = if (task.done) ZEmerald else ZCyan, trackColor = ZBorder,
                     )
                 }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             if (task.done) {
                 Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald)
             } else {
@@ -444,7 +444,7 @@ private fun TaskRow(task: DailyTask, onStart: () -> Unit) {
                     Surface(shape = RoundedCornerShape(50), color = ZIndigo, onClick = onStart) {
                         Icon(
                             Icons.Filled.PlayArrow, "ابدأ", tint = Color.White,
-                            modifier = Modifier.padding(6.dp).size(18.dp),
+                            modifier = Modifier.padding(8.dp).size(18.dp),
                         )
                     }
                 }
@@ -468,8 +468,8 @@ private fun taskIcon(k: String): ImageVector = when (k) {
 @Composable
 private fun PlanCard(item: PlanItem, onClick: () -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp, onClick = onClick) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).height(40.dp).clip(RoundedCornerShape(3.dp)).background(Color(item.accent)))
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).height(40.dp).clip(RoundedCornerShape(4.dp)).background(Color(item.accent)))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(item.lessonTitle, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -484,7 +484,7 @@ private fun PlanCard(item: PlanItem, onClick: () -> Unit) {
 @Composable
 private fun AllDoneBanner() {
     Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Celebration, null, tint = ZEmerald)
             Spacer(Modifier.width(12.dp))
             Text("رائع! أنهيت خطة اليوم بالكامل \uD83C\uDF89", color = ZEmerald, fontWeight = FontWeight.Bold)
@@ -494,10 +494,10 @@ private fun AllDoneBanner() {
 
 @Composable
 private fun ForgottenWordsRow(words: List<VocabWord>, onReview: () -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(words, key = { it.id }) { w ->
             Surface(shape = RoundedCornerShape(16.dp), color = ZRose.copy(alpha = 0.12f), onClick = onReview) {
-                Column(Modifier.padding(14.dp).width(120.dp)) {
+                Column(Modifier.padding(16.dp).width(120.dp)) {
                     Icon(Icons.Filled.Warning, null, tint = ZRose, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.height(8.dp))
                     Text(w.english, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
@@ -521,7 +521,7 @@ private fun AudioStatusBanner(vm: AppViewModel) {
     SoftCard(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                     .background(Brush.linearGradient(listOf(ZCyanDeep, ZCyan))),
                 contentAlignment = Alignment.Center,
             ) {
@@ -542,9 +542,9 @@ private fun AudioStatusBanner(vm: AppViewModel) {
             }
             if (!busy) {
                 Surface(shape = RoundedCornerShape(12.dp), color = ZCyanDeep, onClick = { vm.generateMissingAudio() }) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("توليد", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
@@ -588,8 +588,8 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFEA580C)))),
+                    Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
+                        .background(Brush.linearGradient(listOf(ZAmber, ZRoseDeep))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -630,7 +630,7 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                     } else {
                         CircularProgressIndicator(color = ZAmber, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             if (vm.isWaitingForAi) "بانتظار الاتصال بالنموذج…" else "الذكاء الاصطناعي ينسج قصة اليوم…",
@@ -648,7 +648,7 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                     }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = {
                             if (ready) onOpenArchive()
@@ -656,14 +656,14 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                         },
                         enabled = ready || (vm.storySeedCount >= 2 && vm.storyAiReady),
                         modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZAmber, disabledContainerColor = ZBorder),
                     ) {
                         Icon(
                             if (ready) Icons.Filled.MenuBook else Icons.Filled.AutoAwesome,
                             null, modifier = Modifier.size(17.dp), tint = Color.White,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             if (ready) "اقرأ قصة اليوم" else "ولّد قصة اليوم",
                             fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White,
@@ -672,19 +672,19 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                     OutlinedButton(
                         onClick = onOpenArchive,
                         modifier = Modifier.height(46.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
                     ) {
                         Icon(Icons.Filled.Inventory2, null, modifier = Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("الأرشيف", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
                 // ── إعادة التوليد / حذف قصة اليوم ──
                 if (ready) {
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
                             onClick = { vm.regenerateTodayStory() },
                             enabled = vm.storySeedCount >= 2 && vm.storyAiReady,
@@ -694,7 +694,7 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ZIndigo),
                         ) {
                             Icon(Icons.Filled.Autorenew, null, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("أعد التوليد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                         OutlinedButton(
@@ -705,7 +705,7 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ZRose),
                         ) {
                             Icon(Icons.Filled.DeleteOutline, null, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("احذفها", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
@@ -728,36 +728,36 @@ private fun DailyStoryCard(vm: AppViewModel, onOpenArchive: () -> Unit) {
 private fun MicroHabitRow(vm: AppViewModel, onStart: () -> Unit) {
     val habit = vm.microHabit
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 18.dp, onClick = onStart) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(ZAmber.copy(alpha = 0.15f)),
+                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(ZAmber.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Filled.Bolt, null, tint = ZAmber, modifier = Modifier.size(21.dp)) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("الورد اليومي", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Surface(shape = RoundedCornerShape(50), color = ZAmber.copy(alpha = 0.15f)) {
                         Text(
                             habit.timeLabel, color = ZAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     "${habit.title} — يكفي للحفاظ على سلسلتك اليوم",
                     color = ZTextSecondary, fontSize = 11.sp, lineHeight = 17.sp,
                 )
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(8.dp))
                 LinearProgressIndicator(
                     progress = { vm.microHabitFraction },
-                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
+                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(4.dp)),
                     color = ZAmber, trackColor = ZBorder,
                 )
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Icon(Icons.Filled.PlayCircleFilled, null, tint = ZAmber, modifier = Modifier.size(28.dp))
         }
     }
@@ -792,13 +792,13 @@ private fun DailyPhraseCard() {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.FormatQuote, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
                     "مقولة اليوم",
                     color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 )
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
                 quote.text, color = Color.White, fontSize = 18.sp,
                 fontWeight = FontWeight.Black, lineHeight = 27.sp,
@@ -808,7 +808,7 @@ private fun DailyPhraseCard() {
                 "— ${quote.author}", color = Color.White.copy(alpha = 0.85f),
                 fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             Surface(
                 shape = RoundedCornerShape(50),
                 color = Color.White.copy(alpha = 0.22f),
@@ -817,7 +817,7 @@ private fun DailyPhraseCard() {
             ) {
                 Icon(
                     Icons.Filled.VolumeUp, "استمع", tint = Color.White,
-                    modifier = Modifier.padding(9.dp).size(16.dp),
+                    modifier = Modifier.padding(8.dp).size(16.dp),
                 )
             }
         }
@@ -864,7 +864,7 @@ private fun AnnouncementCard(
                     ) {
                         Icon(icon, null, tint = accentColor, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Text(
                         announcement.title.ifBlank { "إشعار عام" },
                         color = ZTextPrimary,
@@ -886,7 +886,7 @@ private fun AnnouncementCard(
             )
 
             if (isAdmin) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,

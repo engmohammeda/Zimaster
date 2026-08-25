@@ -53,7 +53,7 @@ fun RoadmapScreen(
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(14.dp))
+            Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(16.dp))
                 .background(ZSurfaceVariant).padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -70,16 +70,16 @@ fun RoadmapScreen(
 @Composable
 private fun SegTab(modifier: Modifier, label: String, icon: ImageVector, active: Boolean, onClick: () -> Unit) {
     Surface(
-        modifier = modifier, shape = RoundedCornerShape(11.dp),
+        modifier = modifier, shape = RoundedCornerShape(12.dp),
         color = if (active) ZIndigo else Color.Transparent, onClick = onClick,
     ) {
         Row(
-            Modifier.padding(vertical = 10.dp),
+            Modifier.padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(icon, null, tint = if (active) Color.White else ZTextSecondary, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(label, color = if (active) Color.White else ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
@@ -105,7 +105,7 @@ private fun ZigZagMap(vm: AppViewModel, onOpenCourse: (Int) -> Unit, onOpenLesso
 
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         item { MapHeader(vm) }
@@ -186,8 +186,8 @@ private fun MapHeader(vm: AppViewModel) {
                 "انقر على المستوى لعرض كورساته، ثم على الكورس لعرض مسار دروسه",
                 color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, lineHeight = 18.sp,
             )
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 HeaderPill("${s.completedLessons}", "مكتمل")
                 HeaderPill("${s.curriculumLessons}", "في المنهج")
                 HeaderPill("${(s.progress * 100).toInt()}%", "التقدم")
@@ -215,7 +215,7 @@ private fun MapHeader(vm: AppViewModel) {
 @Composable
 private fun HeaderPill(value: String, label: String) {
     Surface(shape = RoundedCornerShape(12.dp), color = Color.White.copy(alpha = 0.22f)) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(label, color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp)
         }
@@ -225,7 +225,7 @@ private fun HeaderPill(value: String, label: String) {
 @Composable
 private fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(9.dp).clip(RoundedCornerShape(5.dp)).background(color))
+        Box(Modifier.size(9.dp).clip(RoundedCornerShape(4.dp)).background(color))
         Spacer(Modifier.width(4.dp))
         Text(label, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
     }
@@ -241,13 +241,13 @@ private fun LevelHeader(
     val arrow by animateFloatAsState(if (expanded) 90f else 0f, tween(240), label = "lvArrow")
     Surface(
         shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 4.dp,
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         onClick = onToggle,
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(46.dp).clip(RoundedCornerShape(15.dp))
+                    Modifier.size(46.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))),
                     contentAlignment = Alignment.Center,
                 ) { Text(level.emoji, fontSize = 23.sp) }
@@ -276,7 +276,7 @@ private fun LevelHeader(
                     modifier = Modifier.size(18.dp).rotate(-arrow),
                 )
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             // Real completion measured against the FULL curriculum of the level.
             TwinBar("الإنجاز", stats.done, stats.total, stats.completion, ZEmerald, "من المنهج")
             Spacer(Modifier.height(8.dp))
@@ -292,7 +292,7 @@ private fun TwinBar(title: String, value: Int, total: Int, pct: Float, accent: C
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, color = ZTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(hint, color = ZTextMuted, fontSize = 9.sp)
             Spacer(Modifier.weight(1f))
             Text("$value / $total", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
@@ -322,15 +322,15 @@ private fun CourseBanner(
     val anim by animateFloatAsState(completion, tween(600), label = "cbBar")
     Surface(
         shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.10f),
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp), onClick = onToggle,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp), onClick = onToggle,
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(accent),
+                    Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(accent),
                     contentAlignment = Alignment.Center,
                 ) { Text(courseEmoji(course.type), fontSize = 17.sp) }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(course.name, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
                     Text(
@@ -342,7 +342,7 @@ private fun CourseBanner(
                     "${(completion * 100).toInt()}%",
                     color = accent, fontWeight = FontWeight.Black, fontSize = 13.sp,
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Icon(
                     Icons.Filled.ChevronLeft, null, tint = accent,
                     modifier = Modifier.size(18.dp).rotate(-arrow),
@@ -357,7 +357,7 @@ private fun CourseBanner(
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp), color = accent,
+                    shape = RoundedCornerShape(12.dp), color = accent,
                     modifier = Modifier.fillMaxWidth(), onClick = onOpen,
                 ) {
                     Row(
@@ -366,7 +366,7 @@ private fun CourseBanner(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("افتح الكورس", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
@@ -435,7 +435,7 @@ private fun ZigZagRow(
                 ) {
                     Spacer(Modifier.fillMaxWidth(slot))
                     LessonDot(lesson, state, accent) { onTap(lesson) }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             "درس ${lesson.no}",
@@ -477,12 +477,12 @@ private fun LessonDot(lesson: Lesson, state: DotState, accent: Color, onClick: (
 @Composable
 private fun EmptyCourseHint(target: Int) {
     Surface(
-        shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.CloudDownload, null, tint = ZTextMuted, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Text(
                 "لم تُستورد دروس هذا الكورس بعد ($target درساً متوقعاً)",
                 color = ZTextMuted, fontSize = 11.sp,
@@ -498,7 +498,7 @@ private fun LessonPeekDialog(lesson: Lesson, course: Course?, onStart: () -> Uni
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                        Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                             .background(Color(course?.accent ?: 0xFF6366F5)),
                         contentAlignment = Alignment.Center,
                     ) { Text("${lesson.no}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp) }
@@ -512,17 +512,17 @@ private fun LessonPeekDialog(lesson: Lesson, course: Course?, onStart: () -> Uni
                     Spacer(Modifier.height(12.dp))
                     Text(lesson.summaryAr, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 21.sp)
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (lesson.newWordIds.isNotEmpty()) PeekChip(Icons.Filled.Style, "${lesson.newWordIds.size} كلمة")
                     if (lesson.quiz.isNotEmpty()) PeekChip(Icons.Filled.Quiz, "${lesson.quiz.size} سؤال")
                     if (lesson.isCompleted) PeekChip(Icons.Filled.CheckCircle, "مكتمل")
                 }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = onStart,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                 ) {
                     Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(8.dp))
@@ -540,7 +540,7 @@ private fun LessonPeekDialog(lesson: Lesson, course: Course?, onStart: () -> Uni
 private fun PeekChip(icon: ImageVector, text: String) {
     Surface(shape = RoundedCornerShape(50), color = ZSurfaceVariant) {
         Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(icon, null, tint = ZTextSecondary, modifier = Modifier.size(13.dp))
@@ -570,10 +570,10 @@ private fun PlanTab(vm: AppViewModel, onOpenLesson: (Int) -> Unit) {
 
         if (timeline.isEmpty()) {
             item {
-                Surface(shape = RoundedCornerShape(18.dp), color = ZCard, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Filled.EventBusy, null, tint = ZTextMuted, modifier = Modifier.size(40.dp))
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text("لا توجد دروس لجدولتها", color = ZTextPrimary, fontWeight = FontWeight.Bold)
                         Text(
                             "استورد كورساً للمستوى ${vm.effectivePlan.targetLevel} لتُبنى خطتك تلقائياً",
@@ -587,7 +587,7 @@ private fun PlanTab(vm: AppViewModel, onOpenLesson: (Int) -> Unit) {
                 Text(
                     "الجدول اليومي (${timeline.size} يوم)",
                     color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
             itemsIndexed(timeline, key = { _, d -> d.epochDay }) { _, day ->
@@ -617,7 +617,7 @@ private fun PlanHero(vm: AppViewModel, s: PlanSummary, onEdit: () -> Unit) {
                         Text(
                             if (plan.custom) "خطة مخصصة" else "الخطة الافتراضية",
                             color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -631,7 +631,7 @@ private fun PlanHero(vm: AppViewModel, s: PlanSummary, onEdit: () -> Unit) {
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(14.dp), color = Color.White.copy(alpha = 0.22f), onClick = onEdit,
+                    shape = RoundedCornerShape(16.dp), color = Color.White.copy(alpha = 0.22f), onClick = onEdit,
                 ) {
                     Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Filled.Tune, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -642,7 +642,7 @@ private fun PlanHero(vm: AppViewModel, s: PlanSummary, onEdit: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             LinearProgressIndicator(
                 progress = { s.progress },
-                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(8.dp)),
                 color = Color.White, trackColor = Color.White.copy(alpha = 0.25f),
             )
             Spacer(Modifier.height(8.dp))
@@ -662,19 +662,19 @@ private fun PlanHero(vm: AppViewModel, s: PlanSummary, onEdit: () -> Unit) {
 private fun PlanPaceCard(s: PlanSummary) {
     Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PaceStat(Modifier.weight(1f), String.format("%.1f", s.lessonsPerDay), "درس/يوم", ZIndigo)
                 PaceStat(Modifier.weight(1f), "${s.minutesPerDay}د", "يومياً", ZCyanDeep)
                 PaceStat(Modifier.weight(1f), "${s.remainingLessons}", "متبقٍ", ZAmber)
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             val onTrack = s.onTrack
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = (if (onTrack) ZEmerald else ZRose).copy(alpha = 0.13f),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         if (onTrack) Icons.Filled.TrendingUp else Icons.Filled.TrendingDown,
                         null, tint = if (onTrack) ZEmerald else ZRose, modifier = Modifier.size(22.dp),
@@ -694,10 +694,10 @@ private fun PlanPaceCard(s: PlanSummary) {
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Flag, null, tint = ZTextMuted, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
                     "تاريخ الإنهاء المتوقع: ${s.endDate.dayOfMonth}/${s.endDate.monthValue}/${s.endDate.year}",
                     color = ZTextMuted, fontSize = 11.sp,
@@ -709,7 +709,7 @@ private fun PlanPaceCard(s: PlanSummary) {
 
 @Composable
 private fun PaceStat(modifier: Modifier, value: String, label: String, accent: Color) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.11f)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.11f)) {
         Column(Modifier.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 18.sp)
             Text(label, color = ZTextSecondary, fontSize = 10.sp)
@@ -726,16 +726,16 @@ private fun PlanDayCard(day: PlanDay, onOpenLesson: (Int) -> Unit) {
         else -> ZTextMuted
     }
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         color = if (day.isToday) ZIndigo.copy(alpha = 0.08f) else ZCard,
         shadowElevation = if (day.isToday) 6.dp else 3.dp,
         modifier = Modifier.fillMaxWidth()
-            .then(if (day.isToday) Modifier.border(2.dp, ZIndigo, RoundedCornerShape(18.dp)) else Modifier),
+            .then(if (day.isToday) Modifier.border(2.dp, ZIndigo, RoundedCornerShape(16.dp)) else Modifier),
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(accent.copy(alpha = 0.16f)),
+                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.16f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (day.isComplete) Icon(Icons.Filled.Check, null, tint = accent, modifier = Modifier.size(20.dp))
@@ -749,11 +749,11 @@ private fun PlanDayCard(day: PlanDay, onOpenLesson: (Int) -> Unit) {
                             color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                         )
                         if (day.isToday) {
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Surface(shape = RoundedCornerShape(50), color = ZIndigo) {
                                 Text(
                                     "اليوم", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                 )
                             }
                         }
@@ -772,20 +772,20 @@ private fun PlanDayCard(day: PlanDay, onOpenLesson: (Int) -> Unit) {
                 }
             }
             if (day.tasks.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 day.tasks.forEach { t ->
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = Color(t.accent).copy(alpha = if (t.done) 0.06f else 0.12f),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         onClick = { onOpenLesson(t.lessonId) },
                     ) {
-                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (t.done) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                                 null, tint = Color(t.accent), modifier = Modifier.size(17.dp),
                             )
-                            Spacer(Modifier.width(9.dp))
+                            Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     t.lessonTitle,
@@ -851,7 +851,7 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                         PickChip("${l.emoji} ${l.id}", l.id == level, ZIndigo) { level = l.id }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 FieldLabel("المدة")
                 Row(
@@ -862,14 +862,14 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                         PickChip(d.label, d == duration, ZCyanDeep) { duration = d }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 FieldLabel("الوقت اليومي")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PlanIntensity.values().forEach { p ->
                         Surface(
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             color = if (p == intensity) ZAmber else ZSurfaceVariant,
                             onClick = { intensity = p },
                         ) {
@@ -911,7 +911,7 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                 StepperRow("كلمات المراجعة يومياً", reviewWords, 5, 100, step = 5) { reviewWords = it }
                 StepperRow("دقائق المحادثة", convoMin, 0, 60, step = 5) { convoMin = it }
 
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text("راحة يوم الجمعة", color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         Text("يُستثنى من الجدول", color = ZTextMuted, fontSize = 10.sp)
@@ -923,11 +923,11 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZIndigo.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = ZIndigo.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.Preview, null, tint = ZIndigo, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("معاينة الخطة", color = ZIndigo, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                         Spacer(Modifier.height(8.dp))
@@ -939,11 +939,11 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = { vm.savePlan(draft); onDismiss() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                 ) {
                     Icon(Icons.Filled.Check, null); Spacer(Modifier.width(8.dp))
@@ -973,7 +973,7 @@ private fun PickChip(label: String, active: Boolean, accent: Color, onClick: () 
         Text(
             label, color = if (active) Color.White else ZTextSecondary,
             fontSize = 12.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
 }
@@ -981,21 +981,21 @@ private fun PickChip(label: String, active: Boolean, accent: Color, onClick: () 
 @Composable
 private fun StepperRow(label: String, value: Int, min: Int, max: Int, step: Int = 1, onChange: (Int) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, color = ZTextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
         Surface(
-            shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant,
+            shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant,
             onClick = { onChange((value - step).coerceAtLeast(min)) },
-        ) { Icon(Icons.Filled.Remove, null, tint = ZTextPrimary, modifier = Modifier.padding(6.dp).size(16.dp)) }
+        ) { Icon(Icons.Filled.Remove, null, tint = ZTextPrimary, modifier = Modifier.padding(8.dp).size(16.dp)) }
         Text(
             "$value", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp,
             textAlign = TextAlign.Center, modifier = Modifier.width(46.dp),
         )
         Surface(
-            shape = RoundedCornerShape(10.dp), color = ZSurfaceVariant,
+            shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant,
             onClick = { onChange((value + step).coerceAtMost(max)) },
-        ) { Icon(Icons.Filled.Add, null, tint = ZTextPrimary, modifier = Modifier.padding(6.dp).size(16.dp)) }
+        ) { Icon(Icons.Filled.Add, null, tint = ZTextPrimary, modifier = Modifier.padding(8.dp).size(16.dp)) }
     }
 }

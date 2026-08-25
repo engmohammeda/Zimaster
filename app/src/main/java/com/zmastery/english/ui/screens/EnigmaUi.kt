@@ -114,7 +114,7 @@ fun CrackingChestCard(
             // ── طبقة الدخان المتصاعد ──
             SmokeLayer(progress = smoke, intensity = decay.severity, tint = danger)
 
-            Column(Modifier.padding(18.dp)) {
+            Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // الصندوق المتصدّع
                     Box(
@@ -133,17 +133,17 @@ fun CrackingChestCard(
                             modifier = Modifier.size(30.dp),
                         )
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("\uD83D\uDD25", fontSize = 15.sp)
-                            Spacer(Modifier.width(5.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 "سلسلتك تتصدّع!",
                                 color = danger, fontWeight = FontWeight.Black, fontSize = 17.sp,
                             )
                         }
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             "${decay.streakAtRisk} يوماً من الالتزام على وشك الضياع",
                             color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
@@ -151,18 +151,18 @@ fun CrackingChestCard(
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // العدّاد التنازلي
-                Surface(shape = RoundedCornerShape(14.dp), color = danger.copy(alpha = 0.12f)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = danger.copy(alpha = 0.12f)) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.Timer, null, tint = danger, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("تبقّى", color = ZTextSecondary, fontSize = 12.sp)
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             decay.timeLeftLabel,
                             color = danger, fontWeight = FontWeight.Black, fontSize = 15.sp,
@@ -175,7 +175,7 @@ fun CrackingChestCard(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
 
                 // شريط التآكل — يمتلئ كلما اقترب الخطر
                 Box(
@@ -191,12 +191,12 @@ fun CrackingChestCard(
                     )
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 Button(
                     onClick = onRescue,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = danger),
                 ) {
                     Icon(Icons.Filled.Bolt, null, tint = Color.White, modifier = Modifier.size(19.dp))
@@ -276,14 +276,14 @@ fun RescueGateCard(
                         )
                     )
                 )
-                .padding(18.dp),
+                .padding(20.dp),
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // البوّابة الدوّارة
                     Box(contentAlignment = Alignment.Center) {
                         Box(
-                            Modifier.size(64.dp).rotate(spin).clip(RoundedCornerShape(22.dp))
+                            Modifier.size(64.dp).rotate(spin).clip(RoundedCornerShape(24.dp))
                                 .background(
                                     Brush.sweepGradient(
                                         listOf(violet, Color(0xFFC4B5FD), violet, Color(0xFF6D28D9), violet)
@@ -292,27 +292,27 @@ fun RescueGateCard(
                                 .blur(if (done) 0.dp else 1.dp),
                         )
                         Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(18.dp)).background(ZCard),
+                            Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(ZCard),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 if (done) Icons.Filled.LocalFireDepartment else Icons.Filled.Shield,
                                 null,
-                                tint = if (done) Color(0xFFF97316) else violet,
+                                tint = if (done) ZAmber else violet,
                                 modifier = Modifier.size(28.dp).scale(if (done) 1f + halo * 0.12f else 1f),
                             )
                         }
                     }
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Surface(shape = RoundedCornerShape(50), color = violet.copy(alpha = 0.18f)) {
                             Text(
                                 if (done) "المهمة اكتملت" else "مهمة إنقاذ عاجلة",
                                 color = violet, fontSize = 10.sp, fontWeight = FontWeight.Black,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             )
                         }
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             if (done) "شعلتك جاهزة للعودة! \uD83D\uDD25"
                             else "أنقذ شعلتك (${rescue.streakToRestore} يوماً)",
@@ -332,7 +332,7 @@ fun RescueGateCard(
                     color = ZTextSecondary, fontSize = 13.sp, lineHeight = 21.sp,
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // شريط تقدّم المهمة
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -348,13 +348,13 @@ fun RescueGateCard(
                         color = violet, fontSize = 13.sp, fontWeight = FontWeight.Black,
                     )
                 }
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(8.dp))
                 Box(
-                    Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(5.dp)).background(ZBorder),
+                    Modifier.fillMaxWidth().height(9.dp).clip(RoundedCornerShape(4.dp)).background(ZBorder),
                 ) {
                     Box(
                         Modifier.fillMaxWidth(animProgress).fillMaxHeight()
-                            .clip(RoundedCornerShape(5.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(
                                 Brush.horizontalGradient(listOf(violet, Color(0xFFC4B5FD)))
                             ),
@@ -367,8 +367,8 @@ fun RescueGateCard(
                     Button(
                         onClick = onClaim,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF97316)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
                     ) {
                         Icon(Icons.Filled.LocalFireDepartment, null, tint = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
@@ -378,15 +378,15 @@ fun RescueGateCard(
                         )
                     }
                 } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = onStart,
                             modifier = Modifier.weight(1f).height(50.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = violet),
                         ) {
                             Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(19.dp))
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text("ابدأ الإنقاذ", fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color.White)
                         }
                         TextButton(onClick = onDismiss, modifier = Modifier.height(50.dp)) {
@@ -463,15 +463,15 @@ fun StreakShieldsCard(
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             // الخانات الثلاث
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 repeat(max) { i ->
                     val filled = i < freezes
                     Surface(
                         modifier = Modifier.weight(1f).height(58.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = if (filled) teal.copy(alpha = 0.10f + glow * 0.10f)
                         else ZSurfaceVariant.copy(alpha = 0.55f),
                         border = androidx.compose.foundation.BorderStroke(
@@ -491,7 +491,7 @@ fun StreakShieldsCard(
                                 modifier = Modifier.size(22.dp)
                                     .scale(if (filled) 0.95f + glow * 0.10f else 1f),
                             )
-                            Spacer(Modifier.height(3.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(
                                 if (filled) "جاهز" else "فارغ",
                                 color = if (filled) teal else ZTextMuted,
@@ -505,7 +505,7 @@ fun StreakShieldsCard(
             if (justUsed) {
                 Spacer(Modifier.height(12.dp))
                 Surface(shape = RoundedCornerShape(12.dp), color = ZAmber.copy(alpha = 0.13f)) {
-                    Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Verified, null, tint = ZAmber, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -517,10 +517,10 @@ fun StreakShieldsCard(
             }
 
             if (freezes < max) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
                     "اكسب دروعاً إضافية بفتح الصناديق النادرة فأعلى (الحد الأقصى $max).",
-                    color = ZTextMuted, fontSize = 10.5.sp, lineHeight = 16.sp,
+                    color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
                 )
             }
         }
@@ -542,7 +542,7 @@ fun RescueSuccessDialog(restored: Int, onDismiss: () -> Unit) {
         icon = {
             Box(
                 Modifier.size(78.dp).scale(pulse).clip(RoundedCornerShape(40.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFFF97316), Color(0xFFDC2626)))),
+                    .background(Brush.linearGradient(listOf(ZAmber, Color(0xFFDC2626)))),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Filled.LocalFireDepartment, null, tint = Color.White, modifier = Modifier.size(44.dp))
@@ -562,8 +562,8 @@ fun RescueSuccessDialog(restored: Int, onDismiss: () -> Unit) {
                     "أهلاً بعودتك يا بطل \uD83C\uDF89",
                     color = ZTextSecondary, fontSize = 15.sp, textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(14.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     RescueStat("\uD83D\uDD25", "$restored", "يوم مستعاد")
                     RescueStat("\u2728", "+60", "XP")
                     RescueStat("\uD83D\uDEE1\uFE0F", "+1", "درع هدية")
@@ -574,7 +574,7 @@ fun RescueSuccessDialog(restored: Int, onDismiss: () -> Unit) {
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
             ) { Text("واصل الرحلة", fontWeight = FontWeight.Black, color = Color.White) }
         },
     )
@@ -582,13 +582,13 @@ fun RescueSuccessDialog(restored: Int, onDismiss: () -> Unit) {
 
 @Composable
 private fun RescueStat(emoji: String, value: String, label: String) {
-    Surface(shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant) {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant) {
         Column(
-            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(emoji, fontSize = 17.sp)
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(4.dp))
             Text(value, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
             Text(label, color = ZTextMuted, fontSize = 9.sp)
         }
@@ -604,11 +604,11 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
     val chronoC = Color(m.chrono.colorArgb)
     val sensoryC = Color(m.sensory.colorArgb)
 
-    Surface(shape = RoundedCornerShape(22.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(18.dp)) {
+    Surface(shape = RoundedCornerShape(24.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
+                    Modifier.size(42.dp).clip(RoundedCornerShape(16.dp))
                         .background(Brush.linearGradient(listOf(ZPurple, ZIndigo))),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.Psychology, null, tint = Color.White, modifier = Modifier.size(23.dp)) }
@@ -623,11 +623,11 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
             }
 
             if (!m.hasEnoughData) {
-                Spacer(Modifier.height(14.dp))
-                Surface(shape = RoundedCornerShape(14.dp), color = ZSurfaceVariant) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(16.dp))
+                Surface(shape = RoundedCornerShape(16.dp), color = ZSurfaceVariant) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.HourglassEmpty, null, tint = ZTextMuted, modifier = Modifier.size(19.dp))
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             "راجع ${(12 - m.totalReviews).coerceAtLeast(1)} بطاقة أخرى لتتكوّن بصمتك المعرفية",
                             color = ZTextSecondary, fontSize = 12.sp, lineHeight = 19.sp,
@@ -641,11 +641,11 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
 
             // ── الأنماط الثلاثة ──
             ArchetypeRow(m.tempo.emoji, "الإيقاع", m.tempo.label, m.tempo.desc, tempoC)
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(8.dp))
             ArchetypeRow(m.chrono.emoji, "التوقيت", m.chrono.label, m.chrono.desc, chronoC)
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(8.dp))
             ArchetypeRow(m.sensory.emoji, "القناة الحسّية", m.sensory.label, m.sensory.desc, sensoryC)
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(8.dp))
             ArchetypeRow(
                 m.forgetPattern.emoji, "نمط النسيان",
                 m.forgetPattern.label, m.forgetPattern.advice, ZRose,
@@ -653,16 +653,16 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = ZBorder)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             // ── المؤشرات الرقمية ──
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MirrorMetric(Modifier.weight(1f), "الزمن/بطاقة", if (m.avgSecondsPerCard > 0) String.format("%.1fث", m.avgSecondsPerCard) else "—", ZIndigo)
                 MirrorMetric(Modifier.weight(1f), "ذروتك", m.peakHourLabel, ZAmber)
                 MirrorMetric(Modifier.weight(1f), "التذكّر", "${(m.recallRate * 100).toInt()}%", ZEmerald)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MirrorMetric(Modifier.weight(1f), "عمق الترسيخ", "${(m.depthIndex * 100).toInt()}%", ZPurple)
                 MirrorMetric(Modifier.weight(1f), "الانتظام", "${(m.consistencyIndex * 100).toInt()}%", ZCyanDeep)
                 MirrorMetric(Modifier.weight(1f), "الإعادات", String.format("%.1f", m.avgReplays), ZTextSecondary)
@@ -671,7 +671,7 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
             // ── مدرّج مراحل التذكّر ──
             Spacer(Modifier.height(16.dp))
             Text("من أين تسترجع كلماتك؟", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             StageHistogram(m.stageHistogram)
 
             if (onGenerate != null) {
@@ -679,7 +679,7 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
                 Button(
                     onClick = onGenerate,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ZPurple),
                 ) {
                     Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -693,17 +693,17 @@ fun CognitiveMirrorCard(m: CognitiveMirror, onGenerate: (() -> Unit)? = null) {
 
 @Composable
 private fun ArchetypeRow(emoji: String, kicker: String, title: String, desc: String, accent: Color) {
-    Surface(shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = 0.08f), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(12.dp)) {
             Box(
                 Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(accent.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) { Text(emoji, fontSize = 17.sp) }
-            Spacer(Modifier.width(11.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(kicker, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Text(title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(desc, color = ZTextSecondary, fontSize = 11.sp, lineHeight = 17.sp)
             }
         }
@@ -713,9 +713,9 @@ private fun ArchetypeRow(emoji: String, kicker: String, title: String, desc: Str
 @Composable
 private fun MirrorMetric(modifier: Modifier, label: String, value: String, accent: Color) {
     Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant) {
-        Column(Modifier.padding(vertical = 9.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.padding(vertical = 8.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(label, color = ZTextMuted, fontSize = 9.sp, maxLines = 1)
         }
     }
@@ -729,18 +729,18 @@ private fun StageHistogram(hist: IntArray) {
     val colors = listOf(Color(0xFF06B6D4), Color(0xFFA855F7), Color(0xFFF59E0B), Color(0xFFF43F5E))
     Column {
         // شريط مكدّس
-        Row(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp))) {
+        Row(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(8.dp))) {
             hist.forEachIndexed { i, v ->
                 if (v > 0) {
                     Box(Modifier.weight(v.toFloat()).fillMaxHeight().background(colors[i]))
                 }
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             hist.forEachIndexed { i, v ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(9.dp).clip(RoundedCornerShape(3.dp)).background(colors[i]))
+                    Box(Modifier.size(9.dp).clip(RoundedCornerShape(4.dp)).background(colors[i]))
                     Spacer(Modifier.height(4.dp))
                     Text("${(v * 100 / total)}%", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 11.sp)
                     Text(labels[i], color = ZTextMuted, fontSize = 9.sp)
@@ -756,7 +756,7 @@ fun MirrorReportView(report: MirrorReport, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("\uD83E\uDE9E", fontSize = 17.sp)
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 report.title.ifBlank { "مرآة الإدراك" },
                 color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp,
@@ -774,7 +774,7 @@ fun MirrorReportView(report: MirrorReport, modifier: Modifier = Modifier) {
                 )
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         MirrorSection(Icons.Filled.Fingerprint, "من أنت كمتعلّم", report.identity, ZIndigo)
         MirrorSection(Icons.Filled.Bolt, "قوّتك الخارقة", report.superpower, ZEmerald)
         MirrorSection(Icons.Filled.VisibilityOff, "نقطتك العمياء", report.blindSpot, ZRose)
@@ -789,10 +789,10 @@ private fun MirrorSection(icon: ImageVector, title: String, body: String, accent
     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(title, color = accent, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
-        Spacer(Modifier.height(5.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             body.replace("**", ""),
             color = ZTextSecondary, fontSize = 13.sp, lineHeight = 22.sp,

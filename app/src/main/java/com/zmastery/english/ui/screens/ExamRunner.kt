@@ -144,7 +144,7 @@ fun ExamRunner(
                 // Live score
                 Surface(shape = RoundedCornerShape(50), color = ZEmerald.copy(alpha = 0.14f)) {
                     Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald, modifier = Modifier.size(13.dp))
@@ -173,7 +173,7 @@ fun ExamRunner(
             // ---------- type + difficulty chips ----------
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SkillChip(q.skill)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 DifficultyChip(q.difficulty)
                 Spacer(Modifier.weight(1f))
                 if (q.audioText.isNotBlank()) {
@@ -187,7 +187,7 @@ fun ExamRunner(
 
             // ---------- question card ----------
             Surface(
-                shape = RoundedCornerShape(22.dp), color = ZCard, shadowElevation = 5.dp,
+                shape = RoundedCornerShape(24.dp), color = ZCard, shadowElevation = 5.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
@@ -215,7 +215,7 @@ fun ExamRunner(
                         )
                     }
                     if (q.subtitle.isNotBlank() && (!q.hideSubject || answered)) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             q.subtitle, color = ZCyanDeep, fontSize = 13.sp,
                             textAlign = TextAlign.Center, lineHeight = 20.sp,
@@ -294,7 +294,7 @@ fun ExamRunner(
                         Icon(Icons.Filled.NavigateBefore, null)
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     if (q.isWritten) "لا تقلق من خطأ إملائي بسيط — التصحيح متسامح"
                     else "اختر إجابة ثم أكّد",
@@ -345,7 +345,7 @@ private fun SkillChip(skill: ExamSkill) {
     }
     Surface(shape = RoundedCornerShape(50), color = c.copy(alpha = 0.14f)) {
         Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(skill.emoji, fontSize = 11.sp)
@@ -364,14 +364,14 @@ private fun DifficultyChip(level: Int) {
     }
     Surface(shape = RoundedCornerShape(50), color = c.copy(alpha = 0.12f)) {
         Row(
-            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             repeat(level) {
-                Box(Modifier.size(5.dp).clip(RoundedCornerShape(3.dp)).background(c))
-                Spacer(Modifier.width(2.dp))
+                Box(Modifier.size(5.dp).clip(RoundedCornerShape(4.dp)).background(c))
+                Spacer(Modifier.width(4.dp))
             }
-            Spacer(Modifier.width(3.dp))
+            Spacer(Modifier.width(4.dp))
             Text(label, color = c, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -398,7 +398,7 @@ private fun ListenPad(isPlaying: Boolean, onPlay: () -> Unit) {
                 )
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Text(
             if (isPlaying) "يُنطق الآن…" else "اضغط للاستماع مرة أخرى",
             color = ZTextMuted, fontSize = 11.sp,
@@ -434,13 +434,13 @@ private fun OptionRow(
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = bg,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 9.dp)
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
             .border(1.5.dp, border, RoundedCornerShape(16.dp)),
         onClick = onClick,
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(28.dp).clip(RoundedCornerShape(9.dp))
+                Modifier.size(28.dp).clip(RoundedCornerShape(8.dp))
                     .background(border.copy(alpha = if (answered || selected) 0.20f else 0.10f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -508,11 +508,11 @@ private fun WrittenArea(
             ),
         )
         if (answered && !correct) {
-            Spacer(Modifier.height(10.dp))
-            Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.height(12.dp))
+            Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Lightbulb, null, tint = ZEmerald, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column {
                         Text("الإجابة الصحيحة", color = ZTextSecondary, fontSize = 10.sp)
                         Text(expected, color = ZEmerald, fontSize = 17.sp, fontWeight = FontWeight.Black)
@@ -559,10 +559,10 @@ private fun OrderArea(
                     Text("اضغط الكلمات بالترتيب الصحيح…", color = ZTextMuted, fontSize = 13.sp)
                 } else {
                     FlowRowSimple(picked) { t ->
-                        Surface(shape = RoundedCornerShape(10.dp), color = ZIndigo.copy(alpha = 0.14f)) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = ZIndigo.copy(alpha = 0.14f)) {
                             Text(
                                 t, color = ZIndigo, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             )
                         }
                     }
@@ -583,7 +583,7 @@ private fun OrderArea(
                     Text("تفريغ", color = ZRose, fontSize = 12.sp)
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             FlowRowSimple(remaining) { t ->
                 Surface(
                     shape = RoundedCornerShape(12.dp), color = ZSurfaceVariant,
@@ -596,11 +596,11 @@ private fun OrderArea(
                 }
             }
         } else if (!ok) {
-            Spacer(Modifier.height(10.dp))
-            Surface(shape = RoundedCornerShape(14.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
                     Text("الترتيب الصحيح", color = ZTextSecondary, fontSize = 10.sp)
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(correctText, color = ZEmerald, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
                 }
             }
@@ -625,9 +625,9 @@ private fun <T> FlowRowSimple(items: List<T>, item: @Composable (T) -> Unit) {
 private fun FeedbackCard(q: ExamQuestion, correct: Boolean) {
     val c = if (correct) ZEmerald else ZRose
     Column {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         Surface(shape = RoundedCornerShape(16.dp), color = c.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp)) {
+            Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         if (correct) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
@@ -644,7 +644,7 @@ private fun FeedbackCard(q: ExamQuestion, correct: Boolean) {
                             Text(
                                 "أُضيفت للمراجعة",
                                 color = ZAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             )
                         }
                     }
