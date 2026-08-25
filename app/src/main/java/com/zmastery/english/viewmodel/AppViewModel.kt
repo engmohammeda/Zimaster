@@ -390,6 +390,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mnemonicPromptText = ""
         mnemonicVersion++
         viewModelScope.launch {
+            // امسح النسخة الاحتياطية أيضاً — وإلا لاسترجعها مسار loss recovery
+            // عند الإقلاع القادم كلَّ ما حذفه المستخدم عمداً.
+            DataGuard.clearBackup(getApplication())
             Persistence.clear(getApplication())
             // Also clear the CLOUD copy — otherwise the next launch would merge
             // the old cloud snapshot back in and resurrect everything the user
