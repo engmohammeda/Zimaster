@@ -672,7 +672,7 @@ private fun TopBar(route: String?) {
         },
         actions = {
             // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون الدروس من السحابة.
-        }
+        },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = ZSurface.copy(alpha = 0.85f),
             titleContentColor = ZTextPrimary,
