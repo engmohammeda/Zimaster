@@ -110,7 +110,7 @@ private fun ZigZagMap(vm: AppViewModel, onOpenCourse: (Int) -> Unit, onOpenLesso
     ) {
         item { MapHeader(vm) }
 
-        SampleData.levels.forEach { level ->
+        vm.allLevels.forEach { level ->
             val levelCourses = vm.coursesForLevel(level.id)
             val stats = vm.levelStats(level.id)
             val levelOpen = expandedLevel == level.id
@@ -605,7 +605,7 @@ private fun PlanTab(vm: AppViewModel, onOpenLesson: (Int) -> Unit) {
 @Composable
 private fun PlanHero(vm: AppViewModel, s: PlanSummary, onEdit: () -> Unit) {
     val plan = vm.effectivePlan
-    val level = SampleData.levels.firstOrNull { it.id == plan.targetLevel }
+    val level = vm.allLevels.firstOrNull { it.id == plan.targetLevel }
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(ZIndigo, ZPurple))).padding(20.dp)
@@ -847,7 +847,7 @@ private fun PlanBuilderDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    SampleData.levels.forEach { l ->
+                    vm.allLevels.forEach { l ->
                         PickChip("${l.emoji} ${l.id}", l.id == level, ZIndigo) { level = l.id }
                     }
                 }

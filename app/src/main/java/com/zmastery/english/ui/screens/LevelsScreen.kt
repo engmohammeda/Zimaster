@@ -61,8 +61,10 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
     ) {
         item { OverallHeader(vm) }
 
-        items(count = SampleData.levels.size, key = { SampleData.levels[it].id }) { idx ->
-            val level = SampleData.levels[idx]
+        // الأكاديمية الثلاثة + المسارات التخصصية الديناميكية — بترتيب واحد.
+        val levels = vm.allLevels
+        items(count = levels.size, key = { levels[it].id }) { idx ->
+            val level = levels[idx]
             val stats = vm.levelStats(level.id)
             val expanded = expandedLevel == level.id
 

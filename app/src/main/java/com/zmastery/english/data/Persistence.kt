@@ -22,6 +22,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Serializable
 data class AppState(
     val courses: List<CourseDto> = emptyList(),
+    /** المسارات التخصصية (id ≥ 4) — registry محفوظ ومتزامن مع أي نسخة قديمة. */
+    val customLevels: List<LevelDto> = emptyList(),
     val lessons: List<LessonDto> = emptyList(),
     val vocab: List<WordDto> = emptyList(),
     val profile: ProfileDto = ProfileDto(),
@@ -112,6 +114,18 @@ data class ApiKeyDto(
 data class CourseDto(
     val id: Int, val levelId: Int, val name: String, val type: String,
     val target: Int, val accent: Long, val style: String, val key: String, val jsonId: String,
+)
+
+/**
+ * مستوى تخصصي ديناميكي (id ≥ 4) — يُنشأ تلقائياً من بيانات المناهج المستوردة
+ * (level + level_name داخل JSON الدرس) ويظهر في شاشة المستويات كمسار مستقل.
+ */
+@Serializable
+data class LevelDto(
+    val id: Int = 0,
+    val name: String = "",
+    val description: String = "",
+    val emoji: String = "🎯",
 )
 
 @Serializable

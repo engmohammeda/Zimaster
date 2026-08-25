@@ -66,6 +66,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ----- Courses (mutable so imports can add) -----
     val courses = mutableStateListOf<Course>().apply { addAll(SampleData.courses) }
+    /** المسارات التخصصية الديناميكية (id ≥ 4) — تُنشأ تلقائياً من بيانات المناهج المستوردة. */
+    val customLevels = mutableStateListOf<Level>()
+    /** كل المستويات: الأكاديمية الثلاثة + المسارات التخصصية — تُقرأ بها كل الشاشات. */
+    val allLevels: List<Level> get() = SampleData.levels + customLevels
+
+    /** يضمن وجود مستوى تخصصي (id ≥ 4) في السجل — يستدعيه الاستيراد تلقائياً. */
+    internal fun ensureCustomLevel(id: Int, name: String, emoji: String = "") {
+        if (id <= 3 || customLevels.any { it.id == id }) return
+        customLevels.add(
+            Level(
+                id = id,
+                name = name.ifBlank { "المسار التخصصي $id" },
+                description = "مسار تخصصي — مصطلحات وحوارات وأسلوب المجال",
+                emoji = emoji.ifBlank { "🎯" },
+            )
+        )
+    }
     val vocab = mutableStateListOf<VocabWord>().apply { addAll(SampleData.vocab.map { it.copy() }) }
     val lessons = mutableStateListOf<Lesson>().apply { addAll(SampleData.lessons.map { it.copy() }) }
 
@@ -163,6 +180,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+        // المسارات التخصصية (id ≥ 4)
+        customLevels.clear()
+        customLevels.addAll(s.customLevels.map { it.toDomain() })
         lessons.clear(); lessons.addAll(s.lessons.map { it.toDomain() })
         vocab.clear(); vocab.addAll(s.vocab.map { it.toDomain() })
         repairLessonRichContent()
@@ -418,6 +438,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Build a full snapshot of the current in-memory state. */
     fun currentAppState(): AppState = AppState(
         courses = courses.map { it.toDto() },
+        customLevels = customLevels.map { it.toDto() },
         lessons = lessons.map { it.toDto() },
         vocab = vocab.map { it.toDto() },
         profile = ProfileDto(
@@ -1912,6 +1933,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     internal fun buildAppState(): AppState = AppState(
         courses = courses.map { it.toDto() },
+        customLevels = customLevels.map { it.toDto() },
         lessons = lessons.map { it.toDto() },
         vocab = vocab.map { it.toDto() },
         profile = ProfileDto(

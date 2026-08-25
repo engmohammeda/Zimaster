@@ -52,7 +52,7 @@ internal class ImportController(internal val vm: AppViewModel) {
             ?: courses.firstOrNull { it.name == pkg.courseName && it.levelId == pkg.level }
         val course = existing ?: Course(
             id = nextCourseId++,
-            levelId = pkg.level.coerceIn(1, 3),
+            levelId = pkg.level.coerceIn(1, 99),
             name = pkg.courseName.ifBlank { "كورس مستورد" },
             type = type,
             target = if (pkg.target > 0) pkg.target else pkg.lessons.size,
@@ -60,6 +60,7 @@ internal class ImportController(internal val vm: AppViewModel) {
             style = styleFor(pkg.style, type),
             key = pkg.courseKey.trim(),
         ).also { courses.add(it) }
+        vm.ensureCustomLevel(course.levelId, pkg.levelName)
 
         var addedLessons = 0
         var addedWords = 0
@@ -150,18 +151,23 @@ internal class ImportController(internal val vm: AppViewModel) {
      */
     private fun importLessonCore(pkg: LessonPackage, rawJson: String = ""): String {
         // Match a curriculum course; if unknown, auto-create one so import never fails.
+        // المسارات التخصصية (level ≥ 4): النوع والنمط واللون قد تأتي من metadata
+        // الدرس نفسه، والمستوى الديناميكي يُسجَّل تلقائياً فيعرف على كل جهاز.
+        val metaType = if (pkg.metadata.courseType.isNotBlank())
+            CourseType.fromKey(pkg.metadata.courseType) else CourseType.VOCABULARY
         val course = SampleData.resolveCourse(pkg.metadata.courseId, pkg.metadata.courseNameAr, pkg.metadata.level)
             ?: courses.firstOrNull { it.jsonId.equals(pkg.metadata.courseId, true) || it.name == pkg.metadata.courseNameAr }
             ?: Course(
                 id = nextCourseId++,
-                levelId = pkg.metadata.level.coerceIn(1, 3),
+                levelId = pkg.metadata.level.coerceIn(1, 99),
                 name = pkg.metadata.courseNameAr.ifBlank { pkg.metadata.courseId.ifBlank { "كورس مستورد" } },
-                type = CourseType.VOCABULARY,
+                type = metaType,
                 target = 20,
-                accent = 0xFFE07856,
-                style = LessonStyle.VOCAB_CARDS,
+                accent = accentFor(metaType),
+                style = styleFor(pkg.metadata.style.ifBlank { pkg.metadata.courseType }, metaType),
                 jsonId = pkg.metadata.courseId,
             ).also { courses.add(it) }
+        vm.ensureCustomLevel(course.levelId, pkg.metadata.levelName, pkg.metadata.levelEmoji)
 
         // Register global vocabulary as SRS words linked to this course.
         val wordIds = mutableListOf<Int>()
