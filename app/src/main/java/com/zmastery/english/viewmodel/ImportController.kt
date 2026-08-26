@@ -404,4 +404,49 @@ internal class ImportController(internal val vm: AppViewModel) {
             }
         }
     }
+
+    /** غلاف لفكّ صيغة `{ "lessons": [ ... ] }` التي يكتبها وكلاء AI. */
+    @kotlinx.serialization.Serializable
+    private data class LessonsWrapper(val lessons: List<LessonPackage> = emptyList())
+
+    /**
+     * «لصق منهج من وكيل AI»: يفكّ JSON (درس واحد / مصفوفة / غلاف lessons)
+     * ويوجّه دروسه إلى منهج محدد — عادة منهج مخصص — متجاهلاً course_id
+     * الداخلي في النص، فلا يشترط على الوكيل إلا الحقول الجوهرية (title…).
+     *
+     * كل حقول المحتوى الغنية (حوارات/أصوات/كويز/تعابير…) تمر كما هي لأن
+     * [LessonPackage] يحتفظ بها — والبلوكات تعرضها تلقائياً («المحتوى يقود الواجهة»).
+     */
+    fun importJsonIntoCourse(courseId: Int, jsonText: String, onResult: (Boolean, String) -> Unit) {
+        val course = vm.courses.firstOrNull { it.id == courseId }
+            ?: return onResult(false, "المنهج غير موجود")
+        val t = jsonText.trim()
+        if (t.isEmpty()) return onResult(false, "الصق نص JSON أولاً")
+        val packages: List<LessonPackage> = try {
+            when {
+                t.startsWith("[") -> ImportEngine.json.decodeFromString<List<LessonPackage>>(t)
+                t.startsWith("{") && t.contains("\"lessons\"") ->
+                    ImportEngine.json.decodeFromString<LessonsWrapper>(t).lessons
+                t.startsWith("{") -> listOf(ImportEngine.json.decodeFromString<LessonPackage>(t))
+                else -> return onResult(false, "النص ليس JSON صالحاً")
+            }
+        } catch (e: Exception) {
+            return onResult(false, "خطأ في تنسيق JSON: ${e.message?.take(90) ?: "غير معروف"}")
+        }
+        if (packages.isEmpty()) return onResult(false, "لا دروس داخل النص الملصوق")
+        if (packages.any { it.metadata.title.isBlank() })
+            return onResult(false, "كل درس يحتاج metadata.title — راجع نص الوكيل")
+        // إعادة التوجيه إلى المنهج المحدد: الهوية هنا قرار المستخدم لا قرار النص.
+        val retargeted = packages.map { p ->
+            p.copy(
+                metadata = p.metadata.copy(
+                    courseId = course.jsonId,
+                    courseNameAr = course.name,
+                    level = course.levelId,
+                )
+            )
+        }
+        vm.importLessons(retargeted)
+        onResult(true, "أُضيف ${retargeted.size} درساً إلى «${course.name}» ✓")
+    }
 }

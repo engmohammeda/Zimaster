@@ -1739,6 +1739,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun importLesson(pkg: LessonPackage, rawJson: String = ""): String = importer.importLesson(pkg, rawJson)
     fun importLessons(packages: List<LessonPackage>): String = importer.importLessons(packages)
 
+    // ── استوديو المنهج المخصص (المسؤول ينشئ منهجاً كاملاً بلا ملف) ──
+    /** ينشئ منهجاً مخصصاً: كورس فارغ بمستوى أكاديمي أو مسار تخصصي جديد باسم حر. */
+    fun createCustomCourse(
+        name: String, type: CourseType, levelId: Int, levelName: String, target: Int,
+        onResult: (Boolean, String) -> Unit,
+    ) = importer.createCustomCourse(name, type, levelId, levelName, target, onResult)
+
+    /** يضيف درساً مؤلَّفاً يدوياً من الهاتف إلى أي منهج. */
+    fun addManualLesson(
+        courseId: Int, title: String, summaryAr: String, readingEn: String, readingAr: String,
+        onResult: (Boolean, String) -> Unit,
+    ) = importer.addManualLesson(courseId, title, summaryAr, readingEn, readingAr, onResult)
+
+    /** يلصق JSON كتبه وكيل AI ويوجّه دروسه إلى منهج محدد. */
+    fun importJsonIntoCourse(courseId: Int, jsonText: String, onResult: (Boolean, String) -> Unit) =
+        importer.importJsonIntoCourse(courseId, jsonText, onResult)
+
     internal var tts: com.zmastery.english.audio.TtsManager? = null
 
     /** Wire the shared TTS engine (called once from the Activity/Composition). */
