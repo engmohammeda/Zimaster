@@ -262,6 +262,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         storyArchive.clear()
         storyArchive.addAll(s.stories.map { it.toDomain() })
         nextStoryId = maxOf(p.nextStoryId, (storyArchive.maxOfOrNull { it.id } ?: 0) + 1)
+        goals.clear()
+        goals.addAll(s.goals)
         // Reading-course lessons always contribute their text to the archive.
         syncLessonStories()
         dayStats.clear()
@@ -729,6 +731,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val storyArchive = mutableStateListOf<ArchivedStory>()
     internal var nextStoryId = 1
 
+    /** أهداف المتعلم التطبيقية — القصة اليومية تُنسج حول النشط منها. */
+    val goals = mutableStateListOf<LifeGoal>()
+
+    // ---- حالة اختبار إثبات المرحلة (تُكتب من StoryController) ----
+    var stageQuiz by mutableStateOf<List<StageQuestion>?>(null)
+        internal set
+    var isMakingQuiz by mutableStateOf(false)
+        internal set
+    var quizMessage by mutableStateOf<String?>(null)
+        internal set
+
     /** Epoch-day of the last generated daily story (0 = never). */
     var lastStoryDay by mutableStateOf(0L)
         internal set
@@ -788,6 +801,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleStoryRead(id: Int) = story.toggleStoryRead(id)
 
     fun toggleStoryFavorite(id: Int) = story.toggleStoryFavorite(id)
+
+    // ── مسار الهدف التطبيقي ──
+    /** الهدف النشط (أو الأول إن لم يُفعَّل شيء). */
+    val activeGoal: LifeGoal? get() = story.activeGoal
+
+    /** ينشئ هدف المتعلم الأول إن لم يوجد أي هدف بعد. */
+    fun ensureGoalExists() = story.ensureGoalExists()
+
+    /** ينشئ هدفاً جديداً بعنوان ومراحل يحددها المتعلم. */
+    fun createGoal(title: String, description: String, stages: List<String>, onResult: (Boolean, String) -> Unit) =
+        story.createGoal(title, description, stages, onResult)
+
+    /** يفعّل هدفاً ويوقف بقية الأهداف. */
+    fun setActiveGoal(id: String) = story.setActiveGoal(id)
+
+    /** يحفظ إجابة سؤال السياق اليومي ويبني بها سياق المتعلم تدريجياً. */
+    fun saveContextAnswer(storyId: Int, answer: String) = story.saveContextAnswer(storyId, answer)
+
+    /** يولّد اختبار إثبات المرحلة الحالية (٣ أسئلة موقفية). */
+    fun requestStageQuiz() = story.requestStageQuiz()
+
+    /** يصحح الاختبار؛ اجتياز ≥٢/٣ يقدّم المرحلة. يعيد رسالة النتيجة. */
+    fun submitStageQuiz(answers: List<Int>): String = story.submitStageQuiz(answers)
 
     /** Delete a story. Lesson stories are re-created on the next sync by design. */
     fun deleteStory(id: Int) = story.deleteStory(id)
@@ -2055,6 +2091,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         exams = examHistory.map { it.toDto() },
         examMisses = examMisses.mapKeys { it.key.toString() },
         stories = storyArchive.map { it.toDto() },
+        goals = goals.toList(),
         dayStats = dayStats.values.sortedBy { it.epochDay },
         studyPlan = studyPlan,
         coachReports = coachReports.values.toList(),

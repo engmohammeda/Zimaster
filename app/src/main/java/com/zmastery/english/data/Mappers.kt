@@ -128,6 +128,9 @@ fun ArchivedStory.toDto() = StoryDto(
     id = id, kind = kind.name, title = title, en = en, ar = ar, words = words,
     dayEpoch = dayEpoch, dateLabel = dateLabel, lessonId = lessonId, courseName = courseName,
     isRead = isRead, isFavorite = isFavorite, audioReady = audioReady,
+    goalId = goalId, goalStage = goalStage,
+    contextQuestionEn = contextQuestionEn, contextQuestionAr = contextQuestionAr,
+    contextAnswer = contextAnswer,
 )
 
 fun StoryDto.toDomain() = ArchivedStory(
@@ -136,4 +139,7 @@ fun StoryDto.toDomain() = ArchivedStory(
     title = title, en = en, ar = ar, words = words,
     dayEpoch = dayEpoch, dateLabel = dateLabel, lessonId = lessonId, courseName = courseName,
     isRead = isRead, isFavorite = isFavorite, audioReady = audioReady,
+    goalId = goalId, goalStage = goalStage,
+    contextQuestionEn = contextQuestionEn, contextQuestionAr = contextQuestionAr,
+    contextAnswer = contextAnswer,
 )

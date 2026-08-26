@@ -65,6 +65,17 @@ object StateMerger {
         val stories = local.stories.toMutableList()
         cloud.stories.forEach { s -> if (stories.none { it.id == s.id }) stories += s }
 
+        // ── الأهداف: اتحاد بهوية الهدف، والأعلى تقدماً يفوز في المرحلة ──
+        val goals = local.goals.toMutableList()
+        cloud.goals.forEach { cg ->
+            val i = goals.indexOfFirst { it.id == cg.id }
+            when {
+                i < 0 -> goals += cg
+                cg.stageIndex > goals[i].stageIndex ->
+                    goals[i] = goals[i].copy(stageIndex = cg.stageIndex, learnerContext = (goals[i].learnerContext + cg.learnerContext).distinct())
+            }
+        }
+
         val dayStats = local.dayStats.toMutableList()
         cloud.dayStats.forEach { ds -> if (dayStats.none { it.epochDay == ds.epochDay }) dayStats += ds }
 
@@ -90,6 +101,7 @@ object StateMerger {
             lessons = lessons,
             vocab = vocab,
             stories = stories,
+            goals = goals,
             dayStats = dayStats,
             exams = exams,
             profile = profile,

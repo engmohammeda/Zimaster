@@ -107,3 +107,22 @@ firebase deploy --only firestore:indexes
 
 **تحقق من عمل الوكيل السابق:** إصلاح G1 («استمع للنص كاملاً» في `ReadingBlocks.kt`)
 وبروتوكول المفاجآت في `docs/BLOCKS_GUIDE.md` موجودان ومدموجان عبر PR #6.
+
+---
+
+## 6) مسار الهدف التطبيقي — القصة اليومية نحو هدف المتعلم (نقاش 2026-08-26)
+
+قرارات النقاش: **استبدال كامل** للقصة العشوائية بقصة الهدف · **الـAI يبني السياق
+تدريجياً** بسؤال يومي · **≤3 كلمات مستحقة** وبشرط خدمة الموقف · **اختبار إثبات
+موقفي (٣ أسئلة، اجتياز ≥٢)** وحده يقدّم المرحلة · الأكاديمي يبقى منفصلاً في خطة اليوم.
+
+| الملف | التغيير |
+|-------|---------|
+| `data/Models.kt` | `LifeGoal` (مراحل/سياق/مرحلة حالية) + `StageQuestion` |
+| `data/StoryArchive.kt` | حقول القصة: `goalId/goalStage/contextQuestion*/contextAnswer` + `DailyStoryMaker.goalPrompt` |
+| `data/GeminiStoryService.kt` | وضع «الهدف أولاً» في `generate` + `generateStageQuiz` بنوع `QuizResult` |
+| `viewmodel/StoryController.kt` | `ensureGoalExists` (هدف المتعلم الأول المعلَن) · `createGoal/setActiveGoal` · `saveContextAnswer` · `requestStageQuiz/submitStageQuiz` |
+| `ui/screens/DashboardScreen.kt` | شريط الهدف في بطاقة القصة + سؤال السياق اليومي + زر «إثبات المرحلة» + حوارا الأهداف والاختبار |
+| `Persistence/Mappers/StateMerger` | حفظ الأهداف وحقول القصة + دمجها بين الأجهزة (الأعلى مرحلة يفوز) |
+
+القصة القديمة (بدون `goalId`) تستمر بالعمل كما كانت — الحقول الجديدة افتراضية.
