@@ -1,12 +1,12 @@
 name: Android Build & Release
 
 # ═══════════════════════════════════════════════════════════════════════════
-# سير عمل إنتاجي متكامل:
-#   • CI     — بناء سريع + اختبارات إلزامية على أي فرع/PR (بلا نشر).
-#   • Release— main/الوسوم فقط: اختبارات → ترقيم semver تلقائي → ملاحظات
-#              مصنّفة من الـ commits → GitHub Release → إرسال تلجرام.
-# لا توجد أي أسرار في الملف: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID /
-# GOOGLE_SERVICES_JSON / KEYSTORE_* كلها من Repository Secrets.
+# سير عمل إنتاجي متكامل — بلا لصقات هشة:
+#   • google-services.json: سرّ (خام أو base64) إن وُجد، وإلا الملف المودع في app/.
+#   • الأسرار الحقيقية فقط: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID / KEYSTORE_*.
+#   • CI    — بناء + اختبارات إلزامية على أي فرع/PR (بلا نشر).
+#   • Release — main/الوسوم/التشغيل اليدوي: اختبارات → semver → ملاحظات
+#               مصنّفة → Release → تلجرام.
 # ═══════════════════════════════════════════════════════════════════════════
 on:
   push:
@@ -59,39 +59,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Ensure google-services.json exists
+      - name: google-services.json (سرّ إن وُجد وإلا الملف المودع)
+        env:
+          GSC: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ ! -f app/google-services.json ]; then
-            if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-              echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
-            else
-              echo "::warning::GOOGLE_SERVICES_JSON غير مضبوط — استخدم البديل المؤقت للـ CI"
-              cat << 'EOF' > app/google-services.json
-          {
-            "project_info": {
-              "project_number": "836170376747",
-              "project_id": "zmastery",
-              "storage_bucket": "zmastery.firebasestorage.app"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:836170376747:android:9372331a395944a2792c6e",
-                  "android_client_info": { "package_name": "com.zmastery.english" }
-                },
-                "oauth_client": [
-                  { "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com", "client_type": 3 }
-                ],
-                "api_key": [ { "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM" } ],
-                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          EOF
-            fi
+          if [ -n "$GSC" ]; then
+            # يقبل السرّ بصيغتين: JSON خام (يبدأ بـ {) أو base64 — بلا تحويل إجباري.
+            case "$GSC" in
+              '{'*) printf '%s' "$GSC" > app/google-services.json ;;
+              *)    printf '%s' "$GSC" | base64 -d > app/google-services.json ;;
+            esac
+          elif [ -f app/google-services.json ]; then
+            echo "لا سرّ مضبوط — استخدم app/google-services.json المودع (آمن: معرفات عامة فقط)"
+          else
+            echo "::error::لا سرّ GOOGLE_SERVICES_JSON ولا ملف مودع في app/"
+            exit 1
           fi
-          test -f app/google-services.json
+          test -s app/google-services.json
 
       - name: Unit tests (بوابة الجودة)
         run: |
@@ -146,39 +130,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Ensure google-services.json exists
+      - name: google-services.json (سرّ إن وُجد وإلا الملف المودع)
+        env:
+          GSC: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ ! -f app/google-services.json ]; then
-            if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-              echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
-            else
-              echo "::warning::GOOGLE_SERVICES_JSON غير مضبوط — استخدم البديل المؤقت للـ CI"
-              cat << 'EOF' > app/google-services.json
-          {
-            "project_info": {
-              "project_number": "836170376747",
-              "project_id": "zmastery",
-              "storage_bucket": "zmastery.firebasestorage.app"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:836170376747:android:9372331a395944a2792c6e",
-                  "android_client_info": { "package_name": "com.zmastery.english" }
-                },
-                "oauth_client": [
-                  { "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com", "client_type": 3 }
-                ],
-                "api_key": [ { "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM" } ],
-                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          EOF
-            fi
+          if [ -n "$GSC" ]; then
+            # يقبل السرّ بصيغتين: JSON خام (يبدأ بـ {) أو base64 — بلا تحويل إجباري.
+            case "$GSC" in
+              '{'*) printf '%s' "$GSC" > app/google-services.json ;;
+              *)    printf '%s' "$GSC" | base64 -d > app/google-services.json ;;
+            esac
+          elif [ -f app/google-services.json ]; then
+            echo "لا سرّ مضبوط — استخدم app/google-services.json المودع (آمن: معرفات عامة فقط)"
+          else
+            echo "::error::لا سرّ GOOGLE_SERVICES_JSON ولا ملف مودع في app/"
+            exit 1
           fi
-          test -f app/google-services.json
+          test -s app/google-services.json
 
       - name: Prepare Signing Keystore
         id: signing
@@ -330,7 +298,7 @@ jobs:
             cat /tmp/notes_body.md
           } > /tmp/telegram_message.txt
 
-          # نطبع استجابة Telegram في السجل لتشخيص أي رفض مستقبلاً (لا نكسر الإصدار)
+          # نطبع استجابة Telegram في السجل لتشخيص أي رفض (لا نكسر الإصدار)
           echo "--- sendMessage ---"
           curl -sS -X POST "${API}/sendMessage" \
             -d "chat_id=${TG_CHAT}" \
