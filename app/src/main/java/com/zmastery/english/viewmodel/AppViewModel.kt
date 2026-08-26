@@ -262,6 +262,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         storyArchive.clear()
         storyArchive.addAll(s.stories.map { it.toDomain() })
         nextStoryId = maxOf(p.nextStoryId, (storyArchive.maxOfOrNull { it.id } ?: 0) + 1)
+        goals.clear()
+        goals.addAll(s.goals)
         // Reading-course lessons always contribute their text to the archive.
         syncLessonStories()
         dayStats.clear()
@@ -277,6 +279,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         learnerEmail = p.learnerEmail
         lastCloudLessonSyncMillis = p.lastCloudLessonSyncMillis
         cloudSyncEnabled = p.cloudSyncEnabled
+        dismissedAnnouncementId = p.dismissedAnnouncementId
+        isDeveloperUnlocked = p.developerUnlocked
         val rawWebClientId = p.googleWebClientId
         googleWebClientId = if (rawWebClientId.isBlank() || rawWebClientId.contains("567438543557")) {
             com.zmastery.english.cloud.CloudAuth.DEFAULT_WEB_CLIENT_ID
@@ -727,6 +731,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val storyArchive = mutableStateListOf<ArchivedStory>()
     internal var nextStoryId = 1
 
+    /** أهداف المتعلم التطبيقية — القصة اليومية تُنسج حول النشط منها. */
+    val goals = mutableStateListOf<LifeGoal>()
+
+    // ---- حالة اختبار إثبات المرحلة (تُكتب من StoryController) ----
+    var stageQuiz by mutableStateOf<List<StageQuestion>?>(null)
+        internal set
+    var isMakingQuiz by mutableStateOf(false)
+        internal set
+    var quizMessage by mutableStateOf<String?>(null)
+        internal set
+
     /** Epoch-day of the last generated daily story (0 = never). */
     var lastStoryDay by mutableStateOf(0L)
         internal set
@@ -786,6 +801,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleStoryRead(id: Int) = story.toggleStoryRead(id)
 
     fun toggleStoryFavorite(id: Int) = story.toggleStoryFavorite(id)
+
+    // ── مسار الهدف التطبيقي ──
+    /** الهدف النشط (أو الأول إن لم يُفعَّل شيء). */
+    val activeGoal: LifeGoal? get() = story.activeGoal
+
+    /** ينشئ هدف المتعلم الأول إن لم يوجد أي هدف بعد. */
+    fun ensureGoalExists() = story.ensureGoalExists()
+
+    /** ينشئ هدفاً جديداً بعنوان ومراحل يحددها المتعلم. */
+    fun createGoal(title: String, description: String, stages: List<String>, onResult: (Boolean, String) -> Unit) =
+        story.createGoal(title, description, stages, onResult)
+
+    /** يفعّل هدفاً ويوقف بقية الأهداف. */
+    fun setActiveGoal(id: String) = story.setActiveGoal(id)
+
+    /** يحفظ إجابة سؤال السياق اليومي ويبني بها سياق المتعلم تدريجياً. */
+    fun saveContextAnswer(storyId: Int, answer: String) = story.saveContextAnswer(storyId, answer)
+
+    /** يولّد اختبار إثبات المرحلة الحالية (٣ أسئلة موقفية). */
+    fun requestStageQuiz() = story.requestStageQuiz()
+
+    /** يصحح الاختبار؛ اجتياز ≥٢/٣ يقدّم المرحلة. يعيد رسالة النتيجة. */
+    fun submitStageQuiz(answers: List<Int>): String = story.submitStageQuiz(answers)
 
     /** Delete a story. Lesson stories are re-created on the next sync by design. */
     fun deleteStory(id: Int) = story.deleteStory(id)
@@ -1737,6 +1775,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun importLesson(pkg: LessonPackage, rawJson: String = ""): String = importer.importLesson(pkg, rawJson)
     fun importLessons(packages: List<LessonPackage>): String = importer.importLessons(packages)
 
+    // ── استوديو المنهج المخصص (المسؤول ينشئ منهجاً كاملاً بلا ملف) ──
+    /** ينشئ منهجاً مخصصاً: كورس فارغ بمستوى أكاديمي أو مسار تخصصي جديد باسم حر. */
+    fun createCustomCourse(
+        name: String, type: CourseType, levelId: Int, levelName: String, target: Int,
+        onResult: (Boolean, String) -> Unit,
+    ) = importer.createCustomCourse(name, type, levelId, levelName, target, onResult)
+
+    /** يضيف درساً مؤلَّفاً يدوياً من الهاتف إلى أي منهج. */
+    fun addManualLesson(
+        courseId: Int, title: String, summaryAr: String, readingEn: String, readingAr: String,
+        onResult: (Boolean, String) -> Unit,
+    ) = importer.addManualLesson(courseId, title, summaryAr, readingEn, readingAr, onResult)
+
+    /** يلصق JSON كتبه وكيل AI ويوجّه دروسه إلى منهج محدد. */
+    fun importJsonIntoCourse(courseId: Int, jsonText: String, onResult: (Boolean, String) -> Unit) =
+        importer.importJsonIntoCourse(courseId, jsonText, onResult)
+
     internal var tts: com.zmastery.english.audio.TtsManager? = null
 
     /** Wire the shared TTS engine (called once from the Activity/Composition). */
@@ -1838,10 +1893,55 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     var activeAnnouncement by mutableStateOf<com.zmastery.english.cloud.CloudSync.Announcement?>(null)
         internal set
+    /**
+     * معرّف آخر إعلان أغلقه المستخدم. الإغلاق كان في الذاكرة فقط، فكان الإعلان
+     * يعود للظهور عند كل إقلاع — الآن يُحفظ مع الحالة.
+     */
+    var dismissedAnnouncementId by mutableStateOf("")
+        internal set
     var globalLeaderboard by mutableStateOf<List<com.zmastery.english.cloud.CloudSync.UserRecord>>(emptyList())
         internal set
     var isLoadingLeaderboard by mutableStateOf(false)
         internal set
+
+    // ── مؤشر «تم الرفع»: حالة نشر الدروس سحابياً ──
+    /** جارٍ مطابقة الدروس المحلية بما هو منشور فعلاً في `/lessons`. */
+    var isVerifyingCloudLessons by mutableStateOf(false)
+        internal set
+    /** آخر لحظة اكتمل فيها فحص السحابة (0 = لم يُفحص بعد). */
+    var lastCloudVerifyMillis by mutableStateOf(0L)
+        internal set
+    /** عدد مستندات الدروس الموجودة في السحابة وقت آخر فحص. */
+    var cloudLessonCount by mutableStateOf(0)
+        internal set
+    /** رسالة حالة النشر/الفحص — تُعرض داخل بطاقة النشر. */
+    var cloudPublishMessage by mutableStateOf<String?>(null)
+
+    /** جارٍ فحص صلاحية النشر (كتابة تجريبية في `/announcements` ثم حذفها). */
+    var isProbingCloud by mutableStateOf(false)
+        internal set
+    /** الدور المسجّل فعلاً في `/users/{uid}`: admin / student / no-doc / null = لم يُفحص. */
+    var cloudRoleDoc by mutableStateOf<String?>(null)
+        internal set
+
+    /** عدد الدروس المحلية المؤكد وجودها في السحابة. */
+    val publishedLessonsCount: Int get() = lessons.count { it.isPublishedToCloud }
+
+    /** دروس محلية لم تُرفع بعد. */
+    val unpublishedLessons: List<Lesson> get() = lessons.filterNot { it.isPublishedToCloud }
+
+    /** آخر طابع زمني لنشر أو تحقق ناجح (0 = لم يحدث بعد). */
+    val lastLessonPublishMillis: Long get() = lessons.maxOfOrNull { it.publishedAtMillis } ?: 0L
+
+    /** هل كل الدروس المحلية مرفوعة سحابياً؟ */
+    val allLessonsPublished: Boolean get() = lessons.isNotEmpty() && unpublishedLessons.isEmpty()
+
+    /**
+     * مسؤول محلياً فقط: فتح وضع المطور بالكود على حساب غير حساب المالك يمنح
+     * الواجهة لا السحابة — قواعد Firestore سترفض أي نشر. هذه هي الحالة التي
+     * تجعل «بث إعلان» يبدو وكأنه لا يعمل، وتُعرض صراحة في بطاقة التشخيص.
+     */
+    val isLocalOnlyAdmin: Boolean get() = cloud.isLocalOnlyAdmin
 
     /**
      * Auto-provision or update user profile and progress in Firestore under /users/{uid}
@@ -1932,6 +2032,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         cloud.publishAllLocalLessonsToCloud(onResult)
 
     /**
+     * يفحص السحابة ويضبط شارة «تم الرفع» على كل درس محلي — يشمل الدروس التي
+     * رفعها سكربت البايثون خارج التطبيق.
+     */
+    fun verifyCloudLessons(onResult: ((Boolean, String) -> Unit)? = null) =
+        cloud.verifyCloudLessons(onResult)
+
+    /** فحص حيّ لصلاحية النشر: كتابة تجريبية في `/announcements` ثم حذفها. */
+    fun probePublishPermission(onResult: (Boolean, String) -> Unit) =
+        cloud.probePublishPermission(onResult)
+
+    /**
      * Build the exact same [AppState] snapshot [persist] writes locally — used
      * both by local save and by [pushProgressToCloud] so the two never drift.
      */
@@ -1966,6 +2077,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             lastCloudLessonSyncMillis = lastCloudLessonSyncMillis,
             cloudSyncEnabled = cloudSyncEnabled,
             googleWebClientId = googleWebClientId,
+            dismissedAnnouncementId = dismissedAnnouncementId,
+            developerUnlocked = isDeveloperUnlocked,
         ),
         aiAgents = aiAgents.map { AiAgentDto(it.id, it.modelId, it.character, it.voiceId, it.style, it.prompt) },
         apiKeys = apiKeys.map {
@@ -1978,6 +2091,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         exams = examHistory.map { it.toDto() },
         examMisses = examMisses.mapKeys { it.key.toString() },
         stories = storyArchive.map { it.toDto() },
+        goals = goals.toList(),
         dayStats = dayStats.values.sortedBy { it.epochDay },
         studyPlan = studyPlan,
         coachReports = coachReports.values.toList(),

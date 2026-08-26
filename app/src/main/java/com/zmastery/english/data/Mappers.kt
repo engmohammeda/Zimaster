@@ -43,6 +43,8 @@ fun Lesson.toDto() = LessonDto(
     guidedSentences = guidedSentences.map { SentenceDto(it.en, it.ar) },
     finalDraft = finalDraft?.let { SentenceDto(it.en, it.ar) },
     audioReady = audioReady,
+    publishedAtMillis = publishedAtMillis,
+    publishedDocId = publishedDocId,
 )
 
 fun LessonDto.toDomain() = Lesson(
@@ -71,6 +73,8 @@ fun LessonDto.toDomain() = Lesson(
     guidedSentences = guidedSentences.map { Sentence(it.en, it.ar) },
     finalDraft = finalDraft?.let { Sentence(it.en, it.ar) },
     audioReady = audioReady,
+    publishedAtMillis = publishedAtMillis,
+    publishedDocId = publishedDocId,
 )
 
 fun VocabWord.toDto() = WordDto(
@@ -124,6 +128,9 @@ fun ArchivedStory.toDto() = StoryDto(
     id = id, kind = kind.name, title = title, en = en, ar = ar, words = words,
     dayEpoch = dayEpoch, dateLabel = dateLabel, lessonId = lessonId, courseName = courseName,
     isRead = isRead, isFavorite = isFavorite, audioReady = audioReady,
+    goalId = goalId, goalStage = goalStage,
+    contextQuestionEn = contextQuestionEn, contextQuestionAr = contextQuestionAr,
+    contextAnswer = contextAnswer,
 )
 
 fun StoryDto.toDomain() = ArchivedStory(
@@ -132,4 +139,7 @@ fun StoryDto.toDomain() = ArchivedStory(
     title = title, en = en, ar = ar, words = words,
     dayEpoch = dayEpoch, dateLabel = dateLabel, lessonId = lessonId, courseName = courseName,
     isRead = isRead, isFavorite = isFavorite, audioReady = audioReady,
+    goalId = goalId, goalStage = goalStage,
+    contextQuestionEn = contextQuestionEn, contextQuestionAr = contextQuestionAr,
+    contextAnswer = contextAnswer,
 )
