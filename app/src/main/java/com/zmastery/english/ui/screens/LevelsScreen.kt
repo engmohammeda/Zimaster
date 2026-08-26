@@ -101,6 +101,44 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
         }
 
 
+        // ── مناهجي المخصصة: مثبّتة أعلى القائمة حتى لا «تضيع» بعد الإنشاء ──
+        val customCourses = vm.courses.filter { it.key.startsWith("custom_") }
+        if (customCourses.isNotEmpty()) {
+            item {
+                Column {
+                    Text(
+                        "المناهج المخصصة 🎯", color = ZAmberDeep, fontWeight = FontWeight.Black,
+                        fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    customCourses.forEach { c ->
+                        SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp, onClick = { onOpenCourse(c.id) }) {
+                            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                                        .background(Color(c.accent).copy(alpha = 0.16f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Filled.WorkspacePremium, null, tint = Color(c.accent), modifier = Modifier.size(20.dp))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(c.name, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(
+                                        "${vm.lessons.count { it.courseId == c.id }} درساً · داخل مستوى «" +
+                                            (vm.allLevels.firstOrNull { it.id == c.levelId }?.name ?: c.levelId.toString()) + "»",
+                                        color = ZTextSecondary, fontSize = 11.sp,
+                                    )
+                                }
+                                Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+
         // الأكاديمية الثلاثة + المسارات التخصصية الديناميكية — بترتيب واحد.
         val levels = vm.allLevels
         items(count = levels.size, key = { levels[it].id }) { idx ->
@@ -142,14 +180,22 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
     }
 
     if (showCreateCourse) {
-        CreateCustomCourseDialog(vm) { showCreateCourse = false }
+        CreateCustomCourseDialog(
+            vm,
+            onCreated = { levelId -> expandedLevel = levelId },
+            onDismiss = { showCreateCourse = false },
+        )
     }
 }
 
 /* ─────────────────────────── حوار إنشاء منهج مخصص ─────────────────────────── */
 
 @Composable
-private fun CreateCustomCourseDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+private fun CreateCustomCourseDialog(
+    vm: AppViewModel,
+    onCreated: (Int) -> Unit = {},
+    onDismiss: () -> Unit,
+) {
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(CourseType.VOCABULARY) }
     // 0 = لم يُحدد؛ 1..3 أكاديمية؛ ≥4 مسار تخصصي جديد.
@@ -283,7 +329,11 @@ private fun CreateCustomCourseDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                         target = target.toIntOrNull() ?: 20,
                     ) { ok, msg ->
                         status = ok to msg
-                        if (ok) onDismiss()
+                        if (ok) {
+                            // افتح المستوى المستهدف فوراً ليرى المستخدم أين وُضع منهجه.
+                            onCreated(levelId)
+                            onDismiss()
+                        }
                     }
                 },
                 enabled = name.isNotBlank() && levelId > 0 && (levelId < 4 || customLevelName.isNotBlank()),
