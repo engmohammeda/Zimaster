@@ -322,4 +322,86 @@ internal class ImportController(internal val vm: AppViewModel) {
             CourseType.WRITING -> LessonStyle.WRITING_PRACTICE
         }
     }
+
+    // ==========================================================================
+    // إنشاء منهج مخصص داخل التطبيق — بلا ملف JSON.
+    // ==========================================================================
+
+    /**
+     * ينشئ «منهجاً مخصصاً»: كورس فارغ يختار المسؤول اسمه ونوعه ومستواه،
+     * ثم تُضاف دروسه يدوياً ([addManualLesson]) أو باستيراد ملفات موجّهة إليه.
+     *
+     * قبل هذه الدالة كان المنهج يدخل التطبيق بطريق واحد فقط: ملف JSON/ZIP.
+     */
+    fun createCustomCourse(
+        name: String,
+        type: CourseType,
+        levelId: Int,
+        levelName: String,
+        target: Int,
+        onResult: (Boolean, String) -> Unit,
+    ) {
+        val clean = name.trim()
+        when {
+            clean.isBlank() -> onResult(false, "أدخل اسم المنهج أولاً")
+            clean.length > 40 -> onResult(false, "الاسم أطول من 40 حرفاً")
+            vm.courses.any { it.name.equals(clean, true) && it.levelId == levelId } ->
+                onResult(false, "يوجد منهج بنفس الاسم في هذا المستوى بالفعل")
+            else -> {
+                // معرّف ثابت فريد يميّز المنهج المخصص في النشر السحابي والمزامنة.
+                val key = "custom_${System.currentTimeMillis()}"
+                if (levelId >= 4) vm.ensureCustomLevel(levelId, levelName)
+                val course = Course(
+                    id = vm.nextCourseId++,
+                    levelId = levelId,
+                    name = clean,
+                    type = type,
+                    target = target.coerceIn(1, 200),
+                    accent = accentFor(type),
+                    style = styleFor("", type),
+                    key = key,
+                    jsonId = key,
+                )
+                vm.courses.add(course)
+                vm.persist()
+                onResult(true, "أُنشئ منهج «$clean» ✓ — أضف دروسه من شاشة الكورس")
+            }
+        }
+    }
+
+    /**
+     * يضيف درساً يدوياً إلى أي كورس — أبسط طريق لتأليف منهج مخصص من الهاتف:
+     * عنوان + ملخص + نص إنجليزي/عربي، والباقي اختياري يُستكمل لاحقاً.
+     */
+    fun addManualLesson(
+        courseId: Int,
+        title: String,
+        summaryAr: String,
+        readingEn: String,
+        readingAr: String,
+        onResult: (Boolean, String) -> Unit,
+    ) {
+        val course = vm.courses.firstOrNull { it.id == courseId }
+        when {
+            course == null -> onResult(false, "الكورس غير موجود")
+            title.isBlank() -> onResult(false, "عنوان الدرس مطلوب")
+            readingEn.isBlank() && readingAr.isBlank() ->
+                onResult(false, "أدخل نص الدرس (إنجليزي أو عربي على الأقل)")
+            else -> {
+                val lesson = Lesson(
+                    id = vm.nextLessonId++,
+                    courseId = courseId,
+                    no = (vm.lessons.filter { it.courseId == courseId }.maxOfOrNull { it.no } ?: 0) + 1,
+                    title = title.trim(),
+                    summaryAr = summaryAr.trim().ifBlank { title.trim() },
+                    readingEn = readingEn.trim(),
+                    readingAr = readingAr.trim(),
+                    keyPoints = emptyList(),
+                )
+                vm.lessons.add(lesson)
+                vm.persist()
+                onResult(true, "أُضيف الدرس ${lesson.no} إلى «${course.name}» ✓")
+            }
+        }
+    }
 }
