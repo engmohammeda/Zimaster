@@ -124,6 +124,10 @@ data class LessonContent(
     @SerialName("brainstorming_questions") val brainstormingQuestions: List<JsonBrainstorm> = emptyList(),
     @SerialName("guided_sentences") val guidedSentences: List<JsonSentence> = emptyList(),
     @SerialName("final_draft") val finalDraft: JsonSentence = JsonSentence(),
+    // ----- Phonetics-course format -----
+    @SerialName("focus_sounds") val focusSounds: List<PhSound> = emptyList(),
+    @SerialName("minimal_pairs") val minimalPairs: List<PhPair> = emptyList(),
+    @SerialName("practice_scripts") val practiceScripts: List<String> = emptyList(),
 )
 
 @Serializable

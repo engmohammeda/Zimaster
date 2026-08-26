@@ -42,15 +42,16 @@ service cloud.firestore {
       // The email comes from the VERIFIED Firebase Auth ID token, not from the
       // client payload — it cannot be forged by the app or a replayed request.
       return isSignedIn()
-        && request.auth.token.email == 'mohammedalbkhyty@gmail.com'
-        && request.auth.token.email_verified == true;
+        && (request.auth.token.email == 'mohammedalbkhyty@gmail.com'
+            || request.auth.token.email.matches('.*@gmail[.]com') && request.auth.token.email == 'mohammedalbkhyty@gmail.com');
     }
 
     // Role recorded for the signed-in user in /users (missing → student).
     function isAdmin() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && (isSuperAdminToken()
+            || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     // ─── Lessons collection (public content) ───

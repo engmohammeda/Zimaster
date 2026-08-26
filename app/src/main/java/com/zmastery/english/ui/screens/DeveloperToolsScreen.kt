@@ -48,7 +48,7 @@ fun DeveloperToolsScreen(vm: AppViewModel, onOpenImport: () -> Unit) {
             return@LazyColumn
         }
 
-        item { PublishLessonsCard(onOpenImport) }
+        item { PublishLessonsCard(vm, onOpenImport) }
         item { AnnouncementCard(vm) }
         item { QuoteCard(vm) }
         item { StudentsCard(vm) }
@@ -132,7 +132,10 @@ private fun DevLockedCard() {
 /* ─────────────────────────── 1) رفع ونشر الدروس ─────────────────────────── */
 
 @Composable
-private fun PublishLessonsCard(onOpenImport: () -> Unit) {
+private fun PublishLessonsCard(vm: AppViewModel, onOpenImport: () -> Unit) {
+    var isPublishingAll by remember { mutableStateOf(false) }
+    var publishStatus by remember { mutableStateOf<String?>(null) }
+
     SoftCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -143,20 +146,52 @@ private fun PublishLessonsCard(onOpenImport: () -> Unit) {
                 ) { Icon(Icons.Filled.CloudUpload, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("رفع ونشر الدروس", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                    Text("رفع ملفات JSON/ZIP ← التعرّف ← نشر لكل الطلاب", color = ZTextSecondary, fontSize = 11.sp)
+                    Text("رفع ونشر الدروس سحابياً", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text("رفع ملفات JSON/ZIP أو مزامنة الدروس المحلية الحالية (${vm.lessons.size} درس)", color = ZTextSecondary, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onOpenImport,
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
-            ) {
-                Icon(Icons.Filled.UploadFile, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("فتح أداة رفع الدروس", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onOpenImport,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
+                ) {
+                    Icon(Icons.Filled.UploadFile, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("استيراد ملفات جديدة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+
+                Button(
+                    onClick = {
+                        isPublishingAll = true
+                        publishStatus = "جارٍ رفع جميع الدروس للسحابة..."
+                        vm.publishAllLocalLessonsToCloud { success, msg ->
+                            isPublishingAll = false
+                            publishStatus = msg
+                        }
+                    },
+                    enabled = !isPublishingAll && vm.lessons.isNotEmpty(),
+                    modifier = Modifier.weight(1.2f).height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ZAmber),
+                ) {
+                    if (isPublishingAll) {
+                        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.CloudSync, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text("🚀 نشر كل الدروس (${vm.lessons.size})", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+
+            publishStatus?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Surface(shape = RoundedCornerShape(8.dp), color = ZAmber.copy(alpha = 0.12f)) {
+                    Text(msg, color = ZTextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+                }
             }
         }
     }

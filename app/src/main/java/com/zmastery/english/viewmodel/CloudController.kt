@@ -259,6 +259,81 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
+     * Publish ALL locally stored lessons to Firestore `/lessons` collection.
+     */
+    fun publishAllLocalLessonsToCloud(onResult: (Boolean, String) -> Unit) {
+        launch {
+            val allLessons = vm.lessons.toList()
+            if (allLessons.isEmpty()) {
+                onResult(false, "لا توجد دروس محلية لنشرها")
+                return@launch
+            }
+            var count = 0
+            allLessons.forEach { lesson ->
+                val course = vm.courses.firstOrNull { it.id == lesson.courseId }
+                val courseKey = course?.jsonId?.ifBlank { null } ?: course?.key?.ifBlank { null } ?: "course_${lesson.courseId}"
+                
+                val vocabWords = vm.vocab.filter { it.lessonId == lesson.id || lesson.newWordIds.contains(it.id) }
+                val globalVocab = vocabWords.map {
+                    JsonGlobalWord(
+                        word = it.english,
+                        meaning = it.arabic,
+                        exampleEn = it.exampleEn,
+                        exampleAr = it.exampleAr,
+                        phonetic = it.phonetic,
+                        mentalImage = it.mentalImage,
+                    )
+                }
+                
+                val pkg = LessonPackage(
+                    metadata = LessonMeta(
+                        courseId = courseKey,
+                        courseNameAr = course?.name ?: "",
+                        level = course?.levelId ?: 1,
+                        lessonNo = lesson.no,
+                        title = lesson.title,
+                        style = course?.style?.name ?: "",
+                        courseType = course?.type?.name ?: "",
+                    ),
+                    lessonContent = LessonContent(
+                        fullTextEn = lesson.fullTextEn.ifBlank { lesson.readingEn },
+                        fullTextAr = lesson.fullTextAr.ifBlank { lesson.readingAr },
+                        segments = lesson.segments.map { JsonSentence(it.en, it.ar) },
+                        explanationAr = lesson.explanationAr.ifBlank { lesson.summaryAr },
+                        logicAr = lesson.logicAr,
+                        examples = lesson.examples.map { JsonSentence(it.en, it.ar) },
+                        dialogue = lesson.dialogues.map { JsonDialogue(it.speaker, it.en, it.ar) },
+                        keyExpressions = lesson.keyExpressions.map { JsonKeyExpression(it.expressionEn, it.expressionAr, it.usageAr) },
+                        keySentences = lesson.keySentences.map { JsonSentence(it.en, it.ar) },
+                        topicEn = lesson.topicEn,
+                        topicAr = lesson.topicAr,
+                        brainstormingQuestions = lesson.brainstorming.map { JsonBrainstorm(it.questionEn, it.questionAr, it.suggestedAnswerEn, it.suggestedAnswerAr) },
+                        guidedSentences = lesson.guidedSentences.map { JsonSentence(it.en, it.ar) },
+                        finalDraft = lesson.finalDraft?.let { JsonSentence(it.en, it.ar) } ?: JsonSentence(),
+                    ),
+                    globalVocabulary = globalVocab,
+                    lessonNotes = lesson.notes,
+                    quiz = lesson.quiz.map { q ->
+                        JsonQuiz(
+                            type = q.type.name.lowercase(),
+                            question = q.question,
+                            options = q.options,
+                            answer = q.answer,
+                            explanationAr = q.explanationAr,
+                            wordToSpeak = q.audioText,
+                        )
+                    },
+                )
+                
+                val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+                if (res.isSuccess) count++
+            }
+            pushProgressToCloud()
+            onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب في السحابة 🚀")
+        }
+    }
+
+    /**
      * Called once from the Activity/Composition root at startup. Ensures a
      * Firebase user exists (anonymous if nothing else), then pulls any new
      * cloud lessons and the latest progress snapshot — completely silent,

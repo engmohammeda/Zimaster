@@ -1927,6 +1927,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun addQuote(text: String, author: String, onResult: (Boolean, String) -> Unit) =
         cloud.addQuote(text, author, onResult)
 
+    /** نشر ورفع جميع الدروس المحفوظة محلياً إلى السحابة فوراً */
+    fun publishAllLocalLessonsToCloud(onResult: (Boolean, String) -> Unit) =
+        cloud.publishAllLocalLessonsToCloud(onResult)
+
     /**
      * Build the exact same [AppState] snapshot [persist] writes locally — used
      * both by local save and by [pushProgressToCloud] so the two never drift.
