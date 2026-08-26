@@ -44,8 +44,11 @@ android {
 
     buildTypes {
         debug {
+            val rel = signingConfigs.findByName("release")
             val dbg = signingConfigs.findByName("debugConfig")
-            if (dbg != null && dbg.storeFile != null) {
+            if (rel != null && rel.storeFile != null) {
+                signingConfig = rel
+            } else if (dbg != null && dbg.storeFile != null) {
                 signingConfig = dbg
             }
             isDebuggable = true

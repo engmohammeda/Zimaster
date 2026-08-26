@@ -66,10 +66,16 @@ jobs:
                 "client_info": {
                   "mobilesdk_app_id": "1:836170376747:android:9372331a395944a2792c6e",
                   "android_client_info": {
-                    "package_name": "com.zmastery.english"
+                    "package_name": "com.zmastery.english",
+                    "certificate_hash": "14c9be6a96cbf9a00bbe3bdc38becd061afa0a64"
                   }
                 },
-                "oauth_client": [],
+                "oauth_client": [
+                  {
+                    "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com",
+                    "client_type": 3
+                  }
+                ],
                 "api_key": [
                   {
                     "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM"
@@ -89,38 +95,40 @@ jobs:
           fi
           test -f app/google-services.json
 
-      - name: Setup debug keystore if missing
-        run: |
-          if [ ! -f debug.keystore ]; then
-            if [ -f debug.keystore.base64 ]; then
-              echo "Restoring debug.keystore from embedded base64..."
-              base64 -d debug.keystore.base64 > debug.keystore
-            elif [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-              echo "Restoring debug.keystore from secret..."
-              echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
-            else
-              echo "Generating fallback debug keystore..."
-              keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-            fi
-          fi
-          test -f debug.keystore
-
-      - name: Prepare release signing
+      - name: Prepare Signing Keystore
         id: signing
         run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] \
-             && [ -n "${{ secrets.KEY_ALIAS }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          mkdir -p "$RUNNER_TEMP/keystore"
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Using user-provided KEYSTORE_BASE64 from GitHub Secrets..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/keystore/app.keystore"
+            STORE_PASS="${{ secrets.KEYSTORE_PASSWORD || 'android' }}"
+            ALIAS="${{ secrets.KEY_ALIAS || 'androiddebugkey' }}"
+            KEY_PASS="${{ secrets.KEY_PASSWORD || 'android' }}"
+            
             {
-              echo "RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore"
-              echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
-              echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
-              echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
+              echo "RELEASE_STORE_FILE=$RUNNER_TEMP/keystore/app.keystore"
+              echo "RELEASE_STORE_PASSWORD=$STORE_PASS"
+              echo "RELEASE_KEY_ALIAS=$ALIAS"
+              echo "RELEASE_KEY_PASSWORD=$KEY_PASS"
             } >> "$GITHUB_ENV"
+            
+            # Also copy to root debug.keystore so fallback build steps use it
+            cp "$RUNNER_TEMP/keystore/app.keystore" debug.keystore
             echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ -f debug.keystore.base64 ]; then
+            echo "Restoring debug.keystore from repository embedded base64..."
+            base64 -d debug.keystore.base64 > debug.keystore
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          elif [ -f debug.keystore ]; then
+            echo "Using existing repository debug.keystore..."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
+            echo "Generating standard deterministic debug keystore..."
+            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
+          test -f debug.keystore || test -f "$RUNNER_TEMP/keystore/app.keystore"
 
       - name: Build Debug and Release
         run: |
