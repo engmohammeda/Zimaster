@@ -59,6 +59,7 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
     var expandedLevel by rememberSaveable { mutableStateOf<Int?>(null) }
     // استوديو المنهج المخصص — للمسؤول فقط.
     var showCreateCourse by remember { mutableStateOf(false) }
+    var courseToDelete by remember { mutableStateOf<Course?>(null) }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -130,6 +131,9 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
                                         color = ZTextSecondary, fontSize = 11.sp,
                                     )
                                 }
+                                IconButton(onClick = { courseToDelete = c }, modifier = Modifier.size(30.dp)) {
+                                    Icon(Icons.Filled.DeleteOutline, "حذف المنهج", tint = ZRose, modifier = Modifier.size(15.dp))
+                                }
                                 Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted)
                             }
                         }
@@ -184,6 +188,28 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
             vm,
             onCreated = { levelId -> expandedLevel = levelId },
             onDismiss = { showCreateCourse = false },
+        )
+    }
+
+    courseToDelete?.let { c ->
+        AlertDialog(
+            onDismissRequest = { courseToDelete = null },
+            title = { Text("حذف المنهج المخصص؟", color = ZTextPrimary, fontWeight = FontWeight.Black) },
+            text = {
+                Text(
+                    "سيُحذف «${c.name}» بكل دروسه ومفرداته من هذا الجهاز. لا يمكن التراجع.",
+                    color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteCustomCourse(c.id) { _, _ -> }
+                    courseToDelete = null
+                }) { Text("حذف نهائي", color = ZRose, fontWeight = FontWeight.Black) }
+            },
+            dismissButton = {
+                TextButton(onClick = { courseToDelete = null }) { Text("إلغاء", color = ZTextSecondary) }
+            },
         )
     }
 }

@@ -1782,11 +1782,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         onResult: (Boolean, String) -> Unit,
     ) = importer.createCustomCourse(name, type, levelId, levelName, target, onResult)
 
-    /** يضيف درساً مؤلَّفاً يدوياً من الهاتف إلى أي منهج. */
+    /** يضيف درساً مؤلَّفاً يدوياً من الهاتف إلى أي منهج (+ مفردات اختيارية). */
     fun addManualLesson(
         courseId: Int, title: String, summaryAr: String, readingEn: String, readingAr: String,
+        vocabLines: String = "",
         onResult: (Boolean, String) -> Unit,
-    ) = importer.addManualLesson(courseId, title, summaryAr, readingEn, readingAr, onResult)
+    ) = importer.addManualLesson(courseId, title, summaryAr, readingEn, readingAr, vocabLines, onResult)
+
+    /** حذف درس ومفرداته (تصحيح أخطاء التأليف) — للمسؤول. */
+    fun deleteLessonAdmin(lessonId: Int, onResult: (Boolean, String) -> Unit) =
+        importer.deleteLessonAdmin(lessonId, onResult)
+
+    /** حذف منهج مخصص كاملاً — للمسؤول. */
+    fun deleteCustomCourse(courseId: Int, onResult: (Boolean, String) -> Unit) =
+        importer.deleteCustomCourse(courseId, onResult)
 
     /** يلصق JSON كتبه وكيل AI ويوجّه دروسه إلى منهج محدد. */
     fun importJsonIntoCourse(courseId: Int, jsonText: String, onResult: (Boolean, String) -> Unit) =

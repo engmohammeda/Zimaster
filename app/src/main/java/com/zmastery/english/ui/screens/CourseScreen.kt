@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -39,6 +41,7 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
     // استوديو المنهج المخصص: تأليف يدوي + لصق JSON من وكيل AI.
     var showManualLesson by remember { mutableStateOf(false) }
     var showPasteJson by remember { mutableStateOf(false) }
+    var lessonToDelete by remember { mutableStateOf<com.zmastery.english.data.Lesson?>(null) }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -166,6 +169,12 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
                             Spacer(Modifier.width(8.dp))
                         }
                         Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted)
+                        // تصحيح أخطاء التأليف: حذف درس (للمسؤول فقط).
+                        if (showPublishMark) {
+                            IconButton(onClick = { lessonToDelete = lesson }, modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Filled.DeleteOutline, "حذف الدرس", tint = ZRose, modifier = Modifier.size(15.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -179,6 +188,28 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
 
     if (showManualLesson) ManualLessonDialog(vm, courseId) { showManualLesson = false }
     if (showPasteJson) PasteJsonDialog(vm, courseId) { showPasteJson = false }
+
+    lessonToDelete?.let { l ->
+        AlertDialog(
+            onDismissRequest = { lessonToDelete = null },
+            title = { Text("حذف الدرس؟", color = ZTextPrimary, fontWeight = FontWeight.Black) },
+            text = {
+                Text(
+                    "سيُحذف «${l.title}» ومفرداته من هذا الجهاز. إن كان منشوراً سحابياً فسيبقى لدى من استورده سابقاً.",
+                    color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteLessonAdmin(l.id) { _, _ -> }
+                    lessonToDelete = null
+                }) { Text("حذف", color = ZRose, fontWeight = FontWeight.Black) }
+            },
+            dismissButton = {
+                TextButton(onClick = { lessonToDelete = null }) { Text("إلغاء", color = ZTextSecondary) }
+            },
+        )
+    }
 }
 
 /* ─────────────────── استوديو المنهج المخصص: أزرار التأليف ─────────────────── */
@@ -215,13 +246,14 @@ private fun ManualLessonDialog(vm: AppViewModel, courseId: Int, onDismiss: () ->
     var summary by remember { mutableStateOf("") }
     var en by remember { mutableStateOf("") }
     var ar by remember { mutableStateOf("") }
+    var vocab by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("درس يدوي جديد", color = ZTextPrimary, fontWeight = FontWeight.Black) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text("عنوان الدرس *") }, singleLine = true,
@@ -249,6 +281,15 @@ private fun ManualLessonDialog(vm: AppViewModel, courseId: Int, onDismiss: () ->
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                     colors = fieldColors(ZIndigo),
                 )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = vocab, onValueChange = { vocab = it },
+                    label = { Text("مفردات اختيارية — سطر لكل كلمة") },
+                    placeholder = { Text("surveyor = مسّاح\ntheodolite = ثيودوليت") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors(ZIndigo),
+                )
                 status?.let { (ok, msg) ->
                     Spacer(Modifier.height(8.dp))
                     Text(msg, color = if (ok) ZEmeraldDeep else ZRoseDeep, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -257,7 +298,7 @@ private fun ManualLessonDialog(vm: AppViewModel, courseId: Int, onDismiss: () ->
         },
         confirmButton = {
             TextButton(onClick = {
-                vm.addManualLesson(courseId, title, summary, en, ar) { ok, msg ->
+                vm.addManualLesson(courseId, title, summary, en, ar, vocab) { ok, msg ->
                     status = ok to msg
                     if (ok) onDismiss()
                 }

@@ -379,6 +379,7 @@ internal class ImportController(internal val vm: AppViewModel) {
         summaryAr: String,
         readingEn: String,
         readingAr: String,
+        vocabLines: String = "",
         onResult: (Boolean, String) -> Unit,
     ) {
         val course = vm.courses.firstOrNull { it.id == courseId }
@@ -388,8 +389,9 @@ internal class ImportController(internal val vm: AppViewModel) {
             readingEn.isBlank() && readingAr.isBlank() ->
                 onResult(false, "أدخل نص الدرس (إنجليزي أو عربي على الأقل)")
             else -> {
+                val lessonId = vm.nextLessonId++
                 val lesson = Lesson(
-                    id = vm.nextLessonId++,
+                    id = lessonId,
                     courseId = courseId,
                     no = (vm.lessons.filter { it.courseId == courseId }.maxOfOrNull { it.no } ?: 0) + 1,
                     title = title.trim(),
@@ -399,10 +401,66 @@ internal class ImportController(internal val vm: AppViewModel) {
                     keyPoints = emptyList(),
                 )
                 vm.lessons.add(lesson)
+                // مفردات اختيارية بسطور «english = عربي» — تدخل الـFSRS جاهزة
+                // (بلا انتظار موافقة لأنها من تأليف المسؤول قصداً).
+                var words = 0
+                vocabLines.lines().forEach { line ->
+                    val sep = listOf("=", "-", "—", ":").firstNotNullOfOrNull { s ->
+                        line.indexOf(s).takeIf { it > 0 }?.let { idx -> idx to s }
+                    }
+                    if (sep != null) {
+                        val en = line.substring(0, sep.first).trim()
+                        val ar = line.substring(sep.first + sep.second.length).trim()
+                        if (en.isNotBlank() && en.contains(Regex("[A-Za-z]"))) {
+                            vm.vocab.add(
+                                VocabWord(
+                                    id = vm.nextWordId++,
+                                    english = en,
+                                    arabic = ar.ifBlank { "—" },
+                                    exampleEn = "",
+                                    exampleAr = "",
+                                    phonetic = "",
+                                    mentalImage = "",
+                                    courseId = courseId,
+                                    pendingApproval = false,
+                                    lessonId = lessonId,
+                                )
+                            )
+                            words++
+                        }
+                    }
+                }
                 vm.persist()
-                onResult(true, "أُضيف الدرس ${lesson.no} إلى «${course.name}» ✓")
+                onResult(
+                    true,
+                    "أُضيف الدرس ${lesson.no} إلى «${course.name}»" +
+                        if (words > 0) " مع $words كلمة تدخل المراجعة ✓" else " ✓"
+                )
             }
         }
+    }
+
+    /** حذف درس ومفرداته المرتبطة — للمسؤول لتصحيح أخطاء التأليف. */
+    fun deleteLessonAdmin(lessonId: Int, onResult: (Boolean, String) -> Unit) {
+        val lesson = vm.lessons.firstOrNull { it.id == lessonId }
+            ?: return onResult(false, "الدرس غير موجود")
+        vm.lessons.removeAll { it.id == lessonId }
+        vm.vocab.removeAll { it.lessonId == lessonId }
+        vm.persist()
+        onResult(true, "حُذف الدرس «${lesson.title}» ومفرداته")
+    }
+
+    /** حذف منهج مخصص كاملاً (كورس + دروسه + مفرداته) — للمناهج المخصصة فقط. */
+    fun deleteCustomCourse(courseId: Int, onResult: (Boolean, String) -> Unit) {
+        val course = vm.courses.firstOrNull { it.id == courseId }
+            ?: return onResult(false, "الكورس غير موجود")
+        if (!course.key.startsWith("custom_"))
+            return onResult(false, "من هنا تُحذف المناهج المخصصة فقط — كورسات المنهج الأساسي محمية")
+        vm.lessons.removeAll { it.courseId == courseId }
+        vm.vocab.removeAll { it.courseId == courseId }
+        vm.courses.removeAll { it.id == courseId }
+        vm.persist()
+        onResult(true, "حُذف منهج «${course.name}» بالكامل")
     }
 
     /** غلاف لفكّ صيغة `{ "lessons": [ ... ] }` التي يكتبها وكلاء AI. */
