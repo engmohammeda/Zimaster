@@ -2,6 +2,7 @@ package com.zmastery.english.viewmodel
 
 import com.zmastery.english.data.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Controller for Cloud sync (Firebase): pulling new lessons, backing up &
@@ -129,6 +130,27 @@ internal class CloudController(internal val vm: AppViewModel) {
         get() = isAdmin && !hasCloudWritePower
 
     /**
+     * مهلة قصوى لأي عملية سحابية تنتظرها الواجهة.
+     *
+     * لقطات الشاشة من الجهاز كانت تظهر زرّي «جارٍ البث…» و«جارٍ النشر…»
+     * عالقين إلى الأبد: `await()` على كتابة Firestore لا ينتهي أبداً حين يكون
+     * الاتصال مقطوعاً/بطيئاً (الكتابة المعلّقة تُعاد محاولة إرسالها بلا نهاية)،
+     * فلا يعود الـ callback ولا يتحرر الزر. المهلة تحوّل التعليق الأبدي إلى
+     * رسالة فشل واضحة بعد ثوانٍ.
+     */
+    private val CLOUD_TIMEOUT_MS = 25_000L
+
+    /** ينفّذ عملية سحابية بمهلة؛ عند انتهائها يفشل برسالة عربية بدل التعليق. */
+    private suspend fun <T> timedCloud(op: String, block: suspend () -> Result<T>): Result<T> =
+        withTimeoutOrNull(CLOUD_TIMEOUT_MS) { block() }
+            ?: Result.failure(
+                java.util.concurrent.TimeoutException(
+                    "$op: انتهى الانتظار بعد ${CLOUD_TIMEOUT_MS / 1000} ثانية — " +
+                        "الاتصال بالسحابة بطيء أو مقطوع؛ تحقق من الإنترنت وأعد المحاولة"
+                )
+            )
+
+    /**
      * يترجم أخطاء Firestore إلى سبب مفهوم + الحل المباشر.
      *
      * قبل هذا كانت الرسالة الخام (PERMISSION_DENIED: Missing or insufficient
@@ -138,6 +160,8 @@ internal class CloudController(internal val vm: AppViewModel) {
     private fun describeCloudError(e: Throwable): String {
         val raw = "${e.javaClass.simpleName}: ${e.message.orEmpty()}".trim().trimEnd(':')
         return when {
+            // انتهت المهلة — الرسالة عربية بالفعل فلا نُضيف عليها.
+            e is java.util.concurrent.TimeoutException -> e.message.orEmpty().ifBlank { raw }
             raw.contains("PERMISSION_DENIED", true) || raw.contains("Missing or insufficient permissions", true) ->
                 "رفضت قواعد Firestore الكتابة.\nالسبب المرجّح: $raw\n" +
                     "الحل (بأيٍّ منهما):\n" +
@@ -234,7 +258,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 wordsLearnedCount = vocab.count { it.repetitions > 0 },
                 accuracy = accuracy.toDouble(),
             )
-            val roleResult = com.zmastery.english.cloud.CloudSync.provisionOrUpdateUser(user, snapshot)
+            val roleResult = timedCloud("مزامنة الملف الشخصي") {
+                com.zmastery.english.cloud.CloudSync.provisionOrUpdateUser(user, snapshot)
+            }
             roleResult.onSuccess { role ->
                 userRole = role
             }
@@ -247,7 +273,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     fun loadRegisteredUsers() {
         launch {
             isLoadingUsers = true
-            val res = com.zmastery.english.cloud.CloudSync.fetchAllUsers()
+            val res = timedCloud("قائمة الطلاب") { com.zmastery.english.cloud.CloudSync.fetchAllUsers() }
             res.onSuccess { users ->
                 registeredUsersList = users
             }
@@ -260,7 +286,7 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     fun loadActiveAnnouncement() {
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.fetchActiveAnnouncement()
+            val res = timedCloud("جلب الإعلان") { com.zmastery.english.cloud.CloudSync.fetchActiveAnnouncement() }
             res.onSuccess { announcement ->
                 activeAnnouncement = announcement?.takeIf { it.id.isNotBlank() && it.id != dismissedAnnouncementId }
             }
@@ -289,7 +315,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 onResult(false, "لا يوجد اتصال بالسحابة الآن — تحقق من الإنترنت ثم أعد المحاولة")
                 return@launch
             }
-            val res = com.zmastery.english.cloud.CloudSync.postAnnouncement(title.trim(), message.trim(), type)
+            val res = timedCloud("بث الإعلان") {
+                com.zmastery.english.cloud.CloudSync.postAnnouncement(title.trim(), message.trim(), type)
+            }
             res.onSuccess { id ->
                 // إعلاننا الجديد أحدث من أي إغلاق سابق — لا نخفيه عن صاحبه.
                 dismissedAnnouncementId = ""
@@ -319,7 +347,7 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     fun deactivateAnnouncement(id: String) {
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id)
+            val res = timedCloud("تثبيط الإعلان") { com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id) }
             activeAnnouncement = null
             dismissedAnnouncementId = id
             vm.persist()
@@ -344,10 +372,14 @@ internal class CloudController(internal val vm: AppViewModel) {
                 return@launch
             }
             // ما الدور المسجّل فعلاً لهذا الحساب في السحابة؟
-            cloudRoleDoc = com.zmastery.english.cloud.CloudSync.fetchRoleDoc(uid).getOrNull()
+            cloudRoleDoc = withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                com.zmastery.english.cloud.CloudSync.fetchRoleDoc(uid).getOrNull()
+            }
             // نعتمده محلياً حتى تصدق شارة «مسؤول محلي فقط» في الواجهة.
             cloudRoleDoc?.takeIf { it != "no-doc" }?.let { userRole = it }
-            val res = com.zmastery.english.cloud.CloudSync.probePublishPermission()
+            val res = timedCloud("فحص صلاحية النشر") {
+                com.zmastery.english.cloud.CloudSync.probePublishPermission()
+            }
             isProbingCloud = false
             res.onSuccess {
                 onResult(true, "الاتصال وصلاحية النشر يعملان ✓ — يمكنك بث إعلان الآن")
@@ -363,7 +395,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     fun loadGlobalLeaderboard(limit: Int = 30) {
         launch {
             isLoadingLeaderboard = true
-            val res = com.zmastery.english.cloud.CloudSync.fetchLeaderboard(limit)
+            val res = timedCloud("لوحة الصدارة") { com.zmastery.english.cloud.CloudSync.fetchLeaderboard(limit) }
             res.onSuccess { users ->
                 globalLeaderboard = users
             }
@@ -437,7 +469,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 onResult?.invoke(false, "تعذّر الاتصال بالسحابة الآن")
                 return@launch
             }
-            val res = com.zmastery.english.cloud.CloudSync.fetchCloudLessonIndex()
+            val res = timedCloud("فهرس دروس السحابة") {
+                com.zmastery.english.cloud.CloudSync.fetchCloudLessonIndex()
+            }
             isVerifyingCloudLessons = false
             res.onSuccess { index ->
                 cloudLessonCount = index.size
@@ -469,7 +503,7 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     fun publishLessonToCloud(pkg: LessonPackage, onResult: (Boolean, String) -> Unit) {
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+            val res = timedCloud("نشر الدرس") { com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg) }
             res.onSuccess { docId ->
                 // شارة «تم الرفع» على الدرس المحلي المطابق.
                 applyCloudMarks(mapOf(docId to System.currentTimeMillis()))
@@ -486,7 +520,9 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     fun publishLessonsBatchToCloud(packages: List<LessonPackage>, onResult: (Boolean, String) -> Unit) {
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.publishLessonsBatchToCloud(packages)
+            val res = timedCloud("نشر الدفعة") {
+                com.zmastery.english.cloud.CloudSync.publishLessonsBatchToCloud(packages)
+            }
             res.onSuccess { count ->
                 verifyCloudLessons()
                 onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب سحابياً ✓")
@@ -574,7 +610,10 @@ internal class CloudController(internal val vm: AppViewModel) {
                     },
                 )
                 
-                val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+                // بمهلة لكل درس: درس واحد بلا اتصال لا يُجمّد رفع البقية ولا الزر.
+                val res = timedCloud("رفع درس ${lesson.no}") {
+                    com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
+                }
                 if (res.isSuccess) {
                     count++
                     publishedDocs[docId] = System.currentTimeMillis()
@@ -612,7 +651,10 @@ internal class CloudController(internal val vm: AppViewModel) {
     fun initCloudSync() {
         if (!cloudSyncEnabled) return
         launch {
-            runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+            // بمهلة: إقلاع التطبيق بلا إنترنت لا يجوز أن يعلّق مسار البدء.
+            withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+            }
             refreshCloudAuthState()
             val uid = cloudUid ?: return@launch
             // Pull the cloud snapshot and MERGE it in — never replace. Local
@@ -620,9 +662,11 @@ internal class CloudController(internal val vm: AppViewModel) {
             // `lastCloudLessonSyncMillis == 0L` gate + full restoreFrom was
             // the data-loss bug: a stale cloud snapshot wiped freshly
             // imported lessons on every launch.)
-            runCatching {
-                com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
-            }.getOrNull()?.let { cloudJson ->
+            withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                runCatching {
+                    com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
+                }.getOrNull()
+            }?.let { cloudJson ->
                 adoptCloudProgress(cloudJson)
             }
             syncCloudLessons(silent = true)
@@ -656,7 +700,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 if (!silent) cloudSyncMessage = "تعذّر الاتصال بالسحابة الآن"
                 return@launch
             }
-            val result = com.zmastery.english.cloud.CloudSync.pullNewLessons(lastCloudLessonSyncMillis)
+            val result = timedCloud("مزامنة الدروس") {
+                com.zmastery.english.cloud.CloudSync.pullNewLessons(lastCloudLessonSyncMillis)
+            }
             result.onSuccess { sync ->
                 if (sync.packages.isNotEmpty()) {
                     vm.importLessons(sync.packages)
@@ -696,7 +742,10 @@ internal class CloudController(internal val vm: AppViewModel) {
             // Strip API keys before cloud sync — keys stay on device only
             val safeState = KeyProtector.stripKeysForSharing(state)
             val raw = Persistence.encode(safeState)
-            com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
+            // بمهلة حتى لا يعلّق دفعُ التقدم أي سلسلة استدعاءات تنتظره.
+            withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
+            }
             syncUserProfileToCloud()
         }
     }
@@ -747,9 +796,11 @@ internal class CloudController(internal val vm: AppViewModel) {
                     refreshCloudAuthState()
                     // Merge any cloud progress for this account — never replace
                     // (a stale/smaller cloud snapshot must not wipe local data).
-                    runCatching {
-                        com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
-                    }.getOrNull()?.let { cloudJson ->
+                    withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                        runCatching {
+                            com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
+                        }.getOrNull()
+                    }?.let { cloudJson ->
                         adoptCloudProgress(cloudJson)
                     }
                     vm.persist()
@@ -787,9 +838,11 @@ internal class CloudController(internal val vm: AppViewModel) {
                     refreshCloudAuthState()
                     // Merge any cloud progress for this account — never replace
                     // (a stale/smaller cloud snapshot must not wipe local data).
-                    runCatching {
-                        com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
-                    }.getOrNull()?.let { cloudJson ->
+                    withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                        runCatching {
+                            com.zmastery.english.cloud.CloudSync.pullProgress(user.uid).getOrNull()
+                        }.getOrNull()
+                    }?.let { cloudJson ->
                         adoptCloudProgress(cloudJson)
                     }
                     vm.persist()
@@ -912,7 +965,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     fun syncQuotes(onResult: ((Boolean, Int) -> Unit)? = null) {
         if (!cloudSyncEnabled) { onResult?.invoke(false, cloudQuoteCount); return }
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.pullQuotes()
+            val res = timedCloud("مزامنة العبارات") { com.zmastery.english.cloud.CloudSync.pullQuotes() }
             res.onSuccess { quotes ->
                 QuoteStore.saveCloud(app, quotes)
                 cloudQuoteCount = quotes.size
@@ -944,7 +997,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 onResult(false, "لا يوجد اتصال بالسحابة الآن — تحقق من الإنترنت ثم أعد المحاولة")
                 return@launch
             }
-            val res = com.zmastery.english.cloud.CloudSync.addQuote(text, author, uid)
+            val res = timedCloud("نشر العبارة") {
+                com.zmastery.english.cloud.CloudSync.addQuote(text, author, uid)
+            }
             isAddingQuote = false
             res.onSuccess {
                 quoteMessage = "تم نشر العبارة لكل الأجهزة ✓"

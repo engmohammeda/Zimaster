@@ -511,8 +511,11 @@ private fun PublishLessonsCard(vm: AppViewModel, onOpenImport: () -> Unit) {
                 )
             }
 
-            // رسالة الحالة الدائمة من آخر عملية نشر/فحص.
-            val live = publishStatus ?: vm.cloudPublishMessage?.let { (published == total) to it }
+            // رسالة الحالة الدائمة من آخر عملية نشر/فحص — وتُخفى أثناء العمل الجاري
+            // حتى لا تظهر رسالة حمراء وسط «جارٍ الرفع…».
+            val live = publishStatus
+                ?: if (isPublishingAll || vm.isVerifyingCloudLessons) null
+                   else vm.cloudPublishMessage?.let { (published == total) to it }
             live?.let { (ok, msg) ->
                 Spacer(Modifier.height(4.dp))
                 StatusLine(ok = ok, text = msg)
