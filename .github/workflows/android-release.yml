@@ -1,23 +1,35 @@
 name: Android Build & Release
 
+# ═══════════════════════════════════════════════════════════════════════════
+# سير عمل إنتاجي متكامل:
+#   • CI     — بناء سريع + اختبارات إلزامية على أي فرع/PR (بلا نشر).
+#   • Release— main/الوسوم فقط: اختبارات → ترقيم semver تلقائي → ملاحظات
+#              مصنّفة من الـ commits → GitHub Release → إرسال تلجرام.
+# لا توجد أي أسرار في الملف: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID /
+# GOOGLE_SERVICES_JSON / KEYSTORE_* كلها من Repository Secrets.
+# ═══════════════════════════════════════════════════════════════════════════
 on:
   push:
     branches: [ "main", "master" ]
     tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-jobs:
-  build:
-    name: Build Debug & Release (APK + AAB)
-    runs-on: ubuntu-latest
-    env:
-      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true"
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.caching=true"
 
+jobs:
+  # ─────────────────────────── CI: فحص سريع بلا نشر ───────────────────────────
+  ci:
+    name: CI · build + tests
+    if: ${{ github.event_name == 'pull_request' || (!startsWith(github.ref, 'refs/tags/') && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master') }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -53,7 +65,7 @@ jobs:
             if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
               echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
             else
-              echo "Creating fallback google-services.json for CI..."
+              echo "::warning::GOOGLE_SERVICES_JSON غير مضبوط — استخدم البديل المؤقت للـ CI"
               cat << 'EOF' > app/google-services.json
           {
             "project_info": {
@@ -65,27 +77,100 @@ jobs:
               {
                 "client_info": {
                   "mobilesdk_app_id": "1:836170376747:android:9372331a395944a2792c6e",
-                  "android_client_info": {
-                    "package_name": "com.zmastery.english",
-                    "certificate_hash": "14c9be6a96cbf9a00bbe3bdc38becd061afa0a64"
-                  }
+                  "android_client_info": { "package_name": "com.zmastery.english" }
                 },
                 "oauth_client": [
-                  {
-                    "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com",
-                    "client_type": 3
-                  }
+                  { "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com", "client_type": 3 }
                 ],
-                "api_key": [
-                  {
-                    "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM"
-                  }
+                "api_key": [ { "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM" } ],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+            fi
+          fi
+          test -f app/google-services.json
+
+      - name: Unit tests (بوابة الجودة)
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache
+
+      - name: Build Debug (فحص ترجمة)
+        run: ./gradlew :app:assembleDebug --stacktrace --build-cache
+
+      - name: Upload CI APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CI-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+  # ─────────────────────── Release: نشر كامل + تلجرام ───────────────────────
+  release:
+    name: Release · notes + semver + Telegram
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (كامل التاريخ والوسوم لأجل الملاحظات والترقيم)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Restore Gradle Wrapper jar if missing
+        run: |
+          set -e
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            curl -sSL -o /tmp/gradle-dist.zip https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+            unzip -q /tmp/gradle-dist.zip -d /tmp
+            /tmp/gradle-8.11.1/bin/gradle wrapper --gradle-version 8.11.1 --distribution-type bin --no-daemon
+          fi
+          test -f gradle/wrapper/gradle-wrapper.jar
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Ensure google-services.json exists
+        run: |
+          if [ ! -f app/google-services.json ]; then
+            if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+              echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+            else
+              echo "::warning::GOOGLE_SERVICES_JSON غير مضبوط — استخدم البديل المؤقت للـ CI"
+              cat << 'EOF' > app/google-services.json
+          {
+            "project_info": {
+              "project_number": "836170376747",
+              "project_id": "zmastery",
+              "storage_bucket": "zmastery.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:836170376747:android:9372331a395944a2792c6e",
+                  "android_client_info": { "package_name": "com.zmastery.english" }
+                },
+                "oauth_client": [
+                  { "client_id": "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com", "client_type": 3 }
                 ],
-                "services": {
-                  "appinvite_service": {
-                    "other_platform_oauth_client": []
-                  }
-                }
+                "api_key": [ { "current_key": "AIzaSyAjukQ7B-rbb7XFiOguO0A14Z6Zkn7zAcM" } ],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
               }
             ],
             "configuration_version": "1"
@@ -100,69 +185,104 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/keystore"
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "Using user-provided KEYSTORE_BASE64 from GitHub Secrets..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/keystore/app.keystore"
-            STORE_PASS="${{ secrets.KEYSTORE_PASSWORD || 'android' }}"
-            ALIAS="${{ secrets.KEY_ALIAS || 'androiddebugkey' }}"
-            KEY_PASS="${{ secrets.KEY_PASSWORD || 'android' }}"
-            
             {
               echo "RELEASE_STORE_FILE=$RUNNER_TEMP/keystore/app.keystore"
-              echo "RELEASE_STORE_PASSWORD=$STORE_PASS"
-              echo "RELEASE_KEY_ALIAS=$ALIAS"
-              echo "RELEASE_KEY_PASSWORD=$KEY_PASS"
+              echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD || 'android' }}"
+              echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}"
+              echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD || 'android' }}"
             } >> "$GITHUB_ENV"
-            
-            # Also copy to root debug.keystore so fallback build steps use it
             cp "$RUNNER_TEMP/keystore/app.keystore" debug.keystore
             echo "enabled=true" >> "$GITHUB_OUTPUT"
-          elif [ -f debug.keystore.base64 ]; then
-            echo "Restoring debug.keystore from repository embedded base64..."
-            base64 -d debug.keystore.base64 > debug.keystore
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
           elif [ -f debug.keystore ]; then
-            echo "Using existing repository debug.keystore..."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Generating standard deterministic debug keystore..."
             keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
-          test -f debug.keystore || test -f "$RUNNER_TEMP/keystore/app.keystore"
 
-      - name: Build Debug and Release
+      - name: Unit tests (بوابة إلزامية قبل أي نشر)
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease --stacktrace --build-cache
+          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache
 
-      - name: Collect all build outputs
-        if: success()
+      - name: Compute semver + categorized changelog
+        id: notes
         run: |
           set -euo pipefail
-          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts || echo "1.1.0")
+          # آخر وسم إصدار سابق (يقبل الصيغة الصارمة وصيغة البناءات)
+          LAST=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-build\.[0-9]+)?$' | sort -V | tail -n1 || true)
+          if [ -n "$LAST" ]; then
+            BASE=$(echo "$LAST" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+            RANGE="$LAST..HEAD"
+          else
+            BASE="1.1.0"
+            RANGE="$(git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
+          fi
+          MA=$(echo "$BASE" | cut -d. -f1); MI=$(echo "$BASE" | cut -d. -f2); PA=$(echo "$BASE" | cut -d. -f3)
+          SUBJ=$(git log --pretty=%s "$RANGE" || true)
+          if echo "$SUBJ" | grep -q '^feat'; then
+            MI=$((MI+1)); PA=0
+          else
+            PA=$((PA+1))
+          fi
+          VERSION="$MA.$MI.$PA"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          bullets() { grep -E "$1" | sed -E "$2" | sed 's/^/- /' || true; }
+          ADDED=$(echo "$SUBJ"   | bullets '^feat'        's/^feat[^:]*: *//' )
+          FIXED=$(echo "$SUBJ"   | bullets '^fix'         's/^fix[^:]*: *//'  )
+          CHANGED=$(echo "$SUBJ" | bullets '^(refactor|perf|style)' 's/^[a-z]+[^:]*: *//')
+          INTERNAL=$(echo "$SUBJ"| bullets '^(ci|chore|build|docs)' 's/^[a-z]+[^:]*: *//')
+          {
+            echo "## ✨ أُضيف"
+            [ -n "$ADDED" ]   && echo "$ADDED"   || echo "- لا إضافات مسجلة"
+            echo
+            echo "## 🐛 أُصلح"
+            [ -n "$FIXED" ]   && echo "$FIXED"   || echo "- لا إصلاحات مسجلة"
+            echo
+            echo "## 🛠 تغيّر"
+            [ -n "$CHANGED" ] && echo "$CHANGED" || echo "- لا تغييرات مسجلة"
+            echo
+            echo "## ⚙️ داخلي"
+            [ -n "$INTERNAL" ]&& echo "$INTERNAL"|| echo "- صيانة دورية"
+          } > /tmp/notes_body.md
+          {
+            echo ""
+            echo "📦 يشمل: Debug APK + Release APK + AAB"
+          } >> /tmp/notes_body.md
+          echo "---- notes ----"; cat /tmp/notes_body.md
+
+      - name: Stamp computed version into the build
+        run: |
+          sed -i "s/versionName = \"[^\"]*\"/versionName = \"${{ steps.notes.outputs.version }}\"/" app/build.gradle.kts
+          grep -n "versionName" app/build.gradle.kts
+
+      - name: Build Debug and Release
+        run: ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease --stacktrace --build-cache
+
+      - name: Collect outputs + SHA256
+        id: collect
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.notes.outputs.version }}"
           mkdir -p dist
-          
-          # Debug APK
-          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk "dist/Zimaster-v${VERSION}-debug.apk"
-          fi
-          
-          # Release APK
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Zimaster-v${VERSION}-debug.apk"
           RELEASE_APK=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null | head -1 || true)
-          if [ -n "$RELEASE_APK" ]; then
-            if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then SUFFIX="signed"; else SUFFIX="unsigned"; fi
-            cp "$RELEASE_APK" "dist/Zimaster-v${VERSION}-release-${SUFFIX}.apk"
-          fi
-          
-          # Release AAB
+          [ -n "$RELEASE_APK" ] && cp "$RELEASE_APK" "dist/Zimaster-v${VERSION}-release.apk"
           RELEASE_AAB=$(ls app/build/outputs/bundle/release/*.aab 2>/dev/null | head -1 || true)
-          if [ -n "$RELEASE_AAB" ]; then
-            if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then SUFFIX="signed"; else SUFFIX="unsigned"; fi
-            cp "$RELEASE_AAB" "dist/Zimaster-v${VERSION}-release-${SUFFIX}.aab"
-          fi
+          [ -n "$RELEASE_AAB" ] && cp "$RELEASE_AAB" "dist/Zimaster-v${VERSION}-release.aab"
+          {
+            echo ""
+            echo "## 🔐 بصمات SHA256"
+            echo '```'
+            (cd dist && sha256sum * )
+            echo '```'
+          } >> /tmp/notes_body.md
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          ls -la dist
 
       - name: Upload Artifacts
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Zimaster-APKs-and-Bundle
@@ -170,31 +290,59 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Publish to GitHub Releases
-        if: success()
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts || echo "1.1.0")
+          VERSION="${{ steps.collect.outputs.version }}"
           RUN="${{ github.run_number }}"
           TAG="v${VERSION}-build.${RUN}"
-          
-          cat << 'EOF' > release_notes.md
-          ### 🚀 Zimaster Build Artifacts:
-          - **Debug APK**: Ready to install directly on any device for testing.
-          - **Release APK**: Optimized and minified release build.
-          - **AAB Bundle**: Ready for publishing to Google Play Store.
-          EOF
-          
+          {
+            echo "# 🚀 Z-Mastery v${VERSION} (Build #${RUN})"
+            echo ""
+            cat /tmp/notes_body.md
+          } > release_notes.md
           gh release create "$TAG" dist/* \
             --repo "${{ github.repository }}" \
-            --title "Zimaster v${VERSION} (Build #${RUN})" \
+            --title "Z-Mastery v${VERSION} (Build #${RUN})" \
             --notes-file release_notes.md \
             --latest
 
-      - name: Job Summary
-        if: success()
+      - name: Send to Telegram (اختياري — يتطلب السرّين)
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "## ✅ Zimaster Build Succeeded" >> "$GITHUB_STEP_SUMMARY"
-          echo "- You can download Debug APK, Release APK, and AAB from Releases or Artifacts." >> "$GITHUB_STEP_SUMMARY"
+          set -e
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "::warning::سرّا تلجرام غير مضبوطين — تم تخطي الإرسال"
+            exit 0
+          fi
+          VERSION="${{ steps.collect.outputs.version }}"
+          RUN="${{ github.run_number }}"
+          API="https://api.telegram.org/bot$TG_TOKEN"
+          NOTES=$(cat /tmp/notes_body.md)
+          TEXT="🚀 Z-Mastery v${VERSION} (Build #${RUN}) — الجديد في هذا الإصدار:
+
+${NOTES}"
+          # رسالة الملاحظات الكاملة أولاً
+          curl -s -X POST "$API/sendMessage" \
+            -d chat_id="$TG_CHAT" \
+            --data-urlencode "text=$TEXT" > /dev/null || echo "::warning::فشل إرسال الرسالة النصية"
+          # ثم الملفات: debug APK ثم release APK ثم AAB
+          for f in dist/*debug.apk dist/*release.apk dist/*release.aab; do
+            [ -f "$f" ] || continue
+            curl -s -X POST "$API/sendDocument" \
+              -F chat_id="$TG_CHAT" \
+              -F "document=@$f" \
+              -F "caption=🚀 Z-Mastery v${VERSION} (Build #${RUN})" > /dev/null \
+              && echo "أُرسل: $f" || echo "::warning::فشل إرسال $f"
+          done
+
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "## ✅ Z-Mastery v${{ steps.collect.outputs.version || 'x' }} (Build #${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- الملاحظات المصنّفة + البصمات في نص الـ Release." >> "$GITHUB_STEP_SUMMARY"
+          echo "- أُرسلت الملفات إلى تلجرام إن توفرت الأسرار." >> "$GITHUB_STEP_SUMMARY"
