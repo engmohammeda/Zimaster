@@ -28,17 +28,30 @@ object StateMerger {
             if (courses.none { it.id == c.id || (c.key.isNotBlank() && it.key == c.key) }) courses += c
         }
 
-        // ── الدروس: محلي أولاً + سحابي جديد + تبنّي الإكمال ──
+        // ── الدروس: محلي أولاً + سحابي جديد + تبنّي الإكمال وشارة الرفع ──
         val lessons = local.lessons.toMutableList()
         cloud.lessons.forEach { cl ->
             val i = lessons.indexOfFirst {
                 it.id == cl.id || (it.courseId == cl.courseId && it.no == cl.no)
             }
-            when {
-                i < 0 -> lessons += cl
+            if (i < 0) {
+                lessons += cl
+            } else {
                 // أكمله المتعلّم على جهاز آخر → احفظ الإنجاز، أبقِ المحتوى المحلي.
-                cl.isCompleted && !lessons[i].isCompleted ->
-                    lessons[i] = lessons[i].copy(isCompleted = true)
+                // وكذلك شارة «تم الرفع»: أحدث طابع زمني بين الجهازين يفوز.
+                val done = lessons[i].isCompleted || cl.isCompleted
+                val stamp = maxOf(lessons[i].publishedAtMillis, cl.publishedAtMillis)
+                val docId = lessons[i].publishedDocId.ifBlank { cl.publishedDocId }
+                if (done != lessons[i].isCompleted ||
+                    stamp != lessons[i].publishedAtMillis ||
+                    docId != lessons[i].publishedDocId
+                ) {
+                    lessons[i] = lessons[i].copy(
+                        isCompleted = done,
+                        publishedAtMillis = stamp,
+                        publishedDocId = docId,
+                    )
+                }
             }
         }
 
@@ -65,6 +78,8 @@ object StateMerger {
             learnerName = p.learnerName.ifBlank { cp.learnerName },
             learnerEmail = p.learnerEmail.ifBlank { cp.learnerEmail },
             lastCloudLessonSyncMillis = maxOf(p.lastCloudLessonSyncMillis, cp.lastCloudLessonSyncMillis),
+            // الإعلان المُغلق: لا نعيده للظهور على جهاز آخر أغلقه أيضاً.
+            dismissedAnnouncementId = p.dismissedAnnouncementId.ifBlank { cp.dismissedAnnouncementId },
             streak = maxOf(p.streak, cp.streak),
             xp = maxOf(p.xp, cp.xp),
             studyHours = maxOf(p.studyHours, cp.studyHours),

@@ -43,6 +43,8 @@ fun Lesson.toDto() = LessonDto(
     guidedSentences = guidedSentences.map { SentenceDto(it.en, it.ar) },
     finalDraft = finalDraft?.let { SentenceDto(it.en, it.ar) },
     audioReady = audioReady,
+    publishedAtMillis = publishedAtMillis,
+    publishedDocId = publishedDocId,
 )
 
 fun LessonDto.toDomain() = Lesson(
@@ -71,6 +73,8 @@ fun LessonDto.toDomain() = Lesson(
     guidedSentences = guidedSentences.map { Sentence(it.en, it.ar) },
     finalDraft = finalDraft?.let { Sentence(it.en, it.ar) },
     audioReady = audioReady,
+    publishedAtMillis = publishedAtMillis,
+    publishedDocId = publishedDocId,
 )
 
 fun VocabWord.toDto() = WordDto(

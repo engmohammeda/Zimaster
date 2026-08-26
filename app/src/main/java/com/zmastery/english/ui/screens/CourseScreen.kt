@@ -29,6 +29,9 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
     val imported = vm.courseImported(courseId)
     val completion = vm.courseCompletion(courseId)
     val showPhoneticsSample = course.style == com.zmastery.english.data.LessonStyle.PHONETICS_SOUNDS && lessons.isEmpty()
+    // علامة «تم الرفع» تظهر للمسؤول فقط — الطالب لا يحتاجها.
+    val showPublishMark = vm.isAdmin
+    val publishedCount = lessons.count { it.isPublishedToCloud }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -53,6 +56,26 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
                                 "المتوفر لديك: $imported درساً",
                                 color = ZTextMuted, fontSize = 10.sp,
                             )
+                        }
+                        if (showPublishMark && lessons.isNotEmpty()) {
+                            // حالة النشر السحابي لهذا الكورس — خضراء عند الاكتمال.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (publishedCount == lessons.size) Icons.Filled.TaskAlt else Icons.Filled.CloudUpload,
+                                    null,
+                                    tint = if (publishedCount == lessons.size) ZEmerald else ZAmber,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    if (publishedCount == lessons.size)
+                                        "كل دروس هذا الكورس مرفوعة سحابياً ✓"
+                                    else
+                                        "مرفوع سحابياً: $publishedCount من ${lessons.size}",
+                                    color = if (publishedCount == lessons.size) ZEmerald else ZAmberDeep,
+                                    fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,6 +144,16 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
                         Column(Modifier.weight(1f)) {
                             Text(lesson.title, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(lesson.summaryAr, color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)
+                        }
+                        // علامة «تم الرفع» لكل درس — للمسؤول فقط.
+                        if (showPublishMark) {
+                            Icon(
+                                if (lesson.isPublishedToCloud) Icons.Filled.TaskAlt else Icons.Filled.CloudOff,
+                                if (lesson.isPublishedToCloud) "مرفوع سحابياً" else "غير مرفوع بعد",
+                                tint = if (lesson.isPublishedToCloud) ZEmerald else ZTextMuted,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
                         }
                         Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted)
                     }

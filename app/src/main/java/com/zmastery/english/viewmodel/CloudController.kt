@@ -60,6 +60,27 @@ internal class CloudController(internal val vm: AppViewModel) {
     private var activeAnnouncement
         get() = vm.activeAnnouncement
         set(v) { vm.activeAnnouncement = v }
+    private var dismissedAnnouncementId
+        get() = vm.dismissedAnnouncementId
+        set(v) { vm.dismissedAnnouncementId = v }
+    private var isVerifyingCloudLessons
+        get() = vm.isVerifyingCloudLessons
+        set(v) { vm.isVerifyingCloudLessons = v }
+    private var lastCloudVerifyMillis
+        get() = vm.lastCloudVerifyMillis
+        set(v) { vm.lastCloudVerifyMillis = v }
+    private var cloudLessonCount
+        get() = vm.cloudLessonCount
+        set(v) { vm.cloudLessonCount = v }
+    private var cloudPublishMessage
+        get() = vm.cloudPublishMessage
+        set(v) { vm.cloudPublishMessage = v }
+    private var isProbingCloud
+        get() = vm.isProbingCloud
+        set(v) { vm.isProbingCloud = v }
+    private var cloudRoleDoc
+        get() = vm.cloudRoleDoc
+        set(v) { vm.cloudRoleDoc = v }
     private var globalLeaderboard
         get() = vm.globalLeaderboard
         set(v) { vm.globalLeaderboard = v }
@@ -84,9 +105,57 @@ internal class CloudController(internal val vm: AppViewModel) {
         vm.vmScope.launch(block = block)
     private val app get() = vm.app
 
+    /**
+     * حساب المالك الوحيد المعترف به سحابياً — نفس البريد المكتوب في
+     * `firestore.rules` (isSuperAdminToken). أي تغيير هنا يجب أن يرافقه تغيير هناك.
+     */
+    private val OWNER_EMAIL = "mohammedalbkhyty@gmail.com"
+
     val isAdmin: Boolean
         get() = isDeveloperUnlocked || userRole == "admin" ||
-            cloudEmail?.lowercase()?.trim() == "mohammedalbkhyty@gmail.com"
+            cloudEmail?.lowercase()?.trim() == OWNER_EMAIL
+
+    /**
+     * هل يملك هذا الحساب صلاحية كتابة **سحابية** فعلية؟
+     *
+     * الواجهة قد تفتح بكود وضع المطور، لكن قواعد Firestore لا تعترف إلا
+     * بحساب المالك أو بمستخدم دوره `admin` في `/users/{uid}`.
+     */
+    private val hasCloudWritePower: Boolean
+        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL || userRole == "admin"
+
+    /** مسؤول محلياً فقط — كل محاولة نشر سحابي منه ستُرفض. */
+    val isLocalOnlyAdmin: Boolean
+        get() = isAdmin && !hasCloudWritePower
+
+    /**
+     * يترجم أخطاء Firestore إلى سبب مفهوم + الحل المباشر.
+     *
+     * قبل هذا كانت الرسالة الخام (PERMISSION_DENIED: Missing or insufficient
+     * permissions) تُعرض كما هي وبلا تمييز بين «لا يوجد حساب» و«القواعد لم
+     * تُنشر» و«الحساب ليس مسؤولاً» — ولهذا بدا النشر وكأنه «لا يعمل» بلا سبب.
+     */
+    private fun describeCloudError(e: Throwable): String {
+        val raw = "${e.javaClass.simpleName}: ${e.message.orEmpty()}".trim().trimEnd(':')
+        return when {
+            raw.contains("PERMISSION_DENIED", true) || raw.contains("Missing or insufficient permissions", true) ->
+                "رفضت قواعد Firestore الكتابة.\nالسبب المرجّح: $raw\n" +
+                    "الحل (بأيٍّ منهما):\n" +
+                    "١) سجّل الدخول بحساب المالك $OWNER_EMAIL\n" +
+                    "٢) أو انشر القواعد: firebase deploy --only firestore:rules\n" +
+                    "٣) أو اجعل دور هذا الحساب admin في مستند /users/{uid}"
+            raw.contains("UNAUTHENTICATED", true) ->
+                "الجلسة السحابية غير صالحة ($raw) — أعد تسجيل الدخول ثم جرّب مجدداً."
+            raw.contains("UNAVAILABLE", true) || raw.contains("DEADLINE_EXCEEDED", true) ||
+                raw.contains("network", true) || raw.contains("NETWORK", true) ->
+                "تعذّر الوصول إلى السحابة ($raw) — تحقق من الاتصال بالإنترنت وأعد المحاولة."
+            raw.contains("FAILED_PRECONDITION", true) && raw.contains("index", true) ->
+                "ينقص فهرس في Firestore ($raw) — نفّذ: firebase deploy --only firestore:indexes"
+            raw.contains("NOT_FOUND", true) || raw.contains("no project", true) ->
+                "مشروع Firebase غير مرتبط بهذا البناء ($raw) — تأكد من وجود google-services.json الصحيح."
+            else -> raw.ifBlank { "حدث خطأ غير متوقع أثناء الاتصال بالسحابة" }
+        }
+    }
 
     fun unlockDeveloperAdmin(code: String): Boolean {
         val trimmed = code.trim()
@@ -98,10 +167,26 @@ internal class CloudController(internal val vm: AppViewModel) {
             userRole = "admin"
             vm.persist()
             syncUserProfileToCloud()
-            cloudSyncMessage = "تم تفعيل وضع المطور والمسؤول بنجاح 👑"
+            cloudSyncMessage = if (hasCloudWritePower) {
+                "تم تفعيل وضع المطور والمسؤول بنجاح 👑"
+            } else {
+                "تم فتح أدوات المطور محلياً 👑 — لكن النشر السحابي يتطلب حساب المالك $OWNER_EMAIL"
+            }
             return true
         }
         return false
+    }
+
+    /**
+     * يضمن وجود حساب سحابي ويعيد قراءة حالة المصادقة.
+     * يُستدعى قبل أي كتابة — فالكتابة بلا حساب تفشل برسالة غامضة.
+     */
+    private suspend fun ensureCloudSession(): String? {
+        cloudUid ?: run {
+            runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
+            refreshCloudAuthState()
+        }
+        return cloudUid
     }
 
     private fun refreshCloudAuthState() {
@@ -171,36 +256,61 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Fetch the active announcement
+     * Fetch the active announcement — مع تجاهل الإعلان الذي أغلقه المستخدم.
      */
     fun loadActiveAnnouncement() {
         launch {
             val res = com.zmastery.english.cloud.CloudSync.fetchActiveAnnouncement()
             res.onSuccess { announcement ->
-                activeAnnouncement = announcement
+                activeAnnouncement = announcement?.takeIf { it.id.isNotBlank() && it.id != dismissedAnnouncementId }
             }
         }
     }
 
     /**
-     * Post a new broadcast announcement (Admin only)
+     * Post a new broadcast announcement (Admin only).
+     *
+     * ثلاث إصلاحات جعلت البث يعمل فعلاً بدل أن يبدو ميتاً:
+     *   ١) ضمان وجود جلسة سحابية قبل الكتابة (كانت الكتابة تتم بلا حساب أحياناً).
+     *   ٢) فحص الصلاحية المحلية أولاً برسالة عربية واضحة.
+     *   ٣) ترجمة الخطأ الخام إلى سبب + حل (عبر [describeCloudError]).
      */
     fun postAnnouncement(title: String, message: String, type: String = "info", onResult: (Boolean, String) -> Unit) {
+        if (title.isBlank() || message.isBlank()) {
+            onResult(false, "العنوان ونص الإعلان مطلوبان معاً")
+            return
+        }
+        if (!isAdmin) {
+            onResult(false, "بث الإعلانات متاح للمسؤول فقط — فعّل وضع المطور من الإعدادات")
+            return
+        }
         launch {
-            val res = com.zmastery.english.cloud.CloudSync.postAnnouncement(title, message, type)
-            res.onSuccess {
+            if (ensureCloudSession() == null) {
+                onResult(false, "لا يوجد اتصال بالسحابة الآن — تحقق من الإنترنت ثم أعد المحاولة")
+                return@launch
+            }
+            val res = com.zmastery.english.cloud.CloudSync.postAnnouncement(title.trim(), message.trim(), type)
+            res.onSuccess { id ->
+                // إعلاننا الجديد أحدث من أي إغلاق سابق — لا نخفيه عن صاحبه.
+                dismissedAnnouncementId = ""
+                vm.persist()
                 loadActiveAnnouncement()
-                onResult(true, "تم نشر الإشعار العام لجميع الطلاب بنجاح 📢")
+                onResult(true, "تم بث الإعلان لجميع الطلاب بنجاح 📢\nمعرّف الإعلان: $id")
             }.onFailure { e ->
-                onResult(false, "فشل نشر الإشعار: ${e.message}")
+                onResult(false, "فشل بث الإعلان — ${describeCloudError(e)}")
             }
         }
     }
 
     /**
-     * Dismiss active announcement locally
+     * Dismiss active announcement locally — ويُحفظ الإغلاق حتى لا يعود الإعلان
+     * للظهور عند كل إقلاع.
      */
     fun dismissActiveAnnouncement() {
+        activeAnnouncement?.let { ann ->
+            dismissedAnnouncementId = ann.id
+            vm.persist()
+        }
         activeAnnouncement = null
     }
 
@@ -209,8 +319,41 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     fun deactivateAnnouncement(id: String) {
         launch {
-            com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id)
+            val res = com.zmastery.english.cloud.CloudSync.deactivateAnnouncement(id)
             activeAnnouncement = null
+            dismissedAnnouncementId = id
+            vm.persist()
+            res.onFailure { e ->
+                cloudPublishMessage = "تعذّر تثبيط الإعلان — ${describeCloudError(e)}"
+            }
+        }
+    }
+
+    /**
+     * فحص حيّ لصلاحية النشر: يكتب مستند اختبار في `/announcements` ثم يحذفه.
+     * يعطي المسؤول جواباً قاطعاً بدل التخمين عندما «لا يعمل» البث.
+     */
+    fun probePublishPermission(onResult: (Boolean, String) -> Unit) {
+        launch {
+            isProbingCloud = true
+            cloudPublishMessage = null
+            val uid = ensureCloudSession()
+            if (uid == null) {
+                isProbingCloud = false
+                onResult(false, "لا يوجد حساب سحابي — تحقق من الاتصال بالإنترنت ثم أعد الفحص")
+                return@launch
+            }
+            // ما الدور المسجّل فعلاً لهذا الحساب في السحابة؟
+            cloudRoleDoc = com.zmastery.english.cloud.CloudSync.fetchRoleDoc(uid).getOrNull()
+            // نعتمده محلياً حتى تصدق شارة «مسؤول محلي فقط» في الواجهة.
+            cloudRoleDoc?.takeIf { it != "no-doc" }?.let { userRole = it }
+            val res = com.zmastery.english.cloud.CloudSync.probePublishPermission()
+            isProbingCloud = false
+            res.onSuccess {
+                onResult(true, "الاتصال وصلاحية النشر يعملان ✓ — يمكنك بث إعلان الآن")
+            }.onFailure { e ->
+                onResult(false, describeCloudError(e))
+            }
         }
     }
 
@@ -229,16 +372,111 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
+     * معرّف مستند Firestore لدرس محلي — نفس القاعدة المستخدمة في
+     * [com.zmastery.english.cloud.CloudSync.publishLessonToCloud] وفي سكربت
+     * `upload_lessons.py`: `{courseId}_lesson_{lessonNo}`.
+     * وجودها في مكان واحد هو ما يجعل شارة «تم الرفع» مطابقة للحقيقة.
+     */
+    fun lessonDocId(lesson: Lesson): String {
+        val course = vm.courses.firstOrNull { it.id == lesson.courseId }
+        val courseKey = course?.jsonId?.ifBlank { null }
+            ?: course?.key?.ifBlank { null }
+            ?: "course_${lesson.courseId}"
+        return "${courseKey}_lesson_${lesson.no}"
+    }
+
+    /**
+     * يضع شارة «تم الرفع» على الدروس المحلية المطابقة لمعرّفات السحابة.
+     * @param cloudIndex معرّف المستند → طابع آخر تحديث في السحابة.
+     * @return عدد الدروس التي تغيّرت شارتها.
+     */
+    private fun applyCloudMarks(cloudIndex: Map<String, Long>): Int {
+        var changed = 0
+        for (i in vm.lessons.indices) {
+            val lesson = vm.lessons[i]
+            val docId = lessonDocId(lesson)
+            val stamp = cloudIndex[docId] ?: continue
+            val effective = if (stamp > 0L) stamp else System.currentTimeMillis()
+            if (lesson.publishedAtMillis != effective || lesson.publishedDocId != docId) {
+                vm.lessons[i] = lesson.copy(publishedAtMillis = effective, publishedDocId = docId)
+                changed++
+            }
+        }
+        if (changed > 0) vm.persist()
+        return changed
+    }
+
+    /**
+     * يمسح شارة الرفع عن درس لم يعد موجوداً في السحابة (حُذف أو تغيّر معرّفه).
+     */
+    private fun clearStaleMarks(cloudIndex: Map<String, Long>): Int {
+        var cleared = 0
+        for (i in vm.lessons.indices) {
+            val lesson = vm.lessons[i]
+            if (lesson.publishedAtMillis > 0L && lessonDocId(lesson) !in cloudIndex) {
+                vm.lessons[i] = lesson.copy(publishedAtMillis = 0L, publishedDocId = "")
+                cleared++
+            }
+        }
+        if (cleared > 0) vm.persist()
+        return cleared
+    }
+
+    /**
+     * التحقق من السحابة: يقارن معرّفات الدروس المحلية بما هو موجود فعلاً في
+     * `/lessons` ويضبط شارة «تم الرفع» — يشمل الدروس المرفوعة بسكربت البايثون.
+     */
+    fun verifyCloudLessons(onResult: ((Boolean, String) -> Unit)? = null) {
+        if (isVerifyingCloudLessons) return
+        launch {
+            isVerifyingCloudLessons = true
+            cloudPublishMessage = "جارٍ فحص دروس السحابة…"
+            if (ensureCloudSession() == null) {
+                isVerifyingCloudLessons = false
+                cloudPublishMessage = "تعذّر الاتصال بالسحابة للتحقق"
+                onResult?.invoke(false, "تعذّر الاتصال بالسحابة الآن")
+                return@launch
+            }
+            val res = com.zmastery.english.cloud.CloudSync.fetchCloudLessonIndex()
+            isVerifyingCloudLessons = false
+            res.onSuccess { index ->
+                cloudLessonCount = index.size
+                lastCloudVerifyMillis = System.currentTimeMillis()
+                val marked = applyCloudMarks(index)
+                val cleared = clearStaleMarks(index)
+                val published = vm.publishedLessonsCount
+                val total = vm.lessons.size
+                val msg = when {
+                    total == 0 -> "لا توجد دروس محلية للمقارنة"
+                    published == total ->
+                        "كل الدروس مرفوعة ✓ — $published من $total درس موجودة في السحابة"
+                    else ->
+                        "في السحابة $published من $total درساً · المتبقي ${total - published}" +
+                            if (marked > 0 || cleared > 0) " (حُدّثت شارة $marked درساً)" else ""
+                }
+                cloudPublishMessage = msg
+                onResult?.invoke(true, msg)
+            }.onFailure { e ->
+                val msg = "تعذّر التحقق من السحابة — ${describeCloudError(e)}"
+                cloudPublishMessage = msg
+                onResult?.invoke(false, msg)
+            }
+        }
+    }
+
+    /**
      * Publish a single lesson package to Firestore (Admin only)
      */
     fun publishLessonToCloud(pkg: LessonPackage, onResult: (Boolean, String) -> Unit) {
         launch {
             val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
             res.onSuccess { docId ->
-                onResult(true, "تم نشر الدرس سحابياً بنجاح ($docId) 🚀")
+                // شارة «تم الرفع» على الدرس المحلي المطابق.
+                applyCloudMarks(mapOf(docId to System.currentTimeMillis()))
+                onResult(true, "تم نشر الدرس سحابياً بنجاح ✓ ($docId)")
                 syncCloudLessons(silent = false)
             }.onFailure { e ->
-                onResult(false, "فشل النشر السحابي: ${e.message}")
+                onResult(false, "فشل النشر السحابي — ${describeCloudError(e)}")
             }
         }
     }
@@ -250,10 +488,11 @@ internal class CloudController(internal val vm: AppViewModel) {
         launch {
             val res = com.zmastery.english.cloud.CloudSync.publishLessonsBatchToCloud(packages)
             res.onSuccess { count ->
-                onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب سحابياً 🚀")
+                verifyCloudLessons()
+                onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب سحابياً ✓")
                 syncCloudLessons(silent = false)
             }.onFailure { e ->
-                onResult(false, "فشل النشر السحابي: ${e.message}")
+                onResult(false, "فشل النشر السحابي — ${describeCloudError(e)}")
             }
         }
     }
@@ -268,10 +507,20 @@ internal class CloudController(internal val vm: AppViewModel) {
                 onResult(false, "لا توجد دروس محلية لنشرها")
                 return@launch
             }
+            // لا نشر بلا جلسة سحابية — وإلا فشلت كل الدروس برسالة غامضة واحدة.
+            if (ensureCloudSession() == null) {
+                onResult(false, "لا يوجد اتصال بالسحابة الآن — تحقق من الإنترنت ثم أعد المحاولة")
+                return@launch
+            }
+            cloudPublishMessage = "جارٍ رفع ${allLessons.size} درساً إلى السحابة…"
             var count = 0
+            var failed = 0
+            var firstError: Throwable? = null
+            val publishedDocs = mutableMapOf<String, Long>()
             allLessons.forEach { lesson ->
                 val course = vm.courses.firstOrNull { it.id == lesson.courseId }
                 val courseKey = course?.jsonId?.ifBlank { null } ?: course?.key?.ifBlank { null } ?: "course_${lesson.courseId}"
+                val docId = "${courseKey}_lesson_${lesson.no}"
                 
                 val vocabWords = vm.vocab.filter { it.lessonId == lesson.id || lesson.newWordIds.contains(it.id) }
                 val globalVocab = vocabWords.map {
@@ -326,10 +575,31 @@ internal class CloudController(internal val vm: AppViewModel) {
                 )
                 
                 val res = com.zmastery.english.cloud.CloudSync.publishLessonToCloud(pkg)
-                if (res.isSuccess) count++
+                if (res.isSuccess) {
+                    count++
+                    publishedDocs[docId] = System.currentTimeMillis()
+                } else {
+                    failed++
+                    firstError = firstError ?: res.exceptionOrNull()
+                }
+                cloudPublishMessage = "جارٍ الرفع… $count/${allLessons.size}"
             }
+            // شارة «تم الرفع» لكل درس نجح نشره فعلاً — لا لكل درس حاولنا رفعه.
+            if (publishedDocs.isNotEmpty()) applyCloudMarks(publishedDocs)
             pushProgressToCloud()
-            onResult(true, "تم نشر $count درس بنجاح لجميع الطلاب في السحابة 🚀")
+            // الإصلاح الجوهري: قبل هذا كانت الرسالة «تم النشر» تُرسل حتى لو فشل
+            // رفع كل الدروس، فتبدو العملية ناجحة بينما السحابة فارغة.
+            val msg = when {
+                count == 0 ->
+                    "لم يُرفع أي درس ✗ — ${firstError?.let { describeCloudError(it) } ?: "سبب غير معروف"}"
+                failed == 0 ->
+                    "تم رفع $count درساً بنجاح إلى السحابة ✓ — ستصل لكل الطلاب عند فتح التطبيق"
+                else ->
+                    "تم رفع $count درساً · وفشل رفع $failed ✗ — " +
+                        (firstError?.let { describeCloudError(it) } ?: "سبب غير معروف")
+            }
+            cloudPublishMessage = msg
+            onResult(count > 0, msg)
         }
     }
 
@@ -391,6 +661,13 @@ internal class CloudController(internal val vm: AppViewModel) {
                 if (sync.packages.isNotEmpty()) {
                     vm.importLessons(sync.packages)
                     newLessonsFromCloud += sync.packages.size
+                    // كل درس وصل من السحابة موجود فيها بالتعريف → شارة «تم الرفع».
+                    applyCloudMarks(
+                        sync.packages.associate { pkg ->
+                            "${pkg.metadata.courseId}_lesson_${pkg.metadata.lessonNo}" to
+                                System.currentTimeMillis()
+                        }
+                    )
                     vm.autoGenerateAudioIfOnline()
                 }
                 if (sync.latestUpdatedAtMillis > lastCloudLessonSyncMillis) {
@@ -649,11 +926,10 @@ internal class CloudController(internal val vm: AppViewModel) {
 
     /**
      * يضيف المسؤول عبارة جديدة إلى السحابة (تظهر لكل الأجهزة عند المزامنة).
-     * الهدف الوحيد لكل مسؤول عبر الإمتيازات.
      */
     fun addQuote(text: String, author: String, onResult: (Boolean, String) -> Unit) {
         if (!isAdmin) {
-            onResult(false, "إضافة العبارات متاحة للمسؤول فقط")
+            onResult(false, "إضافة العبارات متاحة للمسؤول فقط — فعّل وضع المطور من الإعدادات")
             return
         }
         if (text.isBlank()) {
@@ -662,14 +938,10 @@ internal class CloudController(internal val vm: AppViewModel) {
         }
         isAddingQuote = true
         launch {
-            val uid = cloudUid ?: run {
-                runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
-                refreshCloudAuthState()
-                cloudUid
-            }
+            val uid = ensureCloudSession()
             if (uid == null) {
                 isAddingQuote = false
-                onResult(false, "تعذّر الاتصال بالسحابة الآن")
+                onResult(false, "لا يوجد اتصال بالسحابة الآن — تحقق من الإنترنت ثم أعد المحاولة")
                 return@launch
             }
             val res = com.zmastery.english.cloud.CloudSync.addQuote(text, author, uid)
@@ -679,7 +951,7 @@ internal class CloudController(internal val vm: AppViewModel) {
                 syncQuotes()
                 onResult(true, quoteMessage!!)
             }.onFailure { e ->
-                quoteMessage = "فشل النشر: ${e.message}"
+                quoteMessage = "فشل نشر العبارة — ${describeCloudError(e)}"
                 onResult(false, quoteMessage!!)
             }
         }

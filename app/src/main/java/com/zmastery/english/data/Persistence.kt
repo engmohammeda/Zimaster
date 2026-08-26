@@ -159,6 +159,12 @@ data class LessonDto(
     val finalDraft: SentenceDto? = null,
     // ----- AI audio generation state -----
     val audioReady: Boolean = false,
+    // ----- حالة النشر السحابي (شارة «تم الرفع») — بحقول اختيارية حتى تبقى ----
+    // ----- النسخ الاحتياطية القديمة تُقرأ بلا أي فقدان. ----
+    /** لحظة التأكد من وجود الدرس في السحابة (0 = لم يُرفع). */
+    val publishedAtMillis: Long = 0L,
+    /** معرّف مستند Firestore الخاص بالدرس. */
+    val publishedDocId: String = "",
 )
 
 @Serializable
@@ -278,6 +284,16 @@ data class ProfileDto(
      * app still fully works via the automatic anonymous cloud account.
      */
     val googleWebClientId: String = "",
+    /**
+     * معرّف آخر إعلان أغلقه المستخدم — بدونه كان الإعلان يعود للظهور عند كل
+     * إقلاع لأن الإغلاق كان في الذاكرة فقط.
+     */
+    val dismissedAnnouncementId: String = "",
+    /**
+     * فتح وضع المطور محلياً (بكود المسؤول). كان غير محفوظ، فكانت أدوات النشر
+     * تختفي بعد كل إعادة تشغيل للتطبيق.
+     */
+    val developerUnlocked: Boolean = false,
 )
 
 object Persistence {

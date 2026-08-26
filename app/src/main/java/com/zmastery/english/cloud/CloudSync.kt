@@ -147,6 +147,16 @@ object CloudSync {
     }.getOrDefault("student")
 
     /**
+     * نفس [fetchUserRole] لكنها تميّز «لا يوجد مستند» من «المستند بلا دور» —
+     * يحتاجها تشخيص سبب رفض النشر في شاشة أدوات المطور.
+     * القيم: "admin" / "student" / "no-doc".
+     */
+    suspend fun fetchRoleDoc(uid: String): Result<String> = runCatching {
+        val doc = db.collection(USERS_COLLECTION).document(uid).get().await()
+        if (!doc.exists()) "no-doc" else (doc.getString("role") ?: "student")
+    }
+
+    /**
      * Fetch all registered users (for admin dashboard)
      */
     suspend fun fetchAllUsers(): Result<List<UserRecord>> = runCatching {
@@ -291,6 +301,19 @@ object CloudSync {
         Unit
     }
 
+    /**
+     * فهرس الدروس الموجودة فعلاً في السحابة: `docId → updated_at`.
+     *
+     * هذا هو مصدر الحقيقة لشارة «تم الرفع» — يشمل أيضاً الدروس التي رفعها
+     * سكربت البايثون خارج التطبيق. ملاحظة تقنية: Firestore على أندرويد لا
+     * يدعم اختيار حقول معيّنة، لذا تُنزَّل المستندات كاملة؛ لهذا يُستدعى
+     * الفحص بطلب صريح من زر «التحقق من السحابة» لا تلقائياً.
+     */
+    suspend fun fetchCloudLessonIndex(): Result<Map<String, Long>> = runCatching {
+        val snap = db.collection(LESSONS_COLLECTION).get().await()
+        snap.documents.associate { doc -> doc.id to (doc.getLong(UPDATED_AT) ?: 0L) }
+    }
+
     // ---------------------------------------------------------------- QUOTES
 
     /**
@@ -403,11 +426,13 @@ object CloudSync {
      * Post a new announcement across all devices (Admin only).
      */
     suspend fun postAnnouncement(title: String, message: String, type: String = "info"): Result<String> = runCatching {
+        require(title.isNotBlank()) { "عنوان الإعلان فارغ" }
+        require(message.isNotBlank()) { "نص الإعلان فارغ" }
         val docRef = db.collection(ANNOUNCEMENTS_COLLECTION).document()
         val data = mapOf(
             "id" to docRef.id,
-            "title" to title,
-            "message" to message,
+            "title" to title.trim(),
+            "message" to message.trim(),
             "type" to type,
             "createdAtMillis" to System.currentTimeMillis(),
             "createdAt" to FieldValue.serverTimestamp(),
@@ -424,6 +449,33 @@ object CloudSync {
         db.collection(ANNOUNCEMENTS_COLLECTION).document(id).update("isActive", false).await()
         Unit
     }
+
+    /**
+     * فحص حيّ لصلاحية النشر: يكتب مستند اختبار داخل `/announcements` ثم يحذفه.
+     *
+     * لماذا؟ لأن «البث لا يعمل» له ثلاثة أسباب مختلفة تماماً (لا يوجد حساب،
+     * القواعد لم تُنشر، الحساب ليس مسؤولاً) والرسالة الخام وحدها لا تميّزها.
+     * المستند يُكتب بـ `isActive = false` فلا يراه أي طالب إطلاقاً، ويُمسح
+     * فوراً بعد الفحص.
+     */
+    suspend fun probePublishPermission(): Result<String> = runCatching {
+        val ref = db.collection(ANNOUNCEMENTS_COLLECTION).document(PERMISSION_PROBE_ID)
+        ref.set(
+            mapOf(
+                "id" to PERMISSION_PROBE_ID,
+                "title" to "فحص الصلاحية",
+                "message" to "مستند اختبار يُحذف تلقائياً",
+                "type" to "info",
+                "isActive" to false,
+                "isProbe" to true,
+                "createdAtMillis" to System.currentTimeMillis(),
+            )
+        ).await()
+        runCatching { ref.delete().await() }
+        PERMISSION_PROBE_ID
+    }
+
+    private const val PERMISSION_PROBE_ID = "__permission_probe__"
 
     /**
      * Fetch the global leaderboard from `/leaderboard` — a public mirror of

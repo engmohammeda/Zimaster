@@ -113,9 +113,24 @@ data class Lesson(
     val rawJson: String = "",
     // ----- AI audio generation state (for reading/listening/story content) -----
     var audioReady: Boolean = false,
+    // ----- حالة النشر السحابي (شارة «تم الرفع») -----
+    /**
+     * لحظة التأكد من وجود هذا الدرس في السحابة (epoch millis) — صفر = لم يُرفع بعد.
+     *
+     * تُملأ من مصدرين لا ثالث لهما:
+     *   ١) نجاح النشر من التطبيق (درس واحد / دفعة / «نشر كل الدروس»).
+     *   ٢) «التحقق من السحابة» الذي يقارن معرّفات الدروس المحلية بما هو
+     *      موجود فعلاً في `/lessons` — فيشمل أيضاً ما رفعه سكربت البايثون.
+     */
+    var publishedAtMillis: Long = 0L,
+    /** معرّف مستند Firestore الذي نُشر تحته الدرس (`{courseId}_lesson_{no}`). */
+    var publishedDocId: String = "",
 ) {
     /** A completed lesson becomes due for review as its interval elapses. */
     val needsReview: Boolean get() = isCompleted && dueInDays <= 0
+
+    /** هل هذا الدرس موجود في السحابة فعلاً (تم رفعه)؟ */
+    val isPublishedToCloud: Boolean get() = publishedAtMillis > 0L
 }
 
 data class Sentence(val en: String, val ar: String)
