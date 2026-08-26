@@ -39,16 +39,6 @@ internal class StoryController(internal val vm: AppViewModel) {
     private var storyRetryIn
         get() = vm.storyRetryIn
         set(v) { vm.storyRetryIn = v }
-    private val goals get() = vm.goals
-    private var stageQuiz
-        get() = vm.stageQuiz
-        set(v) { vm.stageQuiz = v }
-    private var isMakingQuiz
-        get() = vm.isMakingQuiz
-        set(v) { vm.isMakingQuiz = v }
-    private var quizMessage
-        get() = vm.quizMessage
-        set(v) { vm.quizMessage = v }
 
     private var storyJob: Job? = null
 
@@ -136,10 +126,8 @@ internal class StoryController(internal val vm: AppViewModel) {
         if (!force) {
             todayStory?.let { storyMessage = "قصة اليوم جاهزة"; onDone(it); return }
         }
-        val goal = activeGoal
         val seeds = storySeedWords()
-        // وضع الهدف لا يشترط كلمات: الموقف يكفي. الأكاديمي القديم يشترطها.
-        if (goal == null && seeds.size < 2) {
+        if (seeds.size < 2) {
             storyMessage = "أضف كلمتين على الأقل لها أمثلة لتوليد قصة"
             onDone(null)
             return
@@ -174,9 +162,6 @@ internal class StoryController(internal val vm: AppViewModel) {
                     persona = agent?.character.orEmpty(),
                     style = agent?.style.orEmpty(),
                     basePrompt = agent?.prompt.orEmpty(),
-                    goalTitle = goal?.title.orEmpty(),
-                    goalStage = goal?.currentStage.orEmpty(),
-                    goalContext = goal?.learnerContext ?: emptyList(),
                 )
 
                 when (res) {
@@ -193,20 +178,13 @@ internal class StoryController(internal val vm: AppViewModel) {
                             dayEpoch = today,
                             dateLabel = java.time.LocalDate.now()
                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                            goalId = goal?.id.orEmpty(),
-                            goalStage = goal?.currentStage.orEmpty(),
-                            contextQuestionEn = st.contextQuestionEn,
-                            contextQuestionAr = st.contextQuestionAr,
                         )
                         storyArchive.add(story)
                         lastStoryDay = today
                         isMakingStory = false
                         isWaitingForAi = false
                         storyAttempt = 0
-                        storyMessage = if (goal != null)
-                            "قصة اليوم نحو هدفك «${goal.title}» — مرحلة «${goal.currentStage}»"
-                        else
-                            "تم توليد قصة اليوم بالذكاء الاصطناعي من ${seeds.size} كلمة"
+                        storyMessage = "تم توليد قصة اليوم بالذكاء الاصطناعي من ${seeds.size} كلمة"
                         xp += 12
                         completeTask("story")
                         vm.persist()
@@ -250,153 +228,6 @@ internal class StoryController(internal val vm: AppViewModel) {
 
     /** AI prompt for enriching today's story (used by the AI-assisted path). */
     fun todayStoryPrompt(): String = DailyStoryMaker.aiPrompt(storySeedWords())
-
-    // ======================================================================
-    // مسار الهدف التطبيقي — القصة نحو الهدف، السياق يبنيه الـAI، والإثبات يقدّم.
-    // ======================================================================
-
-    /** الهدف النشط (أو الأول إن لم يُفعَّل شيء صراحة). */
-    val activeGoal: com.zmastery.english.data.LifeGoal?
-        get() = goals.firstOrNull { it.active } ?: goals.firstOrNull()
-
-    /**
-     * هدف المتعلم الأول إن لم يوجد أي هدف: هدفه المعلَن في النقاش — التعريف
-     * بالنفس والمهارات والخبرة بوضوح — بمصغّرات مراحل متدرجة.
-     */
-    fun ensureGoalExists() {
-        if (goals.isNotEmpty()) return
-        goals.add(
-            com.zmastery.english.data.LifeGoal(
-                id = "goal_${System.currentTimeMillis()}",
-                title = "أعرّف بنفسي وأشرح مهاراتي وخبرتي بوضوح",
-                description = "هدفي الأول: أن أقدّم نفسي ومهاراتي وخبرتي بالإنجليزية بثقة — التطبيق قبل الحفظ.",
-                stages = listOf(
-                    "التحية وذكر الاسم بثقة",
-                    "المهنة والمجال: ماذا أعمل",
-                    "المهارات والأدوات التي أتقنها",
-                    "الخبرة والمشاريع السابقة",
-                    "الإجابة عن الأسئلة وإغلاق اللقاء بلطف",
-                ),
-                stageIndex = 0,
-                createdAtDay = todayEpochDay(),
-                active = true,
-            )
-        )
-        vm.persist()
-    }
-
-    fun createGoal(title: String, description: String, stages: List<String>, onResult: (Boolean, String) -> Unit) {
-        val clean = title.trim()
-        when {
-            clean.isBlank() -> onResult(false, "اكتب عنوان الهدف أولاً")
-            stages.isEmpty() -> onResult(false, "أضف مرحلتين على الأقل (سطر لكل مرحلة)")
-            else -> {
-                goals.add(
-                    com.zmastery.english.data.LifeGoal(
-                        id = "goal_${System.currentTimeMillis()}",
-                        title = clean,
-                        description = description.trim(),
-                        stages = stages.map { it.trim() }.filter { it.isNotBlank() },
-                        stageIndex = 0,
-                        createdAtDay = todayEpochDay(),
-                        active = goals.none { it.active },
-                    )
-                )
-                vm.persist()
-                onResult(true, "أُنشئ هدف «$clean» ✓")
-            }
-        }
-    }
-
-    fun setActiveGoal(id: String) {
-        for (i in goals.indices) {
-            goals[i] = goals[i].copy(active = goals[i].id == id)
-        }
-        vm.persist()
-    }
-
-    private fun replaceGoal(updated: com.zmastery.english.data.LifeGoal) {
-        val i = goals.indexOfFirst { it.id == updated.id }
-        if (i >= 0) goals[i] = updated
-    }
-
-    /**
-     * يحفظ إجابة سؤال السياق اليومي: تُضاف لسياق المتعلم الذي يقرأه النموذج
-     * غداً — هكذا «يستنتج الـAI سياقك تدريجياً» كما اتفقنا.
-     */
-    fun saveContextAnswer(storyId: Int, answer: String) {
-        val clean = answer.trim()
-        if (clean.isBlank()) {
-            storyMessage = "اكتب إجابة أولاً — بها تتعرف القصة القادمة على حياتك"
-            return
-        }
-        val i = storyArchive.indexOfFirst { it.id == storyId }
-        if (i < 0) return
-        val q = storyArchive[i].contextQuestionAr.ifBlank { storyArchive[i].contextQuestionEn }
-        storyArchive[i] = storyArchive[i].copy(contextAnswer = clean)
-        activeGoal?.let { g ->
-            replaceGoal(g.copy(learnerContext = (g.learnerContext + "س: $q — ج: $clean").takeLast(40)))
-        }
-        xp += 4
-        vm.persist()
-        storyMessage = "حُفظت إجابتك ✓ — قصة الغد ستكتب عنك أنت"
-    }
-
-    /** يولّد اختبار إثبات المرحلة الحالية (٣ أسئلة موقفية). */
-    fun requestStageQuiz() {
-        val goal = activeGoal ?: return
-        if (goal.isFinished) {
-            quizMessage = "أتممت مراحل هذا الهدف 🏆 — أنشئ هدفاً جديداً"
-            return
-        }
-        if (isMakingQuiz) return
-        if (!hasAiKey) {
-            quizMessage = "اختبار الإثبات يولَّد بالذكاء الاصطناعي — أضف مفتاح API من إعدادات الذكاء"
-            return
-        }
-        isMakingQuiz = true
-        quizMessage = null
-        launch {
-            val res = GeminiStoryService.generateStageQuiz(
-                ctx = app,
-                goalTitle = goal.title,
-                stage = goal.currentStage,
-                contextLines = goal.learnerContext,
-                apiKey = geminiApiKey,
-                modelId = aiAgents.firstOrNull { it.id == "story_writer" }?.modelId ?: "",
-            )
-            isMakingQuiz = false
-            when (res) {
-                is GeminiStoryService.QuizResult.Ok -> {
-                    stageQuiz = res.questions
-                    quizMessage = "٣ أسئلة موقفية — أجب عن اثنين منها صحيحاً لتتقدم"
-                }
-                is GeminiStoryService.QuizResult.Fail -> quizMessage = res.message
-            }
-        }
-    }
-
-    /** يصحّح الإجابات؛ اجتياز ≥٢/٣ وحده يقدّم المرحلة (قرار النقاش). */
-    fun submitStageQuiz(answers: List<Int>): String {
-        val quiz = stageQuiz ?: return "لا يوجد اختبار جارٍ — اطلبه أولاً"
-        val goal = activeGoal ?: return "لا يوجد هدف نشط"
-        val correct = quiz.indices.count { answers.getOrNull(it) == quiz[it].correctIndex }
-        return if (correct >= 2) {
-            val next = goal.copy(stageIndex = goal.stageIndex + 1)
-            replaceGoal(next)
-            stageQuiz = null
-            xp += 15
-            completeTask("story")
-            vm.persist()
-            if (next.isFinished)
-                "🏆 اجتزت آخر مرحلة — هدف «${goal.title}» مكتمل! أنشئ هدفاً جديداً متى شئت"
-            else
-                "✓ اجتزت الإثبات ($correct/3) — تقدمت إلى مرحلة «${next.currentStage}»"
-        } else {
-            stageQuiz = null
-            "لم تجتز بعد ($correct/3). أعد قراءة قصة اليوم وعاود غداً — المرحلة لا تتقدم بلا إثبات"
-        }
-    }
 
     /**
      * Mirror every reading-style lesson's text into the archive, so lesson

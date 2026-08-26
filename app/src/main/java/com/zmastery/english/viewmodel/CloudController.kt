@@ -557,6 +557,9 @@ internal class CloudController(internal val vm: AppViewModel) {
                 val course = vm.courses.firstOrNull { it.id == lesson.courseId }
                 val courseKey = course?.jsonId?.ifBlank { null } ?: course?.key?.ifBlank { null } ?: "course_${lesson.courseId}"
                 val docId = "${courseKey}_lesson_${lesson.no}"
+                // اسم المسار التخصصي وأيقونته حتى يصل المنهج المخصص للطلاب
+                // بهويته الكاملة («إنجليزية المساحة والطرق» لا «المسار التخصصي 4»).
+                val lvl = vm.allLevels.firstOrNull { it.id == (course?.levelId ?: 1) }
                 
                 val vocabWords = vm.vocab.filter { it.lessonId == lesson.id || lesson.newWordIds.contains(it.id) }
                 val globalVocab = vocabWords.map {
@@ -575,6 +578,8 @@ internal class CloudController(internal val vm: AppViewModel) {
                         courseId = courseKey,
                         courseNameAr = course?.name ?: "",
                         level = course?.levelId ?: 1,
+                        levelName = lvl?.name ?: "",
+                        levelEmoji = lvl?.emoji ?: "",
                         lessonNo = lesson.no,
                         title = lesson.title,
                         style = course?.style?.name ?: "",

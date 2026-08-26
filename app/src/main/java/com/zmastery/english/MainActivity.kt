@@ -38,7 +38,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.zmastery.english.data.Telemetry
 import com.zmastery.english.ui.components.AppBackground
 import com.zmastery.english.ui.screens.*
 import com.zmastery.english.ui.theme.*
@@ -118,43 +117,41 @@ private val tabs = listOf(
     NavTab("vocab", "القاموس", Icons.Filled.MenuBook),
 )
 
-private data class MoreItem(val route: String, val label: String, val desc: String, val icon: ImageVector, val tint: Color)
+private data class MoreItem(val route: String, val label: String, val desc: String, val icon: ImageVector, val colors: List<Color>)
 
 /** A titled group of destinations — keeps the sheet scannable as it grows. */
 private data class MoreGroup(val title: String, val items: List<MoreItem>)
 
-/**
- * هندسة معلومات مدروسة (ترتيب رحلة المتعلم، بلا تكرار مع الشريط السفلي):
- *   مسارك → ثبّت وقيّم → تقدّمك وحماسك → حسابك.
- * «مراجعة الكلمات» في الشريط السفلي فلا تُكرر هنا.
- */
 private val moreGroups = listOf(
-    MoreGroup("مسارك", listOf(
-        MoreItem("stories", "القصص وأهدافي", "قصة اليوم نحو هدفك التطبيقي", Icons.Filled.AutoStories, ZAmberDeep),
-        MoreItem("roadmap", "خريطة المنهج", "خطتك وتغطيتك", Icons.Filled.Map, ZEmerald),
-        MoreItem("skills", "المهارات الخمس", "قراءة · استماع · كتابة", Icons.Filled.Interests, ZIndigo),
-    )),
-    MoreGroup("ثبّت وقيّم", listOf(
-        MoreItem("lessonReview", "مراجعة الدروس", "ثبّت ما تعلمته قبل الجديد", Icons.Filled.Autorenew, ZCyanDeep),
-        MoreItem("mnemonics", "الروابط الذهنية", "صور تثبّت الكلمات", Icons.Filled.Link, ZPurple),
-        MoreItem("exams", "الاختبارات", "قيّم مستواك بصدق", Icons.Filled.Quiz, ZCyanDeep),
-    )),
-    MoreGroup("تقدّمك وحماسك", listOf(
-        MoreItem("analytics", "التحليلات", "مدربك الذكي ومرآة إدراكك", Icons.Filled.Analytics, ZPurple),
-        MoreItem("momentum", "زخم الالتزام", "سلسلتك وصناديقك ودروعك", Icons.Filled.LocalFireDepartment, ZAmber),
-    )),
-    MoreGroup("حسابك والنظام", listOf(
-        MoreItem("profile", "الملف الشخصي", "بياناتك وإحصائياتك", Icons.Filled.Person, ZIndigo),
-        MoreItem("settings", "الإعدادات", "التخصيص والمفاتيح والمزامنة", Icons.Filled.Settings, ZCyanDeep),
-        MoreItem("backup", "النسخ الاحتياطي", "صدّر واستعد بأمان", Icons.Filled.CloudSync, ZEmerald),
-    )),
+    MoreGroup(
+        "الدراسة والمراجعة", listOf(
+            MoreItem("review", "مراجعة الكلمات", "المستحقة اليوم", Icons.Filled.Psychology, listOf(ZIndigo, ZPurple)),
+            MoreItem("lessonReview", "مراجعة الدروس", "ثبّت ما تعلمته", Icons.Filled.Autorenew, listOf(ZCyanDeep, ZCyan)),
+            MoreItem("exams", "الاختبارات", "قيّم مستواك", Icons.Filled.Quiz, listOf(ZCyanDeep, ZCyan)),
+            MoreItem("skills", "المهارات الخمس", "قراءة واستماع", Icons.Filled.Interests, listOf(ZIndigo, ZPurple)),
+        ),
+    ),
+    MoreGroup(
+        "المحتوى", listOf(
+            MoreItem("mnemonics", "الروابط الذهنية", "صور تثبّت الكلمات", Icons.Filled.Link, listOf(ZPurple, ZRose)),
+            MoreItem("stories", "أرشيف القصص", "قصة اليوم", Icons.Filled.AutoStories, listOf(ZAmber, ZRoseDeep)),
+            MoreItem("roadmap", "خريطة المنهج", "تابع خطتك", Icons.Filled.Map, listOf(ZEmerald, ZEmeraldDeep)),
+        ),
+    ),
+    MoreGroup(
+        "التقدّم", listOf(
+            MoreItem("analytics", "التحليلات", "مدربك الذكي", Icons.Filled.Analytics, listOf(ZPurple, ZIndigo)),
+            MoreItem("momentum", "زخم الالتزام", "سلسلتك وصناديقك", Icons.Filled.LocalFireDepartment, listOf(ZAmber, ZRose)),
+        ),
+    ),
+    MoreGroup(
+        "الإعداد", listOf(
+            MoreItem("profile", "الملف الشخصي", "بياناتك وإحصائياتك", Icons.Filled.Person, listOf(ZIndigo, ZCyanDeep)),
+            MoreItem("settings", "الإعدادات", "التخصيص وAPI", Icons.Filled.Settings, listOf(ZCyanDeep, ZIndigo)),
+            MoreItem("backup", "النسخ الاحتياطي", "صدّر واستعد", Icons.Filled.CloudSync, listOf(ZEmerald, ZCyanDeep)),
+        ),
+    ),
 )
-
-/** مجموعة المسؤول — تتصدر القائمة لأنه الأكثر استعمالاً للمعلّم. */
-private val adminGroup = MoreGroup("النشر والإدارة 👑", listOf(
-    MoreItem("devtools", "مركز النشر", "دروس · إعلانات · عبارات · طلاب", Icons.Filled.AdminPanelSettings, ZAmberDeep),
-    MoreItem("import", "استيراد ملفات", "JSON / ZIP لمنهج كامل", Icons.Filled.UploadFile, ZIndigo),
-))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -390,7 +387,7 @@ fun ZMasteryApp(
                 dragHandle = { BottomSheetDefaults.DragHandle(color = ZBorder) },
             ) {
                 MoreSheetContent(
-                    vm = vm,
+                    isAdmin = vm.isAdmin,
                     onNavigate = { r -> closeSheetAndGo(r) },
                 )
             }
@@ -447,133 +444,188 @@ private fun ExitConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
  *     and a chevron — instead of a grid of disconnected mini-tiles.
  */
 @Composable
-private fun MoreSheetContent(vm: AppViewModel, onNavigate: (String) -> Unit) {
-    val isAdmin = vm.isAdmin
-    val name = vm.learnerName.ifBlank { "متعلم Z-Mastery" }
-    val (cefr, _) = Telemetry.estimatedCefr(vm.masteredCount, vm.completedLessons, vm.lifetime.examAvg)
-
+private fun MoreSheetContent(isAdmin: Boolean, onNavigate: (String) -> Unit) {
     Column(
         Modifier.fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 28.dp),
     ) {
-        // ── هوية المتعلم أولاً: اسمك وأرقامك، لا شعار عام ──
+        // ── Hero header — mesh gradient backdrop + real headline (للجميع) ──
         Box(
             Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(ZIndigo, ZPurple)))
-                .padding(18.dp),
+                .drawBehind {
+                    drawCircle(
+                        Color.White.copy(alpha = 0.10f),
+                        radius = size.minDimension * 0.55f,
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.92f, -size.height * 0.15f),
+                    )
+                    drawCircle(
+                        Color.White.copy(alpha = 0.06f),
+                        radius = size.minDimension * 0.35f,
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.05f, size.height * 1.05f),
+                    )
+                }
+                .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Column {
+                Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("مركز التحكم", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "كل أدواتك في مكان واحد",
+                    color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black, lineHeight = 28.sp,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "الدراسة، التقدّم، والإعداد — منظّمة لتصل لما تريد بأقل عدد لمسات",
+                    color = Color.White.copy(alpha = 0.88f), fontSize = 12.sp, lineHeight = 18.sp,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // ── بوابة المطور الذهبية — كل أدوات النشر في مكان واحد ──
+        if (isAdmin) {
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
+                        .shadow(14.dp, RoundedCornerShape(24.dp), ambientColor = ZAmber.copy(alpha = 0.30f), spotColor = ZAmber.copy(alpha = 0.30f)),
+                    onClick = { onNavigate("devtools") },
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                            .background(Brush.linearGradient(listOf(ZAmberDeep, ZAmber)))
+                            .drawBehind {
+                                drawCircle(
+                                    Color.White.copy(alpha = 0.10f),
+                                    radius = size.minDimension * 0.55f,
+                                    center = androidx.compose.ui.geometry.Offset(size.width * 0.95f, -size.height * 0.2f),
+                                )
+                            }
+                            .padding(20.dp),
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier.size(50.dp).clip(RoundedCornerShape(16.dp))
+                                        .background(Color.White.copy(alpha = 0.22f)),
+                                    contentAlignment = Alignment.Center,
+                                ) { Icon(Icons.Filled.AdminPanelSettings, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("أدوات المطور والمسؤول 👑", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "رفع الدروس · بث الإعلانات · العبارات · الطلاب",
+                                        color = Color.White.copy(alpha = 0.92f), fontSize = 11.sp,
+                                    )
+                                }
+                                Icon(Icons.Filled.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Surface(shape = RoundedCornerShape(50), color = Color.White) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                ) {
+                                    Text("فتح مركز النشر", color = ZAmberDeep, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Filled.ArrowBackIosNew, null, tint = ZAmberDeep, modifier = Modifier.size(12.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+        } else {
+            // ── بطاقة الطالب: لا استيراد — الدروس تصل من السحابة تلقائياً ──
+            Box(
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Brush.linearGradient(listOf(ZCyanDeep, ZIndigo)))
+                    .padding(20.dp),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(50.dp).clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.20f)),
+                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
-                    ) {
-                        Text(name.take(1), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                    }
+                    ) { Icon(Icons.Filled.CloudDownload, null, tint = Color.White, modifier = Modifier.size(24.dp)) }
                     Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1)
+                    Column {
+                        Text("دروسك تصل تلقائياً", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            if (isAdmin) "مسؤول ومطوّر — أدوات النشر بالأسفل"
-                            else "دروسك الجديدة تصلك تلقائياً من السحابة",
-                            color = Color.White.copy(alpha = 0.88f), fontSize = 11.sp,
+                            "كل درس ينشره معلمك يظهر لديك عند فتح التطبيق — لا تحتاج استيراد أي ملف",
+                            color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, lineHeight = 17.sp,
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HeroChip("🔥 سلسلة ${vm.streak}")
-                    HeroChip("⚡ ${vm.xp} XP")
-                    HeroChip("🎓 $cefr")
-                }
             }
         }
 
-        // ── المسؤول: النشر أولاً لأنه الأكثر استعمالاً للمعلم ──
-        if (isAdmin) {
-            Spacer(Modifier.height(20.dp))
-            MoreGroupCard(adminGroup, onNavigate)
-        }
-
-        moreGroups.forEach { g ->
-            Spacer(Modifier.height(20.dp))
-            MoreGroupCard(g, onNavigate) { route ->
-                when (route) {
-                    "stories" -> vm.unreadStoryCount.takeIf { it > 0 }
-                    else -> null
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeroChip(text: String) {
-    Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
-        Text(
-            text, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-        )
-    }
-}
-
-/** بطاقة مجموعة بأسلوب الإعدادات: بلاطات هادئة ملوّنة + فواصل شعرية + شيفرون. */
-@Composable
-private fun MoreGroupCard(
-    group: MoreGroup,
-    onNavigate: (String) -> Unit,
-    badgeFor: (String) -> Int? = { null },
-) {
-    Column {
-        Text(
-            group.title, color = ZTextMuted, fontWeight = FontWeight.Black, fontSize = 11.sp,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-        Box(Modifier.padding(horizontal = 16.dp)) {
-            Surface(
-                shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column {
-                    group.items.forEachIndexed { idx, item ->
-                        Surface(
-                            color = Color.Transparent,
-                            onClick = { onNavigate(item.route) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+        // ── Grouped destinations — one elevated "settings-style" card per group ──
+        moreGroups.forEach { group ->
+            val visibleItems = group.items.filter { it.route != "import" || isAdmin }
+            if (visibleItems.isEmpty()) return@forEach
+            Spacer(Modifier.height(24.dp))
+            Text(
+                group.title, color = ZTextSecondary,
+                fontWeight = FontWeight.Black, fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = ZCard,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column {
+                        visibleItems.forEachIndexed { idx, item ->
+                            Surface(
+                                color = Color.Transparent,
+                                onClick = { onNavigate(item.route) },
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Box(
-                                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                                        .background(item.tint.copy(alpha = 0.14f)),
-                                    contentAlignment = Alignment.Center,
-                                ) { Icon(item.icon, null, tint = item.tint, modifier = Modifier.size(20.dp)) }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(item.label, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Text(item.desc, color = ZTextSecondary, fontSize = 11.sp, maxLines = 1)
-                                }
-                                badgeFor(item.route)?.let { n ->
-                                    Surface(shape = RoundedCornerShape(50), color = ZRose.copy(alpha = 0.15f)) {
-                                        Text(
-                                            "$n", color = ZRoseDeep, fontSize = 10.sp, fontWeight = FontWeight.Black,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                        )
+                                Row(
+                                    Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
+                                            .background(Brush.linearGradient(item.colors)),
+                                        contentAlignment = Alignment.Center,
+                                    ) { Icon(item.icon, null, tint = Color.White, modifier = Modifier.size(21.dp)) }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(item.label, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(item.desc, color = ZTextSecondary, fontSize = 12.sp, maxLines = 1)
                                     }
-                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted, modifier = Modifier.size(20.dp))
                                 }
-                                Icon(Icons.Filled.ChevronLeft, null, tint = ZTextMuted, modifier = Modifier.size(18.dp))
                             }
-                        }
-                        if (idx < group.items.lastIndex) {
-                            HorizontalDivider(color = ZBorder, modifier = Modifier.padding(start = 68.dp, end = 14.dp))
+                            if (idx < group.items.lastIndex) {
+                                HorizontalDivider(color = ZBorder, modifier = Modifier.padding(start = 69.dp, end = 14.dp))
+                            }
                         }
                     }
                 }
