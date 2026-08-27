@@ -1952,6 +1952,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     val isLocalOnlyAdmin: Boolean get() = cloud.isLocalOnlyAdmin
 
+    /** بريد هذا الحساب مطابق لبريد المالك لكنه غير موثّق بعد — يحتاج ضغط رابط التأكيد. */
+    val ownerEmailUnverified: Boolean get() = cloud.ownerEmailUnverified
+
+    /** يعيد إرسال رابط توثيق البريد لحساب البريد/كلمة المرور الحالي. */
+    fun resendEmailVerification(onResult: (Boolean, String) -> Unit) = vmScope.launch {
+        val res = com.zmastery.english.cloud.CloudAuth.resendEmailVerification()
+        res.onSuccess { onResult(true, "تم إرسال رابط التوثيق إلى بريدك — افتحه واضغط الرابط ثم أعد فتح التطبيق") }
+            .onFailure { onResult(false, it.message ?: "تعذّر إرسال رابط التوثيق") }
+    }
+
+    /** يعيد تحميل حالة الحساب (بعد ضغط رابط التوثيق) ويحدّث الصلاحيات فوراً. */
+    fun refreshEmailVerification(onResult: (Boolean) -> Unit) = vmScope.launch {
+        com.zmastery.english.cloud.CloudAuth.reloadCurrentUser()
+        cloud.syncUserProfileToCloud()
+        onResult(com.zmastery.english.cloud.CloudAuth.isEmailVerified)
+    }
+
     /**
      * Auto-provision or update user profile and progress in Firestore under /users/{uid}
      */

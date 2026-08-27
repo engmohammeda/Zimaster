@@ -41,6 +41,17 @@ object CloudAuth {
     val email: String? get() = auth.currentUser?.email
     val photoUrl: String? get() = auth.currentUser?.photoUrl?.toString()
 
+    /**
+     * هل بريد الحساب الحالي موثّق؟ Google Sign-In يوثّقه دائماً تلقائياً؛
+     * حسابات البريد/كلمة المرور تحتاج ضغط رابط أُرسل بالبريد.
+     *
+     * مهم أمنياً: قواعد Firestore (`isSuperAdminToken`) لا تمنح صلاحيات
+     * المالك إلا لبريد موثّق — بدون هذا الشرط يستطيع أي شخص إنشاء حساب
+     * ببريد `mohammedalbkhyty@gmail.com` وكلمة مرور من اختياره وانتحال
+     * صلاحيات المالك دون أن يملك صندوق البريد فعلاً.
+     */
+    val isEmailVerified: Boolean get() = auth.currentUser?.isEmailVerified ?: false
+
     const val DEFAULT_WEB_CLIENT_ID = "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com"
 
     var webClientId: String = DEFAULT_WEB_CLIENT_ID
@@ -139,7 +150,22 @@ object CloudAuth {
                 .build()
             user.updateProfile(profileUpdates).await()
         }
+        // يُرسَل تلقائياً — ضروري خصوصاً لو كان هذا بريد المالك: القواعد
+        // السحابية لا تمنح صلاحيات المالك إلا بعد توثيق البريد (اضغط الرابط).
+        runCatching { user.sendEmailVerification().await() }
         user
+    }
+
+    /** إعادة إرسال رابط توثيق البريد للحساب الحالي (لو لم يوثَّق بعد). */
+    suspend fun resendEmailVerification(): Result<Unit> = runCatching {
+        val user = auth.currentUser ?: throw IllegalStateException("لا يوجد حساب مسجّل الدخول")
+        if (user.isEmailVerified) return@runCatching
+        user.sendEmailVerification().await()
+    }
+
+    /** يعيد تحميل بيانات المستخدم من Firebase — لازم بعد ضغط رابط التوثيق. */
+    suspend fun reloadCurrentUser(): Result<Unit> = runCatching {
+        auth.currentUser?.reload()?.await() ?: Unit
     }
 
     /**
@@ -216,6 +242,8 @@ class CloudAuthState {
         private set
     var photoUrl by mutableStateOf<String?>(null)
         private set
+    var isEmailVerified by mutableStateOf(false)
+        private set
 
     fun refresh() {
         uid = CloudAuth.uid
@@ -223,5 +251,6 @@ class CloudAuthState {
         displayName = CloudAuth.displayName
         email = CloudAuth.email
         photoUrl = CloudAuth.photoUrl
+        isEmailVerified = CloudAuth.isEmailVerified
     }
 }

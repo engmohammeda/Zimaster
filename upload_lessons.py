@@ -22,21 +22,44 @@ except ImportError:
     print("   pip install firebase-admin")
     sys.exit(1)
 
-# مسار ملف مفتاح حساب الخدمة من Firebase Console
-# (Project Settings -> Service Accounts -> Generate new private key)
+# اسم مشروع Firebase (لازم فقط مع بيانات اعتماد المستخدم/ADC، وليس مع مفتاح حساب خدمة)
+FIREBASE_PROJECT_ID = "zmastery"
+
+# مسار اختياري لملف مفتاح حساب خدمة (Service Account) — لن يُستخدم غالباً لأن
+# أغلب مؤسسات Google Cloud الحديثة تمنع تنزيله افتراضياً عبر سياسة
+# iam.disableServiceAccountKeyCreation. اترك هذا الملف غير موجود واستخدم بدلاً
+# منه بيانات اعتماد المستخدم (ADC) كما هو موضّح أدناه — لا تحتاج أي مفتاح.
 SERVICE_ACCOUNT_KEY_PATH = "serviceAccountKey.json"
 
 # المجلد الأساسي الذي يحوي مجلدات الدروس
 LESSONS_ROOT_DIR = "./الدروس"  # أو ضع المسار لمجلد الدروس لديك
 
 def init_firebase():
+    # 1) الطريقة المفضّلة (تعمل حتى مع سياسة iam.disableServiceAccountKeyCreation
+    #    المفعّلة على مؤسستك): بيانات اعتماد المستخدم الافتراضية (ADC) — سجّل
+    #    الدخول مرة واحدة من جهازك بالأمر التالي (لا يُنشئ أي مفتاح حساب خدمة،
+    #    بل جلسة شخصية مؤقتة قابلة للإلغاء بأمر gcloud auth revoke):
+    #        gcloud auth application-default login \
+    #          --scopes=https://www.googleapis.com/auth/cloud-platform
+    #    بعدها شغّل هذا السكربت مباشرة بلا أي إعداد إضافي.
     if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
-        print(f"❌ لم يتم العثور على ملف المفتاح: {SERVICE_ACCOUNT_KEY_PATH}")
-        print("💡 قم بتنزيله من Firebase Console > Project Settings > Service Accounts")
-        sys.exit(1)
-    
+        try:
+            firebase_admin.initialize_app(options={"projectId": FIREBASE_PROJECT_ID})
+            print("✓ تمت المصادقة عبر بيانات اعتماد المستخدم الافتراضية (ADC) — بلا أي مفتاح JSON.")
+            return firestore.client()
+        except Exception as e:
+            print("❌ لم يتم العثور على مفتاح حساب خدمة ولا بيانات اعتماد افتراضية صالحة.")
+            print("💡 نفّذ مرة واحدة من جهازك:")
+            print("   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform")
+            print(f"   (تفاصيل الخطأ: {e})")
+            sys.exit(1)
+
+    # 2) الطريقة القديمة (فقط إن كانت مؤسستك من الاستثناءات القليلة التي لا
+    #    تزال تسمح بتنزيل مفاتيح حسابات الخدمة، أو استخدمت مشروعاً استثنيته
+    #    يدوياً من السياسة):
     cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
     firebase_admin.initialize_app(cred)
+    print("✓ تمت المصادقة عبر ملف مفتاح حساب الخدمة المحلي.")
     return firestore.client()
 
 def normalize_course_id(raw_id, folder_name=""):
