@@ -39,16 +39,27 @@ service cloud.firestore {
     }
 
     function isSuperAdminToken() {
-      // The email comes from the VERIFIED Firebase Auth ID token, not from the
-      // client payload — it cannot be forged by the app or a replayed request.
+      // The email comes from the Firebase Auth ID token, not from the client
+      // payload — it cannot be forged by the app or a replayed request.
       //
       // The null-guard is load-bearing: an anonymous account has no `email`
       // claim, and calling `.matches()` on null makes the whole rule evaluation
       // throw — which surfaces to the app as an opaque "denied" instead of a
       // clean false, hiding the real reason from the admin diagnostics panel.
+      //
+      // SECURITY (account-spoofing guard): Firebase Auth lets ANYONE sign up
+      // with email/password using ANY email address — including the owner's
+      // own email — without proving they control that mailbox. Without the
+      // `email_verified` check below, an attacker could self-register with
+      // `mohammedalbkhyty@gmail.com` and instantly inherit super-admin. Google
+      // Sign-In always sets `email_verified = true` for the real account
+      // holder, and Firebase never marks an unverified address as verified for
+      // someone else, so this closes the spoofing path while still trusting
+      // the legitimate owner signing in with Google (or a verified email).
       return isSignedIn()
         && request.auth.token.email != null
-        && request.auth.token.email == 'mohammedalbkhyty@gmail.com';
+        && request.auth.token.email == 'mohammedalbkhyty@gmail.com'
+        && request.auth.token.email_verified == true;
     }
 
     // Role recorded for the signed-in user in /users (missing → student).

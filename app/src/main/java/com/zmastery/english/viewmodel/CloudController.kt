@@ -112,18 +112,32 @@ internal class CloudController(internal val vm: AppViewModel) {
      */
     private val OWNER_EMAIL = "mohammedalbkhyty@gmail.com"
 
+    /**
+     * الحساب هو حساب المالك **وبريده موثّق** — نفس شرط `isSuperAdminToken()`
+     * في firestore.rules حرفياً. بريد غير موثّق (تسجيل بريد/كلمة مرور بلا
+     * ضغط رابط التأكيد) لا يمنح صلاحيات المالك، حتى لو تطابق نص البريد —
+     * وإلا يستطيع أي شخص انتحال بريد المالك بحساب جديد لم يثبت ملكيته له.
+     */
+    private val isVerifiedOwnerAccount: Boolean
+        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL &&
+            com.zmastery.english.cloud.CloudAuth.isEmailVerified
+
     val isAdmin: Boolean
-        get() = isDeveloperUnlocked || userRole == "admin" ||
-            cloudEmail?.lowercase()?.trim() == OWNER_EMAIL
+        get() = isDeveloperUnlocked || userRole == "admin" || isVerifiedOwnerAccount
 
     /**
      * هل يملك هذا الحساب صلاحية كتابة **سحابية** فعلية؟
      *
      * الواجهة قد تفتح بكود وضع المطور، لكن قواعد Firestore لا تعترف إلا
-     * بحساب المالك أو بمستخدم دوره `admin` في `/users/{uid}`.
+     * بحساب المالك (ببريد موثّق) أو بمستخدم دوره `admin` في `/users/{uid}`.
      */
     private val hasCloudWritePower: Boolean
-        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL || userRole == "admin"
+        get() = isVerifiedOwnerAccount || userRole == "admin"
+
+    /** بريد المالك مطابق لكن غير موثّق بعد — حالة تستحق رسالة توضيحية خاصة. */
+    val ownerEmailUnverified: Boolean
+        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL &&
+            !com.zmastery.english.cloud.CloudAuth.isEmailVerified
 
     /** مسؤول محلياً فقط — كل محاولة نشر سحابي منه ستُرفض. */
     val isLocalOnlyAdmin: Boolean
@@ -164,8 +178,12 @@ internal class CloudController(internal val vm: AppViewModel) {
             e is java.util.concurrent.TimeoutException -> e.message.orEmpty().ifBlank { raw }
             raw.contains("PERMISSION_DENIED", true) || raw.contains("Missing or insufficient permissions", true) ->
                 "رفضت قواعد Firestore الكتابة.\nالسبب المرجّح: $raw\n" +
+                    (if (ownerEmailUnverified)
+                        "بريدك مطابق لحساب المالك لكنه **غير موثّق** — افتح بريدك واضغط رابط " +
+                            "التأكيد الذي أرسلناه، ثم أعد فتح التطبيق وحاول مجدداً.\n"
+                     else "") +
                     "الحل (بأيٍّ منهما):\n" +
-                    "١) سجّل الدخول بحساب المالك $OWNER_EMAIL\n" +
+                    "١) سجّل الدخول بحساب المالك $OWNER_EMAIL (وبريد موثّق)\n" +
                     "٢) أو انشر القواعد: firebase deploy --only firestore:rules\n" +
                     "٣) أو اجعل دور هذا الحساب admin في مستند /users/{uid}"
             raw.contains("UNAUTHENTICATED", true) ->

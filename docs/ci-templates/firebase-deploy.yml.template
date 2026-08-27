@@ -1,0 +1,110 @@
+name: Firebase Deploy (Firestore Rules & Indexes)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ينشر تلقائياً firestore.rules + firestore.indexes.json إلى مشروع Firebase
+# الحقيقي (zmastery) في كل مرة يتغيّر أحدهما على main — بلا أي خطوة يدوية.
+#
+# ⚠️ هذا الملف "قالب" محفوظ في docs/ci-templates/ — انسخه إلى
+#    .github/workflows/firebase-deploy.yml ليصبح فعّالاً (خطوة §4 في
+#    docs/FIREBASE_SETUP.md):
+#      mkdir -p .github/workflows
+#      cp docs/ci-templates/firebase-deploy.yml.template .github/workflows/firebase-deploy.yml
+#
+# لماذا سير عمل منفصل عن android-release.yml؟
+#   • قواعد Firestore يجب أن تُنشر فوراً عند تعديلها (أمان)، بصرف النظر عن
+#     دورة بناء الأندرويد الأطول (اختبارات + Gradle + توقيع).
+#   • فشل نشر القواعد يجب أن يظهر كخطأ واضح مستقل لا يغرق داخل لوق بناء ضخم.
+#
+# الإعداد المطلوب منك (مرة واحدة فقط) — راجع القسم 4.1 من docs/FIREBASE_SETUP.md:
+#   1) أنشئ حساب خدمة (Service Account) بصلاحية "Firebase Rules Admin" +
+#      "Cloud Datastore Index Admin" (أو "Editor" إن كنت تريد التبسيط).
+#   2) نزّل مفتاحه JSON من Google Cloud Console.
+#   3) أضِفه سرّاً في GitHub باسم FIREBASE_SERVICE_ACCOUNT (المحتوى الخام JSON،
+#      لا base64 — انسخ الملف كما هو).
+#   4) بعد نسخ هذا الملف إلى .github/workflows/، أي دفعة تعدّل firestore.rules
+#      أو firestore.indexes.json إلى main تُشغّله تلقائياً — أو شغّله يدوياً
+#      (Actions ← Firebase Deploy ← Run workflow).
+# ═══════════════════════════════════════════════════════════════════════════
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/firebase-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "فحص القواعد فقط بلا نشر فعلي (dry-run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-firestore:
+    name: نشر قواعد وفهارس Firestore
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: تحقق من وجود سرّ حساب الخدمة
+        id: check-secret
+        env:
+          HAS_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+        run: |
+          if [ "$HAS_SECRET" != "true" ]; then
+            echo "::error::السرّ FIREBASE_SERVICE_ACCOUNT غير مضبوط في إعدادات المستودع."
+            echo "::error::أضفه من: Settings → Secrets and variables → Actions → New repository secret."
+            echo "::error::راجع القسم 4.1 من docs/FIREBASE_SETUP.md لخطوات إنشائه."
+            exit 1
+          fi
+
+      - name: كتابة بيانات اعتماد حساب الخدمة
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          python3 -c "import json; json.load(open('$RUNNER_TEMP/firebase-service-account.json'))" \
+            || { echo "::error::FIREBASE_SERVICE_ACCOUNT ليس JSON صالحاً — تأكد من نسخ الملف كاملاً بلا تعديل"; exit 1; }
+
+      - name: التحقق من صحة القواعد (dry-run دائماً كخطوة أولى)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: |
+          firebase deploy --only firestore:rules,firestore:indexes \
+            --project zmastery --non-interactive --dry-run
+
+      - name: نشر القواعد والفهارس فعلياً
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+        run: |
+          firebase deploy --only firestore:rules,firestore:indexes \
+            --project zmastery --non-interactive
+
+      - name: تنظيف بيانات الاعتماد
+        if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
+
+      - name: ملخص التشغيلة
+        if: always()
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "## 🧪 فحص فقط (dry-run) — لم يُنشر شيء فعلياً" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## ✅ نُشرت قواعد وفهارس Firestore إلى مشروع zmastery" >> "$GITHUB_STEP_SUMMARY"
+          fi

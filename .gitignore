@@ -20,3 +20,11 @@ local.properties
 *.hprof
 upload_tool/__pycache__/
 __pycache__/
+
+# ============ Firebase secrets — NEVER in the repo ============
+# Admin SDK service account keys (used by upload_lessons.py or manual CLI
+# deploys). GitHub Actions uses the FIREBASE_SERVICE_ACCOUNT repo secret
+# instead — see docs/FIREBASE_SETUP.md §4.
+serviceAccountKey.json
+firebase-service-account*.json
+*-firebase-adminsdk-*.json

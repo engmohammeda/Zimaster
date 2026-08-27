@@ -143,6 +143,12 @@ cd Zimaster
 
 > سير عمل **GitHub Actions** يبني تلقائياً مع كل دفعة: Debug APK + Release APK (مُحسَّن
 > بـ R8) + AAB جاهزة للنشر، ويرفعها إلى Releases.
+>
+> قالب سير عمل ثانٍ جاهز (`docs/ci-templates/firebase-deploy.yml.template`)
+> **ينشر قواعد وفهارس Firestore تلقائياً** إلى مشروع Firebase الحقيقي في كل
+> مرة يتغيّر فيها `firestore.rules` أو `firestore.indexes.json` على `main` —
+> بلا أي أمر يدوي بعد تفعيله. خطوة التفعيل (نسخ ملف + سرّ واحد في GitHub):
+> **[docs/FIREBASE_SETUP.md §4](docs/FIREBASE_SETUP.md#4-النشر-التلقائي-للقواعد-والفهارس-عبر-github-actions)**.
 
 ---
 

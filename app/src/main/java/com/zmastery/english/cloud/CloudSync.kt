@@ -78,7 +78,11 @@ object CloudSync {
         val userRef = db.collection(USERS_COLLECTION).document(user.uid)
         val existingDoc = userRef.get().await()
 
-        val isSuperAdmin = user.email?.lowercase()?.trim() in SUPER_ADMIN_EMAILS
+        // مطابقة تماماً لشرط `isSuperAdminToken()` في firestore.rules: البريد
+        // وحده لا يكفي — يجب أن يكون موثّقاً، وإلا يرسل العميل role="admin"
+        // فترفضه القواعد، فيبقى المستند بلا 'role' وتبدو الكتابة "فاشلة بصمت".
+        val isSuperAdmin = user.isEmailVerified &&
+            (user.email?.lowercase()?.trim() in SUPER_ADMIN_EMAILS)
         val existingRole = existingDoc.getString("role")
 
         val userData = mutableMapOf<String, Any?>(

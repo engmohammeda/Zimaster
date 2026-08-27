@@ -160,6 +160,40 @@ private fun DevHero(vm: AppViewModel) {
                         )
                     }
                 }
+
+                // بريدك مطابق للمالك لكنه غير موثّق بعد — أقرب سبب وأسهل حل.
+                if (vm.ownerEmailUnverified) {
+                    Spacer(Modifier.height(10.dp))
+                    Column(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                            .background(Color.Black.copy(alpha = 0.18f))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.MarkEmailUnread, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "بريدك مطابق لحساب المالك لكنه غير موثّق — وثّقه لتفعيل النشر السحابي.",
+                                color = Color.White, fontSize = 10.sp, lineHeight = 15.sp,
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        Row {
+                            TextButton(onClick = {
+                                vm.resendEmailVerification { _, msg ->
+                                    android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            }) { Text("إعادة إرسال رابط التوثيق", color = Color.White, fontSize = 11.sp) }
+                            TextButton(onClick = {
+                                vm.refreshEmailVerification { verified ->
+                                    val msg = if (verified) "تم التوثيق ✓ — صلاحيات المالك مفعّلة الآن" else "لم يُوثَّق البريد بعد"
+                                    android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show()
+                                }
+                            }) { Text("تحققت — أعد الفحص", color = Color.White, fontSize = 11.sp) }
+                        }
+                    }
+                }
             }
         }
     }
