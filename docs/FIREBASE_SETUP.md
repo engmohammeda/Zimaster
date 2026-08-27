@@ -102,7 +102,8 @@ GitHub: تعديل firestore.rules
 هذا هو الجزء الذي يجعل الصيانة **بلا أوامر يدوية بعد اليوم**. المستودع يحوي
 جاهزاً في **`docs/ci-templates/firebase-deploy.yml.template`** سير عمل كامل
 ينشر `firestore.rules` و `firestore.indexes.json` تلقائياً في كل مرة تُدفع
-فيها تعديلات عليهما إلى `main`.
+فيها تعديلات عليهما إلى `main` — **بلا أي مفتاح JSON لحساب خدمة إطلاقاً**،
+عبر آلية اسمها **Workload Identity Federation (WIF)**.
 
 > ⚠️ **لماذا هو "قالب" في `docs/` وليس مفعّلاً مباشرة في `.github/workflows/`؟**
 > إنشاء/تعديل ملفات داخل `.github/workflows/` يتطلب صلاحية `workflows` خاصة
@@ -119,29 +120,76 @@ GitHub: تعديل firestore.rules
 > ```
 > بعد هذه الخطوة الواحدة فقط، يعمل كل شيء تلقائياً للأبد كما هو موصوف أدناه.
 
-### 4.1 إنشاء حساب خدمة (Service Account) — مرة واحدة
+> 🔒 **لماذا WIF وليس مفتاح JSON تقليدي؟**
+> إذا حاولت اتّباع دليل قديم يطلب منك "نزّل مفتاح JSON من Service Accounts"،
+> فستجد Google Cloud **ترفض العملية بخطأ**:
+> ```
+> تم تطبيق سياسة تنظيمية تمنع إنشاء مفاتيح حسابات الخدمة على مؤسستك.
+> iam.disableServiceAccountKeyCreation
+> ```
+> هذه سياسة أمان تُفعَّل **تلقائياً على كل مؤسسة (Organization) جديدة على
+> Google Cloud منذ مايو 2024** (أي حساب Google بنطاق بريد مؤسسي وليس
+> `@gmail.com` عادةً يقع تحت "مؤسسة"). لا علاقة لها بخطأ في إعداد مشروعك؛
+> هي إجراء أمان افتراضي من Google نفسها لمنع تسريب مفاتيح دائمة الصلاحية.
+> **الحل الصحيح ليس تعطيل السياسة (يتطلب صلاحية مسؤول مؤسسة عالية وغير
+> مستحسن)، بل تجاوز الحاجة للمفتاح أصلاً** عبر WIF: بدل ملف JSON طويل الأمد
+> يمكن تسريبه، يُبادِل GitHub Actions رمز هوية مؤقت (OIDC) صادر عنه هو نفسه
+> بتوكن Google Cloud صالح لدقائق معدودة فقط، دون أي سرّ دائم يُخزَّن في أي مكان.
 
-1. اذهب إلى [Google Cloud Console ← IAM & Admin ← Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
-   لمشروع `zmastery` نفسه (نفس المشروع الظاهر أعلى الصفحة).
-2. **Create Service Account**:
-   - الاسم: `github-actions-deploy` (أي اسم واضح).
-   - **Grant this service account access** → أضف الأدوار التالية (الأقل صلاحية كافية):
-     - `Cloud Datastore Index Admin` (لنشر `firestore.indexes.json`)
-     - `Firebase Rules Admin` (لنشر `firestore.rules`)
-     - `Service Usage Consumer`
-   - (الطريق الأسهل والأقل دقة: دور `Editor` وحده يكفي أيضاً إن كنت لا تمانع
-     صلاحيات أوسع على حساب أبسط إعداد.)
-3. بعد الإنشاء: **Keys ← Add Key ← Create new key ← JSON** → يُنزَّل ملف JSON.
-   **لا تشاركه ولا تدفعه إلى git أبداً.**
+### 4.1 الإعداد لمرة واحدة (بلا أي مفتاح JSON) — من Cloud Shell
 
-### 4.2 ربط السرّ في GitHub — مرة واحدة
+افتح [Cloud Shell](https://console.cloud.google.com/?cloudshell=true) من نفس
+حساب Google المالك لمشروع `zmastery` (أيقونة `>_` أعلى يمين الكونسول)، وشغّل
+الأوامر التالية بالترتيب — استبدل `OWNER/REPO` باسم مستودعك الفعلي
+(`engmohammeda/Zimaster`):
+
+```bash
+# 0) متغيرات تحتاجها كل الأوامر التالية
+export PROJECT_ID="zmastery"
+export PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+export REPO="engmohammeda/Zimaster"
+export SA_NAME="github-actions-deploy"
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+export POOL_ID="github-pool"
+export PROVIDER_ID="github-provider"
+
+# 1) إنشاء حساب الخدمة (إنشاء الحساب نفسه غير ممنوع — الممنوع فقط تنزيل مفتاح JSON له)
+gcloud iam service-accounts create "$SA_NAME"   --project="$PROJECT_ID"   --display-name="GitHub Actions – نشر قواعد Firestore"
+
+# 2) منحه أقل صلاحيات كافية لنشر القواعد والفهارس فقط
+gcloud projects add-iam-policy-binding "$PROJECT_ID"   --member="serviceAccount:${SA_EMAIL}"   --role="roles/firebaserules.admin"
+gcloud projects add-iam-policy-binding "$PROJECT_ID"   --member="serviceAccount:${SA_EMAIL}"   --role="roles/datastore.indexAdmin"
+gcloud projects add-iam-policy-binding "$PROJECT_ID"   --member="serviceAccount:${SA_EMAIL}"   --role="roles/serviceusage.serviceUsageConsumer"
+
+# 3) إنشاء Workload Identity Pool مخصّص لـ GitHub Actions
+gcloud iam workload-identity-pools create "$POOL_ID"   --project="$PROJECT_ID" --location="global"   --display-name="GitHub Actions Pool"
+
+# 4) إنشاء Provider داخل الـ Pool، مقيّد بمستودعك تحديداً (شرط أمان مهم)
+gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_ID"   --project="$PROJECT_ID" --location="global"   --workload-identity-pool="$POOL_ID"   --issuer-uri="https://token.actions.githubusercontent.com"   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"   --attribute-condition="assertion.repository=='${REPO}'"
+
+# 5) السماح لهذا المستودع تحديداً بانتحال صفة حساب الخدمة (بلا أي كلمة سرّ)
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL"   --project="$PROJECT_ID"   --role="roles/iam.workloadIdentityUser"   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/attribute.repository/${REPO}"
+
+# 6) اطبع القيمتين اللتين ستضعهما كأسرار GitHub في الخطوة التالية
+echo "WIF_PROVIDER=projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
+echo "WIF_SERVICE_ACCOUNT=${SA_EMAIL}"
+```
+
+لا يُنتج أي أمر من هذه الأوامر ملف JSON ولا يخالف سياسة
+`iam.disableServiceAccountKeyCreation` — لأننا لا ننشئ مفتاحاً إطلاقاً، بل
+علاقة ثقة (trust) بين GitHub وGoogle Cloud مقيّدة بمستودعك فقط.
+
+### 4.2 ربط القيمتين في GitHub — مرة واحدة
 
 1. **GitHub ← مستودع Zimaster ← Settings ← Secrets and variables ← Actions
    ← New repository secret**.
-2. الاسم: **`FIREBASE_SERVICE_ACCOUNT`**.
-3. القيمة: افتح ملف JSON الذي نزّلته وألصق **محتواه الخام كاملاً** (لا base64،
-   انسخ الملف كما هو من `{` إلى `}`).
-4. احفظ.
+2. أضف سرّاً باسم **`WIF_PROVIDER`** وقيمته السطر الذي طُبع أمام
+   `WIF_PROVIDER=` في الخطوة السابقة (بدون `WIF_PROVIDER=` نفسها).
+3. أضف سرّاً ثانياً باسم **`WIF_SERVICE_ACCOUNT`** وقيمته بريد حساب الخدمة
+   المطبوع أمام `WIF_SERVICE_ACCOUNT=`.
+4. احفظ. (هاتان القيمتان مجرد معرّفات موارد — لا تحملان صلاحيات بذاتهما، على
+   عكس مفتاح JSON، لذا لا خطورة أمنية مماثلة في تسريبهما بالخطأ، رغم أنه
+   يُفضَّل دوماً إبقاء أسرار المستودع خاصة.)
 
 ### 4.3 من الآن فصاعداً — تلقائي بالكامل
 
@@ -152,18 +200,22 @@ GitHub: تعديل firestore.rules
 - `.firebaserc`
 
 يُشغّل تلقائياً سير عمل **Firebase Deploy** الذي:
-1. يتحقق من صحة القواعد (`--dry-run`) أولاً.
-2. ثم ينشرها فعلياً إلى مشروع `zmastery`.
-3. يُظهر النتيجة في تبويب **Actions** من المستودع.
+1. يصادق على Google Cloud عبر WIF (بلا أي مفتاح).
+2. يتحقق من صحة القواعد (`--dry-run`) أولاً.
+3. ثم ينشرها فعلياً إلى مشروع `zmastery`.
+4. يُظهر النتيجة في تبويب **Actions** من المستودع.
 
-**لا حاجة لتثبيت `firebase-tools` على جهازك ولا لتسجيل دخول يدوي بعد اليوم.**
-إن أردت تشغيله يدوياً لأي سبب (مثلاً بعد تعديل الصلاحيات على حساب الخدمة):
+**لا حاجة لتثبيت `firebase-tools` على جهازك ولا لتسجيل دخول يدوي بعد اليوم،**
+**ولا لإدارة أي مفتاح سرّي دائم الصلاحية.**
+إن أردت تشغيله يدوياً لأي سبب:
 **Actions ← Firebase Deploy (Firestore Rules & Indexes) ← Run workflow**
 (يوجد خيار `dry_run` لفحص القواعد فقط بلا نشر فعلي).
 
 ### 4.4 (اختياري) نشر يدوي من جهازك أيضاً
 
-إن كنت تفضّل النشر من جهازك أحياناً (تطوير محلي/تجربة سريعة)، ما زال ذلك ممكناً:
+إن كنت تفضّل النشر من جهازك أحياناً (تطوير محلي/تجربة سريعة)، ما زال ذلك ممكناً
+عبر تسجيل الدخول التفاعلي العادي (لا علاقة له بسياسة منع المفاتيح، لأنه لا
+يُنشئ مفتاح حساب خدمة، بل جلسة دخول شخصية مؤقتة):
 ```bash
 npm install -g firebase-tools && firebase login
 cd Zimaster && firebase deploy --only firestore:rules,firestore:indexes
@@ -235,13 +287,25 @@ mohammedalbkhyty@gmail.com
 
 ### النشر بسكربت بايثون (رفع دفعي خارج التطبيق)
 `upload_lessons.py` في جذر المستودع يرفع مجلدات دروس كاملة دفعة واحدة عبر
-Firebase Admin SDK (يتجاوز قواعد Firestore لأنه يعمل بصلاحية خادم موثوقة):
+Firebase Admin SDK (يتجاوز قواعد Firestore لأنه يعمل بصلاحية خادم موثوقة).
+**لا يحتاج أي مفتاح JSON** — يستخدم بيانات اعتمادك الشخصية المؤقتة (ADC)،
+وهذا يعمل حتى مع سياسة `iam.disableServiceAccountKeyCreation` المفعّلة على
+مؤسستك (راجع صندوق التنبيه في §4 أعلاه لشرح هذه السياسة):
 ```bash
 pip install firebase-admin
-# نزّل مفتاح حساب خدمة (نفس §4.1) واحفظه باسم serviceAccountKey.json بجانب السكربت
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/cloud-platform
 python3 upload_lessons.py
 ```
-> ⚠️ لا تدفع `serviceAccountKey.json` إلى git أبداً — أضِفه في `.gitignore` إن لم يكن مضافاً.
+أول أمر يفتح متصفحاً لتسجيل الدخول بحسابك (مرة واحدة فقط، الجلسة تُخزَّن
+محلياً على جهازك ويمكن إلغاؤها لاحقاً بـ `gcloud auth application-default revoke`).
+السكربت نفسه يكتشف تلقائياً غياب `serviceAccountKey.json` ويستخدم هذه
+الجلسة بدلاً منه — لا حاجة لأي تعديل يدوي على الكود.
+
+> ⚠️ إن كانت مؤسستك من الاستثناءات النادرة التي لا تزال تسمح بتنزيل مفتاح
+> حساب خدمة تقليدي، يدعم السكربت ذلك أيضاً: احفظ الملف باسم
+> `serviceAccountKey.json` بجانب السكربت — ولا تدفعه إلى git أبداً (مضاف
+> بالفعل إلى `.gitignore`).
 
 ---
 
@@ -276,15 +340,16 @@ python3 upload_lessons.py
 
 | المشكلة | السبب | الحل |
 |---------|-------|------|
-| «فشل النشر السحابي: PERMISSION_DENIED» | القواعد القديمة ما زالت منشورة، أو نشرك التلقائي لم يعمل بعد | تحقق من تبويب **Actions** في GitHub — إن فشلت التشغيلة راجع سجلّها؛ الأغلب أن `FIREBASE_SERVICE_ACCOUNT` غير مضبوط أو صلاحياته ناقصة (§4) |
+| «فشل النشر السحابي: PERMISSION_DENIED» | القواعد القديمة ما زالت منشورة، أو نشرك التلقائي لم يعمل بعد | تحقق من تبويب **Actions** في GitHub — إن فشلت التشغيلة راجع سجلّها؛ الأغلب أن `WIF_PROVIDER`/`WIF_SERVICE_ACCOUNT` غير مضبوطين أو صلاحيات حساب الخدمة ناقصة (§4) |
+| «تم تطبيق سياسة تنظيمية تمنع إنشاء مفاتيح حسابات الخدمة... iam.disableServiceAccountKeyCreation» | حاولت تنزيل مفتاح JSON تقليدي من Service Accounts، لكن مؤسستك تمنع ذلك افتراضياً | هذا متوقّع وليس عطلاً — لا تحاول تعطيل السياسة؛ اتّبع §4.1 (Workload Identity Federation، بلا أي مفتاح) للنشر التلقائي، و§6 (`gcloud auth application-default login`) لسكربت `upload_lessons.py` |
 | النشر يفشل رغم القواعد الجديدة، والرسالة تذكر «غير موثّق» | بريدك مطابق للمالك لكن `email_verified = false` | افتح بريدك واضغط رابط التوثيق، ثم اضغط «تحققت — أعد الفحص» في أدوات المطور (§5) |
 | النشر يفشل ولا تظهر أي إشارة للتوثيق | لم تسجّل الدخول بحساب المالك أصلاً | سجّل بـ `mohammedalbkhyty@gmail.com` ثم أعد المحاولة |
 | الطالب لا يستلم الدروس | Anonymous معطّل، أو المزامنة متوقفة من إعداداته | فعّل Anonymous (§2.2) |
 | دخول Google يعطي رمز 10 | SHA-1 غير مسجل في Firebase | أضف بصمة SHA-1 (§3.3) |
 | تقدم الطالب ضاع بعد تغيير الجهاز | لم يسجّل دخولاً (جلسة مجهولة لا تنتقل) | سجّل دخوله بنفس البريد/حساب Google |
 | لوحة الصدارة فارغة | تُبنى تلقائياً عند أول مزامنة لكل مستخدم | افتح التطبيق مرة على الأقل ككل مستخدم |
-| سير عمل «Firebase Deploy» يفشل بـ «FIREBASE_SERVICE_ACCOUNT ليس JSON صالحاً» | نُسخ جزء من الملف فقط، أو أُضيف base64 بالخطأ | أعد فتح ملف JSON وانسخه كاملاً من `{` الأولى إلى `}` الأخيرة، بلا أي تحويل |
-| سير عمل «Firebase Deploy» يفشل بخطأ صلاحيات (403/`PERMISSION_DENIED`) | حساب الخدمة ينقصه دور | أضف له `Firebase Rules Admin` + `Cloud Datastore Index Admin` من IAM (§4.1) |
+| سير عمل «Firebase Deploy» يفشل بخطأ مصادقة WIF (`unable to generate access token`/`permission denied on resource`) | ربط انتحال الصفة (§4.1 خطوة 5) غير مضبوط، أو `attribute-condition` لا يطابق اسم مستودعك فعلياً | تأكد أن `REPO` في أوامر §4.1 مطابق حرفياً لاسم مستودعك (`OWNER/REPO`) وأن خطوة `add-iam-policy-binding` نُفّذت بنجاح |
+| سير عمل «Firebase Deploy» يفشل بخطأ صلاحيات (403/`PERMISSION_DENIED`) | حساب الخدمة ينقصه دور | أضف له `roles/firebaserules.admin` + `roles/datastore.indexAdmin` من IAM (§4.1) |
 
 ---
 
