@@ -1,5 +1,7 @@
 package com.zmastery.english.data
 
+import kotlinx.serialization.Serializable
+
 data class Level(
     val id: Int,
     val name: String,
@@ -113,9 +115,24 @@ data class Lesson(
     val rawJson: String = "",
     // ----- AI audio generation state (for reading/listening/story content) -----
     var audioReady: Boolean = false,
+    // ----- حالة النشر السحابي (شارة «تم الرفع») -----
+    /**
+     * لحظة التأكد من وجود هذا الدرس في السحابة (epoch millis) — صفر = لم يُرفع بعد.
+     *
+     * تُملأ من مصدرين لا ثالث لهما:
+     *   ١) نجاح النشر من التطبيق (درس واحد / دفعة / «نشر كل الدروس»).
+     *   ٢) «التحقق من السحابة» الذي يقارن معرّفات الدروس المحلية بما هو
+     *      موجود فعلاً في `/lessons` — فيشمل أيضاً ما رفعه سكربت البايثون.
+     */
+    var publishedAtMillis: Long = 0L,
+    /** معرّف مستند Firestore الذي نُشر تحته الدرس (`{courseId}_lesson_{no}`). */
+    var publishedDocId: String = "",
 ) {
     /** A completed lesson becomes due for review as its interval elapses. */
     val needsReview: Boolean get() = isCompleted && dueInDays <= 0
+
+    /** هل هذا الدرس موجود في السحابة فعلاً (تم رفعه)؟ */
+    val isPublishedToCloud: Boolean get() = publishedAtMillis > 0L
 }
 
 data class Sentence(val en: String, val ar: String)
@@ -285,4 +302,41 @@ data class PlanItem(
     val lessonId: Int,
     val lessonTitle: String,
     val accent: Long,
+)
+
+// ==========================================================================
+// مسار الهدف التطبيقي — القصة اليومية تُنسج حول هدف المتعلم لا حول جدول الحفظ.
+// ==========================================================================
+
+/**
+ * هدف حياتي يطبّق المتعلم لغته عليه (مثلاً: «أعرّف بنفسي ومهاراتي بوضوح»).
+ *
+ * القرار المنتج (نقاش 2026-08-26): القصة اليومية تستبدل بالكامل بقصة نحو
+ * الهدف، والأكاديمي يبقى منفصلاً في خطة اليوم. السياق الشخصي يبنيه الـAI
+ * تدريجياً بسؤال يومي صغير، والتقدم بين المراحل مشروط باختبار إثبات موقفي.
+ */
+@Serializable
+data class LifeGoal(
+    val id: String,
+    val title: String,
+    val description: String = "",
+    /** المراحل المصغّرة بالترتيب (تحية → مهنة → مهارات → خبرة …). */
+    val stages: List<String> = emptyList(),
+    /** المرحلة الحالية — لا تتقدم إلا باجتياز اختبار الإثبات. */
+    val stageIndex: Int = 0,
+    /** سياق المتعلم كما بناه الـAI: سطر لكل إجابة عن سؤال السياق اليومي. */
+    val learnerContext: List<String> = emptyList(),
+    val createdAtDay: Long = 0L,
+    val active: Boolean = true,
+) {
+    val currentStage: String get() = stages.getOrNull(stageIndex) ?: "بداية الطريق"
+    val isFinished: Boolean get() = stages.isNotEmpty() && stageIndex >= stages.size
+}
+
+/** سؤال موقفي واحد من اختبار إثبات المرحلة (٣ أسئلة، اجتياز ≥ ٢). */
+@Serializable
+data class StageQuestion(
+    val questionEn: String,
+    val options: List<String> = emptyList(),
+    val correctIndex: Int = 0,
 )

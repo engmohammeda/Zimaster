@@ -41,9 +41,14 @@ service cloud.firestore {
     function isSuperAdminToken() {
       // The email comes from the VERIFIED Firebase Auth ID token, not from the
       // client payload — it cannot be forged by the app or a replayed request.
+      //
+      // The null-guard is load-bearing: an anonymous account has no `email`
+      // claim, and calling `.matches()` on null makes the whole rule evaluation
+      // throw — which surfaces to the app as an opaque "denied" instead of a
+      // clean false, hiding the real reason from the admin diagnostics panel.
       return isSignedIn()
-        && (request.auth.token.email == 'mohammedalbkhyty@gmail.com'
-            || request.auth.token.email.matches('.*@gmail[.]com') && request.auth.token.email == 'mohammedalbkhyty@gmail.com');
+        && request.auth.token.email != null
+        && request.auth.token.email == 'mohammedalbkhyty@gmail.com';
     }
 
     // Role recorded for the signed-in user in /users (missing → student).
