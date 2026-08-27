@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,6 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,6 +73,7 @@ fun DeveloperToolsScreen(vm: AppViewModel, onOpenImport: () -> Unit) {
 
         item { CloudHealthCard(vm) }
         item { PublishLessonsCard(vm, onOpenImport) }
+        item { AuthoringPromptsCard(vm) }
         item { AnnouncementCard(vm) }
         item { QuoteCard(vm) }
         item { StudentsCard(vm) }
@@ -968,4 +972,137 @@ private fun stampLabel(millis: Long): String {
         java.text.SimpleDateFormat("dd MMMM · HH:mm", java.util.Locale.forLanguageTag("ar"))
             .format(java.util.Date(millis))
     }.getOrDefault("—")
+}
+
+/* ─────────────────────── ٥) مطالبات تأليف المناهج ─────────────────────── */
+
+/**
+ * مطالبتا التأليف (إنشاء المنهج التخصصي + استخراج الدروس الموحّد) مضمّنتان
+ * كـ assets وتُعرضان للنسخ هنا — للمسؤول فقط، لأن الشاشة كلها محمية بـ isAdmin.
+ * المصدر الوحيد للمحتوى: ملفا *.md في جذر المستودع (يُنسخان إلى assets).
+ */
+@Composable
+private fun AuthoringPromptsCard(vm: AppViewModel) {
+    val clipboard = LocalClipboardManager.current
+    val ctx = vm.app
+    val builder = remember {
+        runCatching { ctx.assets.open("prompts/ESP_COURSE_BUILDER_PROMPT.md").bufferedReader().readText() }
+            .getOrDefault("")
+    }
+    val extractor = remember {
+        runCatching { ctx.assets.open("prompts/UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md").bufferedReader().readText() }
+            .getOrDefault("")
+    }
+    var preview by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var copied by remember { mutableStateOf<String?>(null) }
+
+    SoftCard(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            SectionHeader(
+                icon = Icons.Filled.ContentCopy,
+                tint = ZPurple,
+                title = "مطالبات تأليف المناهج 🤖",
+                subtitle = "انسخها لأي وكيل AI فيكتب منهجاً أو دروساً بمخطط التطبيق تماماً",
+            )
+            Spacer(Modifier.height(12.dp))
+
+            PromptRow(
+                name = "مُنشئ المناهج التخصصية (ESP)",
+                desc = "منهج كامل لمجال مهني → JSON جاهز للصق في «لصق JSON من AI»",
+                chars = builder.length,
+                copied = copied == "builder",
+                onCopy = { clipboard.setText(AnnotatedString(builder)); copied = "builder" },
+                onPreview = { preview = "مُنشئ المناهج التخصصية (ESP)" to builder },
+            )
+            Spacer(Modifier.height(8.dp))
+            PromptRow(
+                name = "مستخرج الدروس الموحّد (ZAmerican)",
+                desc = "تحويل نص حلقة كورس ذا أمريكان → درس JSON بمخطط البلوكات",
+                chars = extractor.length,
+                copied = copied == "extractor",
+                onCopy = { clipboard.setText(AnnotatedString(extractor)); copied = "extractor" },
+                onPreview = { preview = "مستخرج الدروس الموحّد (ZAmerican)" to extractor },
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    clipboard.setText(
+                        AnnotatedString(
+                            "# ١) مطالبة إنشاء المنهج\n$builder\n\n═══ الفاصل ═══\n\n# ٢) مطالبة استخراج الدروس\n$extractor"
+                        )
+                    )
+                    copied = "merged"
+                },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ZPurple),
+            ) {
+                Icon(
+                    if (copied == "merged") Icons.Filled.CheckCircle else Icons.Filled.ContentCopy,
+                    null, modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (copied == "merged") "نُسخت المطالبتان معاً ✓" else "نسخ المطالبتين معاً (مدموج)",
+                    fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                )
+            }
+        }
+    }
+
+    preview?.let { (title, text) ->
+        AlertDialog(
+            onDismissRequest = { preview = null },
+            title = { Text(title, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp) },
+            text = {
+                Column {
+                    Text(
+                        text, color = ZTextSecondary, fontSize = 10.sp, lineHeight = 15.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp)
+                            .verticalScroll(rememberScrollState()),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    clipboard.setText(AnnotatedString(text)); copied = title; preview = null
+                }) { Text("نسخ الكل", color = ZPurple, fontWeight = FontWeight.Black) }
+            },
+            dismissButton = { TextButton(onClick = { preview = null }) { Text("إغلاق", color = ZTextSecondary) } },
+        )
+    }
+}
+
+@Composable
+private fun PromptRow(
+    name: String,
+    desc: String,
+    chars: Int,
+    copied: Boolean,
+    onCopy: () -> Unit,
+    onPreview: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(ZSurfaceVariant.copy(alpha = 0.6f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(name, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(desc, color = ZTextSecondary, fontSize = 10.sp, lineHeight = 15.sp)
+            Text("الحجم: $chars حرفاً", color = ZTextMuted, fontSize = 9.sp)
+        }
+        TextButton(onClick = onPreview) { Text("عرض", color = ZTextSecondary, fontSize = 11.sp) }
+        TextButton(onClick = onCopy) {
+            Text(
+                if (copied) "نُسخ ✓" else "نسخ",
+                color = if (copied) ZEmeraldDeep else ZPurple, fontSize = 11.sp, fontWeight = FontWeight.Black,
+            )
+        }
+    }
 }
