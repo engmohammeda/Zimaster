@@ -100,8 +100,9 @@ jobs:
 
       - name: التحقق من صحة القواعد (dry-run دائماً كخطوة أولى)
         run: |
+          firebase --version
           firebase deploy --only firestore:rules,firestore:indexes \
-            --project zmastery --non-interactive --dry-run
+            --project zmastery --non-interactive --dry-run --debug
 
       - name: نشر القواعد والفهارس فعلياً
         if: ${{ github.event.inputs.dry_run != 'true' }}
