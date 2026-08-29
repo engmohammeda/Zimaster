@@ -225,20 +225,22 @@ internal class AiConfigController(internal val vm: AppViewModel) {
     val freeModelCount: Int get() = aiModels.count { GeminiQuotas.isFree(it.id) }
 
     /**
-     * Candidate models for an agent — **only the kinds this persona actually
-     * uses**. A TTS teacher never sees Imagen; an image artist never sees
-     * Gemini TTS. LIVE personas also receive TEXT models as a turn-based
-     * fallback when the key has no native-audio models.
+     * Candidate models for an agent. The agent's declared kind comes first, but
+     * the FULL catalogue is always appended so the user can pick any model for
+     * any persona — including brand-new previews we could not classify.
      */
-    fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> =
-        agent.kind.pickerKinds.mapNotNull { k ->
-            val list = modelsOfKind(k)
-            if (list.isEmpty()) null else k to list
+    fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> {
+        val primary = modelsOfKind(agent.kind)
+        val rest = ModelKind.values()
+            .filter { it != agent.kind }
+            .mapNotNull { k ->
+                val l = modelsOfKind(k)
+                if (l.isEmpty()) null else k to l
+            }
+        return buildList {
+            if (primary.isNotEmpty()) add(agent.kind to primary)
+            addAll(rest)
         }
-
-    fun setShowFreeModelsOnly(value: Boolean) {
-        vm.showFreeModelsOnly = value
-        persist()
     }
 
     fun modelName(id: String) = aiModels.firstOrNull { it.id == id }?.displayName ?: id

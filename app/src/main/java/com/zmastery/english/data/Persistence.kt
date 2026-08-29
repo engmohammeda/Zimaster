@@ -28,8 +28,6 @@ data class AppState(
     val vocab: List<WordDto> = emptyList(),
     val profile: ProfileDto = ProfileDto(),
     val aiAgents: List<AiAgentDto> = emptyList(),
-    /** Catalogue last fetched for the active key — survives app restarts. */
-    val aiModels: List<AiModelDto> = emptyList(),
     val apiKeys: List<ApiKeyDto> = emptyList(),
     val exams: List<ExamRecordDto> = emptyList(),
     /** wordId -> exam miss count (stored as string keys for JSON safety). */
@@ -103,47 +101,6 @@ data class StoryDto(
 data class AiAgentDto(
     val id: String, val modelId: String, val character: String,
     val voiceId: String, val style: String, val prompt: String,
-)
-
-/** Persisted catalogue entry — compact, defaults keep old backups readable. */
-@Serializable
-data class AiModelDto(
-    val id: String,
-    val displayName: String = "",
-    val kind: String = "TEXT",
-    val description: String = "",
-    val methods: List<String> = emptyList(),
-    val inputTokenLimit: Int = 0,
-    val outputTokenLimit: Int = 0,
-    val version: String = "",
-    val apiVersions: List<String> = emptyList(),
-    val fetched: Boolean = false,
-) {
-    fun toDomain(): AiModel = AiModel(
-        id = id,
-        displayName = displayName.ifBlank { id },
-        kind = runCatching { ModelKind.valueOf(kind) }.getOrDefault(ModelKind.OTHER),
-        description = description,
-        methods = methods,
-        inputTokenLimit = inputTokenLimit,
-        outputTokenLimit = outputTokenLimit,
-        version = version,
-        apiVersions = apiVersions,
-        fetched = fetched,
-    )
-}
-
-fun AiModel.toDto(): AiModelDto = AiModelDto(
-    id = id,
-    displayName = displayName,
-    kind = kind.name,
-    description = description,
-    methods = methods,
-    inputTokenLimit = inputTokenLimit,
-    outputTokenLimit = outputTokenLimit,
-    version = version,
-    apiVersions = apiVersions,
-    fetched = fetched,
 )
 
 @Serializable
@@ -343,8 +300,6 @@ data class ProfileDto(
      * تختفي بعد كل إعادة تشغيل للتطبيق.
      */
     val developerUnlocked: Boolean = false,
-    /** Keep the "free models only" filter across sessions. */
-    val showFreeModelsOnly: Boolean = false,
 )
 
 object Persistence {

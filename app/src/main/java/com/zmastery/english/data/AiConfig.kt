@@ -21,28 +21,7 @@ enum class ModelKind(val label: String, val short: String) {
     IMAGE("نماذج الصور", "صور"),
     VIDEO("نماذج الفيديو", "فيديو"),
     EMBEDDING("نماذج التضمين (Embedding)", "تضمين"),
-    OTHER("نماذج أخرى", "أخرى");
-
-    /**
-     * Kinds offered in this agent's model picker.
-     *
-     * A voice-only persona never sees image/text catalogues, an image persona
-     * never sees TTS, and so on. LIVE includes TEXT as a turn-based fallback
-     * so conversation still works when the key has no native-audio models.
-     */
-    val pickerKinds: List<ModelKind>
-        get() = when (this) {
-            TEXT -> listOf(TEXT)
-            TTS -> listOf(TTS)
-            LIVE -> listOf(LIVE, TEXT)
-            IMAGE -> listOf(IMAGE)
-            VIDEO -> listOf(VIDEO)
-            EMBEDDING -> listOf(EMBEDDING)
-            OTHER -> listOf(OTHER)
-        }
-
-    /** Whether this kind speaks aloud and therefore needs a voice picker. */
-    val usesVoice: Boolean get() = this == TTS || this == LIVE
+    OTHER("نماذج أخرى", "أخرى"),
 }
 
 /**
@@ -204,14 +183,14 @@ object AiDefaults {
         AiAgent(
             id = "conversation",
             feature = "شريك المحادثة",
-            description = "يحاورك لايف بناءً على حوارات الدرس — يستمع ويرد بصوته.",
+            description = "يحاورك بناءً على حوارات الدرس المستوردة (ليس عشوائياً).",
             icon = "talk",
-            kind = ModelKind.LIVE,
-            modelId = "gemini-2.5-flash",
+            kind = ModelKind.TTS,
+            modelId = "gemini-2.5-flash-tts",
             character = "صديق أمريكي ودود يساعدك على التدرّب",
             voiceId = "puck",
-            style = "عفوي، مشجّع، يصحّح الأخطاء بلطف، جمل قصيرة",
-            prompt = "أنت شريك محادثة ودود. تحدث بالإنجليزية البسيطة ضمن سياق الحوار الحالي: {DIALOGUE}. شجّع المتعلم وصحّح أخطاءه بلطف واطرح أسئلة متابعة قصيرة. أجب بجملة أو جملتين فقط.",
+            style = "عفوي، مشجّع، يصحّح الأخطاء بلطف",
+            prompt = "أنت شريك محادثة ودود. تحدث بالإنجليزية البسيطة ضمن سياق الحوار الحالي: {DIALOGUE}. شجّع المتعلم وصحّح أخطاءه بلطف واطرح أسئلة متابعة قصيرة.",
         ),
         AiAgent(
             id = "phonetics",
