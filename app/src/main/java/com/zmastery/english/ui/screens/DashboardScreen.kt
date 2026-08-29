@@ -217,11 +217,11 @@ private fun PlanTierNote(vm: AppViewModel) {
 }
 
 private fun routeForTask(id: String): String = when (id) {
-    "review" -> "review"
-    "listen", "speak" -> "skills"
+    "review", "listen" -> "review"
     "lesson" -> "levels"
     "quiz" -> "exams"
     "story" -> "stories"
+    "speak" -> "skills"
     "addword" -> "vocab"
     "mnemonic" -> "mnemonics"
     else -> "levels"

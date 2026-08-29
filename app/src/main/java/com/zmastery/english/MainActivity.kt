@@ -134,7 +134,7 @@ private val moreGroups = listOf(
     MoreGroup("مسارك", listOf(
         MoreItem("stories", "القصص وأهدافي", "قصة اليوم نحو هدفك التطبيقي", Icons.Filled.AutoStories, ZAmberDeep),
         MoreItem("roadmap", "خريطة المنهج", "خطتك وتغطيتك", Icons.Filled.Map, ZEmerald),
-        MoreItem("skills", "التدريب", "قراءة · استماع · تحدث · كتابة · صوتيات", Icons.Filled.FitnessCenter, ZIndigo),
+        MoreItem("skills", "المهارات الخمس", "قراءة · استماع · كتابة", Icons.Filled.Interests, ZIndigo),
     )),
     MoreGroup("تقدّمك وحماسك", listOf(
         MoreItem("analytics", "التحليلات", "مدربك الذكي ومرآة إدراكك", Icons.Filled.Analytics, ZPurple),
@@ -631,7 +631,7 @@ private fun TopBar(route: String?) {
         "exams" -> "الاختبارات"
         "stories" -> "أرشيف القصص"
         "stories/{focus}" -> "أرشيف القصص"
-        "skills" -> "التدريب"
+        "skills" -> "المهارات الخمس"
         "roadmap" -> "خريطة المنهج"
         "analytics" -> "التحليلات"
         "momentum" -> "زخم الالتزام"

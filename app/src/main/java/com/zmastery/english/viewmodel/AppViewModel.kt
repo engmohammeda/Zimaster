@@ -217,14 +217,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
-        if (s.aiModels.isNotEmpty()) {
-            aiModels.clear()
-            aiModels.addAll(s.aiModels.map { it.toDomain() })
-            AiDefaults.builtinModels.forEach { b ->
-                if (aiModels.none { it.id == b.id }) aiModels.add(b)
-            }
-        }
-        showFreeModelsOnly = p.showFreeModelsOnly
         apiKeys.clear()
         apiKeys.addAll(
             s.apiKeys
@@ -714,8 +706,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Candidate models for an agent (declared kind first, full catalogue appended). */
     fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> = aiConfig.modelChoicesFor(agent)
-
-    fun setShowFreeModelsOnly(value: Boolean) = aiConfig.setShowFreeModelsOnly(value)
 
     fun modelName(id: String) = aiConfig.modelName(id)
     fun modelById(id: String) = aiConfig.modelById(id)
