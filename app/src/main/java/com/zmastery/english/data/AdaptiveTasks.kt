@@ -197,7 +197,8 @@ object AdaptiveTasks {
             subtitle = "درّب لسانك على النطق",
             icon = "talk",
             target = { s ->
-                if (s.hasConversationLesson && s.tier >= LearnerTier.GROWING) 1 else null
+                // Café / intro scenes always exist — no imported dialogue required.
+                if (s.tier >= LearnerTier.SPROUT) 1 else null
             },
             weight = { s -> if (s.tier == LearnerTier.ESTABLISHED) 55 else 25 },
         ),

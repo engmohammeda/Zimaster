@@ -350,8 +350,8 @@ private fun FetchModelsCard(vm: AppViewModel) {
                     Text("النماذج المتاحة", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
                         if (fetchedCount > 0)
-                            "$total نموذج مجلوب لمفتاحك · ${vm.freeModelCount} ضمن الحصة المجانية"
-                        else "$total نموذج مبدئي · اجلب القائمة الكاملة لمفتاحك",
+                            "$total نموذج محفوظ على الجهاز · ${vm.freeModelCount} ضمن الحصة المجانية"
+                        else "$total نموذج مبدئي · اجلب القائمة مرة واحدة وتُحفظ تلقائياً",
                         color = ZTextSecondary, fontSize = 11.sp,
                     )
                 }
@@ -414,7 +414,7 @@ private fun FetchModelsCard(vm: AppViewModel) {
                 }
                 Switch(
                     checked = vm.showFreeModelsOnly,
-                    onCheckedChange = { vm.showFreeModelsOnly = it },
+                    onCheckedChange = { vm.setShowFreeModelsOnly(it) },
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = ZEmerald),
                 )
             }
@@ -561,7 +561,7 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(Icons.Filled.Memory, vm.modelName(agent.modelId))
-                if (agent.kind == ModelKind.TTS) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
+                if (agent.kind.usesVoice) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
             }
         }
     }
@@ -599,12 +599,11 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             }
         }
 
-        // ---- Model selector: the FULL catalogue is offered for every agent ----
-        // The agent's natural kind is listed first, but every other kind is
-        // available too, so any model (including brand-new previews) can be
-        // assigned to any persona.
+        // ---- Model selector: ONLY the kinds this persona actually uses ----
+        // Voice teachers see TTS, image artists see Imagen, live partners see
+        // Live (+ text as a turn-based fallback). Nothing else leaks in.
         var modelQuery by remember { mutableStateOf("") }
-        val groups = remember(vm.aiModels.toList(), vm.showFreeModelsOnly, agent.id) {
+        val groups = remember(vm.aiModels.toList(), vm.showFreeModelsOnly, agent.id, agent.kind) {
             vm.modelChoicesFor(agent)
         }
         val filteredGroups = groups.mapNotNull { (kind, list) ->
@@ -616,7 +615,14 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
 
         EditorCard("النموذج", Icons.Filled.Memory) {
             Text(
-                "كل النماذج المتاحة لمفتاحك — اختر أي نموذج لهذه الشخصية",
+                when (agent.kind) {
+                    ModelKind.TTS -> "النماذج الصوتية فقط — هذه الشخصية تنطق ولا تكتب"
+                    ModelKind.IMAGE -> "نماذج الصور فقط — هذه الشخصية ترسم ولا تتحدث"
+                    ModelKind.VIDEO -> "نماذج الفيديو فقط"
+                    ModelKind.LIVE -> "النماذج الحيّة أولاً، ثم النصية كبديل للمحادثة"
+                    ModelKind.EMBEDDING -> "نماذج التضمين فقط"
+                    else -> "النماذج النصية فقط — هذه الشخصية تكتب ولا تنطق"
+                },
                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
             )
             Spacer(Modifier.height(8.dp))
@@ -624,7 +630,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = if (vm.showFreeModelsOnly) ZEmerald.copy(alpha = 0.15f) else ZSurfaceVariant,
-                    onClick = { vm.showFreeModelsOnly = !vm.showFreeModelsOnly },
+                    onClick = { vm.setShowFreeModelsOnly(!vm.showFreeModelsOnly) },
                 ) {
                     Row(
                         Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -747,14 +753,14 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             }
             if (filteredGroups.isEmpty()) {
                 Text(
-                    "لا توجد نماذج مطابقة — جرّب بحثاً آخر أو أوقف فلتر «المجانية فقط».",
+                    "لا توجد نماذج من نوع هذه الشخصية — اجلب القائمة أو أوقف فلتر «المجانية فقط».",
                     color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp),
                 )
             }
         }
 
-        // Voice selector (TTS only)
-        if (agent.kind == ModelKind.TTS) {
+        // Voice selector — TTS teachers and live conversation partners both speak.
+        if (agent.kind.usesVoice) {
             EditorCard("الصوت / الشخصية الصوتية", Icons.Filled.RecordVoiceOver) {
                 vm.aiVoices.forEach { v ->
                     val sel = v.id == voiceId
