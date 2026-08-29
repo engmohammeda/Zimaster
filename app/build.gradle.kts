@@ -24,53 +24,26 @@ android {
 
     signingConfigs {
         create("debugConfig") {
-            val dbgKeystore = file("${rootDir}/debug.keystore")
-            if (dbgKeystore.exists()) {
-                storeFile = dbgKeystore
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
-        }
-        if (System.getenv("RELEASE_STORE_FILE") != null && file(System.getenv("RELEASE_STORE_FILE")).exists()) {
-            create("release") {
-                storeFile = file(System.getenv("RELEASE_STORE_FILE"))
-                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
-                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
-            }
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
     buildTypes {
         debug {
-            val rel = signingConfigs.findByName("release")
-            val dbg = signingConfigs.findByName("debugConfig")
-            if (rel != null && rel.storeFile != null) {
-                signingConfig = rel
-            } else if (dbg != null && dbg.storeFile != null) {
-                signingConfig = dbg
-            }
+            signingConfig = signingConfigs.getByName("debugConfig")
             isDebuggable = true
         }
         release {
-            // R8: shrink + obfuscate the release build.
-            // App reflection surface is kept via app/proguard-rules.pro
-            // (kotlinx.serialization data classes, the AppViewModel constructor,
-            // the widget provider, enums persisted by name, Firebase).
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            val rel = signingConfigs.findByName("release")
-            val dbg = signingConfigs.findByName("debugConfig")
-            if (rel != null && rel.storeFile != null) {
-                signingConfig = rel
-            } else if (dbg != null && dbg.storeFile != null) {
-                signingConfig = dbg
-            }
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
     }
 

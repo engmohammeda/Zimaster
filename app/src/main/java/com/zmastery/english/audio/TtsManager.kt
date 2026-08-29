@@ -55,9 +55,26 @@ class TtsManager(context: Context) {
     // ---- config ----
     @Volatile var apiKey: String = ""
     @Volatile var voice: String = "Kore"   // Gemini prebuilt voice name
+    @Volatile var backupApiKeys: List<String> = emptyList()
+
+    // ---- Multi-model failover & quota state ----
+    val ttsFallbackModels = listOf(
+        "gemini-2.5-flash-preview-tts",
+        "gemini-2.5-flash-tts",
+        "gemini-2.5-pro-tts",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    )
+    val exhaustedModels = mutableSetOf<String>()
+    var activeModel by mutableStateOf(ttsFallbackModels.first())
+        private set
+    var lastError by mutableStateOf<String?>(null)
+        private set
 
     // ---- Android TTS (instant / temporary path only) ----
     private var androidTts: TextToSpeech? = null
+    @Volatile private var currentMediaPlayer: MediaPlayer? = null
+    @Volatile private var isPlaybackStopped: Boolean = false
 
     init {
         androidTts = TextToSpeech(appContext) { status ->
@@ -145,12 +162,21 @@ class TtsManager(context: Context) {
     suspend fun playCached(text: String, key: String) = speakInstant(text, key)
 
     fun stop() {
+        isPlaybackStopped = true
         androidTts?.stop()
+        runCatching {
+            currentMediaPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.reset()
+                it.release()
+            }
+        }
+        currentMediaPlayer = null
         speakingKey = null
     }
 
     fun shutdown() {
-        androidTts?.stop()
+        stop()
         androidTts?.shutdown()
         androidTts = null
     }
@@ -159,11 +185,13 @@ class TtsManager(context: Context) {
     private suspend fun androidSpeakBlocking(text: String) {
         val tts = androidTts ?: return
         if (!engineReady) return
+        isPlaybackStopped = false
         val maxLen = runCatching { TextToSpeech.getMaxSpeechInputLength() }
             .getOrDefault(4000).coerceAtLeast(500)
         val chunks = splitForTts(text, maxChars = (maxLen - 50).coerceAtLeast(200))
         if (chunks.isEmpty()) return
         for ((idx, chunk) in chunks.withIndex()) {
+            if (isPlaybackStopped) break
             val done = suspendCancellableCoroutine<Boolean> { cont ->
                 val id = "instant_${System.currentTimeMillis()}_$idx"
                 tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -185,12 +213,14 @@ class TtsManager(context: Context) {
                 val res = tts.speak(chunk, mode, params, id)
                 if (res != TextToSpeech.SUCCESS && cont.isActive) cont.resume(false)
             }
-            if (!done) break
+            if (!done || isPlaybackStopped) break
         }
     }
 
     private fun playFile(f: File) {
+        isPlaybackStopped = false
         val mp = MediaPlayer()
+        currentMediaPlayer = mp
         try {
             mp.setDataSource(f.absolutePath)
             mp.setAudioAttributes(
@@ -200,12 +230,21 @@ class TtsManager(context: Context) {
                     .build()
             )
             mp.prepare()
-            mp.start()
-            while (mp.isPlaying) Thread.sleep(80)
+            if (!isPlaybackStopped) {
+                mp.start()
+                while (mp.isPlaying && !isPlaybackStopped) {
+                    Thread.sleep(80)
+                }
+            }
         } catch (e: Exception) {
             // ignore — playback best-effort
         } finally {
-            runCatching { mp.release() }
+            runCatching {
+                if (mp == currentMediaPlayer) {
+                    currentMediaPlayer = null
+                }
+                mp.release()
+            }
         }
     }
 
@@ -301,17 +340,36 @@ class TtsManager(context: Context) {
     }
 
     // ---------------------------------------------------------------
-    // Gemini TTS — returns raw 24kHz mono 16-bit PCM bytes
+    // Gemini TTS — with automatic multi-model failover & quota switching
     // ---------------------------------------------------------------
     private fun geminiPcm(text: String): ByteArray? {
+        val allKeys = listOf(apiKey) + backupApiKeys.filter { it.isNotBlank() && it != apiKey }
+        if (allKeys.isEmpty()) return null
+
+        val availableModels = ttsFallbackModels.filter { it !in exhaustedModels }
+        val modelsToTry = if (availableModels.isNotEmpty()) availableModels else ttsFallbackModels
+
+        for (model in modelsToTry) {
+            for (key in allKeys) {
+                val pcm = tryModelPcm(text, model, key)
+                if (pcm != null && pcm.isNotEmpty()) {
+                    activeModel = model
+                    lastError = null
+                    return pcm
+                }
+            }
+        }
+        return null
+    }
+
+    private fun tryModelPcm(text: String, model: String, key: String): ByteArray? {
         val url = URL(
             "https://generativelanguage.googleapis.com/v1beta/models/" +
-                "gemini-2.5-flash-preview-tts:generateContent?key=$apiKey"
+                "$model:generateContent?key=$key"
         )
         val body = JSONObject().apply {
             put("contents", org.json.JSONArray().put(JSONObject().apply {
                 put("parts", org.json.JSONArray().put(JSONObject().apply {
-                    // Ask for clear, natural English pronunciation
                     put("text", "Say clearly in a natural English accent: $text")
                 }))
             }))
@@ -327,25 +385,37 @@ class TtsManager(context: Context) {
             })
         }.toString()
 
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 15000
-            readTimeout = 20000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json")
-        }
-        conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-
-        val code = conn.responseCode
-        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-        val resp = stream?.bufferedReader()?.use { it.readText() } ?: return null
-        if (code !in 200..299) return null
-
-        // Navigate: candidates[0].content.parts[0].inlineData.data (base64 PCM)
         return try {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 12000
+                readTimeout = 18000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+            }
+            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+
+            val code = conn.responseCode
+            if (code == 429 || code == 403 || code == 404 || code >= 500) {
+                // Quota exceeded / model unavailable: mark exhausted and switch to next
+                exhaustedModels.add(model)
+                lastError = "تم استنفاد حصة $model (رمز $code) — جارٍ التبديل للنموذج التالي"
+                return null
+            }
+
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val resp = stream?.bufferedReader()?.use { it.readText() } ?: return null
+            if (code !in 200..299) {
+                if (resp.contains("RESOURCE_EXHAUSTED", true) || resp.contains("quota", true)) {
+                    exhaustedModels.add(model)
+                    lastError = "استُنفدت حصة $model — تم الانتقال لنموذج بديل"
+                }
+                return null
+            }
+
             val root = JSONObject(resp)
-            val parts = root.getJSONArray("candidates").getJSONObject(0)
-                .getJSONObject("content").getJSONArray("parts")
+            val parts = root.optJSONArray("candidates")?.optJSONObject(0)
+                ?.optJSONObject("content")?.optJSONArray("parts") ?: return null
             for (i in 0 until parts.length()) {
                 val p = parts.getJSONObject(i)
                 if (p.has("inlineData")) {
@@ -355,6 +425,7 @@ class TtsManager(context: Context) {
             }
             null
         } catch (e: Exception) {
+            lastError = e.message
             null
         }
     }

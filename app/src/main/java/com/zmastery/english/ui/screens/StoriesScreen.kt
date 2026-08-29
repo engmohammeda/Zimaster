@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -49,9 +50,19 @@ fun StoriesScreen(vm: AppViewModel, focusStoryId: Int? = null) {
     var filter by remember { mutableStateOf(0) } // 0 all · 1 daily · 2 lesson · 3 unread · 4 favorites
     var query by remember { mutableStateOf("") }
     var expandedId by remember { mutableStateOf(focusStoryId) }
+    var interactiveStory by remember { mutableStateOf<ArchivedStory?>(null) }
 
     // Keep lesson stories in sync whenever the archive screen is opened.
     LaunchedEffect(Unit) { vm.syncLessonStories() }
+
+    // Interactive Estoria-style story dialog
+    interactiveStory?.let { story ->
+        com.zmastery.english.ui.components.InteractiveStoryDialog(
+            story = story,
+            vm = vm,
+            onDismiss = { interactiveStory = null }
+        )
+    }
 
     val all = vm.storiesSorted
     val list = all.filter { s ->
@@ -75,7 +86,13 @@ fun StoriesScreen(vm: AppViewModel, focusStoryId: Int? = null) {
         modifier = Modifier.fillMaxSize(),
     ) {
         item { ArchiveHeader(vm) }
-        item { TodayStoryCard(vm) { expandedId = it } }
+        item {
+            TodayStoryCard(
+                vm = vm,
+                onOpen = { expandedId = it },
+                onOpenInteractive = { s -> interactiveStory = s }
+            )
+        }
 
         item {
             OutlinedTextField(
@@ -117,6 +134,7 @@ fun StoriesScreen(vm: AppViewModel, focusStoryId: Int? = null) {
                     vm = vm,
                     expanded = expandedId == story.id,
                     onToggle = { expandedId = if (expandedId == story.id) null else story.id },
+                    onOpenInteractive = { interactiveStory = story }
                 )
             }
         }
@@ -168,7 +186,11 @@ private fun HeaderPill(icon: androidx.compose.ui.graphics.vector.ImageVector, te
 
 /** The daily ritual card: generate today's story, or jump straight into it. */
 @Composable
-private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
+private fun TodayStoryCard(
+    vm: AppViewModel,
+    onOpen: (Int) -> Unit,
+    onOpenInteractive: (ArchivedStory) -> Unit
+) {
     val today = vm.todayStory
     Surface(
         shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp,
@@ -303,25 +325,25 @@ private fun TodayStoryCard(vm: AppViewModel, onOpen: (Int) -> Unit) {
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
-                        onClick = { onOpen(today.id) },
-                        modifier = Modifier.weight(1f).height(46.dp),
+                        onClick = { onOpenInteractive(today) },
+                        modifier = Modifier.weight(1.3f).height(46.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
                     ) {
-                        Icon(Icons.Filled.MenuBook, null, modifier = Modifier.size(17.dp))
+                        Icon(Icons.Filled.TouchApp, null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("اقرأها", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("قراءة تفاعلية (ايستوريا)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                     OutlinedButton(
-                        onClick = { vm.generateTodayStory(force = true) { s -> s?.let { onOpen(it.id) } } },
-                        modifier = Modifier.weight(1f).height(46.dp),
+                        onClick = { vm.generateTodayStory(force = true) { s -> s?.let { onOpenInteractive(it) } } },
+                        modifier = Modifier.weight(0.9f).height(46.dp),
                         shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary),
                     ) {
                         Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("جدّدها", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("تجديد", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -338,8 +360,7 @@ private fun ArchiveChip(active: Boolean, label: String, accent: Color, onClick: 
         shadowElevation = if (active) 0.dp else 2.dp,
     ) {
         Text(
-            label,
-            color = if (active) Color.White else ZTextSecondary,
+            label, color = if (active) Color.White else ZTextSecondary,
             fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
@@ -352,6 +373,7 @@ private fun StoryCard(
     vm: AppViewModel,
     expanded: Boolean,
     onToggle: () -> Unit,
+    onOpenInteractive: () -> Unit,
 ) {
     var showAr by remember { mutableStateOf(false) }
     val accent = if (story.kind == StoryKind.DAILY) ZIndigo else ZCyanDeep
@@ -416,6 +438,21 @@ private fun StoryCard(
                 MetaPill("${story.readMinutes} د", ZTextSecondary)
                 MetaPill("${story.wordCount} كلمة", ZTextSecondary)
                 if (story.isRead) MetaPill("مقروءة", ZEmerald)
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = accent.copy(alpha = 0.15f),
+                    onClick = onOpenInteractive
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.TouchApp, null, tint = accent, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("قراءة تفاعلية", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -458,7 +495,7 @@ private fun StoryCard(
                     HorizontalDivider(color = ZBorder)
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Listen to the whole story
+                        // Listen / Stop to the whole story
                         com.zmastery.english.audio.AudioButton(
                             text = story.en,
                             audioKey = "story_${story.id}",
@@ -467,25 +504,26 @@ private fun StoryCard(
                             iconSize = 19.dp,
                         )
                         Spacer(Modifier.width(8.dp))
-                        // Generate a natural AI narration for this story (Gemini),
-                        // permanently cached — sounds far more natural than the
-                        // local device TTS used by the button above.
-                        if (story.audioReady) {
-                            Surface(shape = RoundedCornerShape(8.dp), color = ZEmerald.copy(alpha = 0.15f)) {
-                                Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.AutoAwesome, null, tint = ZEmerald, modifier = Modifier.size(13.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("صوت AI جاهز", color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
+
+                        // Stop audio explicit button if speaking
+                        if (vm.tts?.speakingKey == "story_${story.id}") {
+                            IconButton(
+                                onClick = { vm.tts?.stop() },
+                                modifier = Modifier.size(34.dp).clip(CircleShape).background(ZRose.copy(alpha = 0.2f))
+                            ) {
+                                Icon(Icons.Filled.Stop, "إيقاف", tint = ZRose, modifier = Modifier.size(18.dp))
                             }
-                        } else {
-                            TextButton(onClick = { vm.generateStoryAudio(story.id) }, enabled = !vm.isGeneratingAudio) {
-                                Icon(Icons.Filled.AutoAwesome, null, tint = ZPurple, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("صوت طبيعي AI", color = ZPurple, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-                            }
+                            Spacer(Modifier.width(8.dp))
                         }
-                        Spacer(Modifier.width(8.dp))
+
+                        // Open in Full Estoria Interactive Reader Mode
+                        TextButton(onClick = onOpenInteractive) {
+                            Icon(Icons.Filled.AutoStories, null, tint = accent, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("وضع القراءة التفاعلي", color = accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+
+                        Spacer(Modifier.weight(1f))
                         if (story.ar.isNotBlank()) {
                             TextButton(onClick = { showAr = !showAr }) {
                                 Icon(
@@ -499,7 +537,6 @@ private fun StoryCard(
                                 )
                             }
                         }
-                        Spacer(Modifier.weight(1f))
                         TextButton(onClick = { vm.toggleStoryRead(story.id) }) {
                             Icon(
                                 if (story.isRead) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,

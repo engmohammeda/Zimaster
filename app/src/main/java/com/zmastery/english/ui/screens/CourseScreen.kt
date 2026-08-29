@@ -38,10 +38,19 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
     // علامة «تم الرفع» تظهر للمسؤول فقط — الطالب لا يحتاجها.
     val showPublishMark = vm.isAdmin
     val publishedCount = lessons.count { it.isPublishedToCloud }
-    // استوديو المنهج المخصص: تأليف يدوي + لصق JSON من وكيل AI.
+    // استوديو المنهج المخصص: تأليف يدوي + توليد AI متكامل.
+    var showLessonStudio by remember { mutableStateOf(false) }
     var showManualLesson by remember { mutableStateOf(false) }
     var showPasteJson by remember { mutableStateOf(false) }
     var lessonToDelete by remember { mutableStateOf<com.zmastery.english.data.Lesson?>(null) }
+
+    if (showLessonStudio) {
+        LessonStudioDialog(
+            vm = vm,
+            targetCourse = course,
+            onDismiss = { showLessonStudio = false }
+        )
+    }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -50,55 +59,92 @@ fun CourseScreen(vm: AppViewModel, courseId: Int, onOpenLesson: (Int) -> Unit, o
     ) {
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(course.accent).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                        Icon(courseIcon(course.type.icon), null, tint = Color(course.accent), modifier = Modifier.size(26.dp))
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(course.name, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                        Text(
-                            "${course.type.label} • $done مكتمل من $total درساً في المنهج",
-                            color = ZTextSecondary, fontSize = 12.sp,
-                        )
-                        if (imported < total) {
-                            Text(
-                                "المتوفر لديك: $imported درساً",
-                                color = ZTextMuted, fontSize = 10.sp,
-                            )
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(course.accent).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                            Icon(courseIcon(course.type.icon), null, tint = Color(course.accent), modifier = Modifier.size(26.dp))
                         }
-                        if (showPublishMark && lessons.isNotEmpty()) {
-                            // حالة النشر السحابي لهذا الكورس — خضراء عند الاكتمال.
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    if (publishedCount == lessons.size) Icons.Filled.TaskAlt else Icons.Filled.CloudUpload,
-                                    null,
-                                    tint = if (publishedCount == lessons.size) ZEmerald else ZAmber,
-                                    modifier = Modifier.size(12.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(course.name, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                            Text(
+                                "${course.type.label} • $done مكتمل من $total درساً في المنهج",
+                                color = ZTextSecondary, fontSize = 12.sp,
+                            )
+                            if (imported < total) {
                                 Text(
-                                    if (publishedCount == lessons.size)
-                                        "كل دروس هذا الكورس مرفوعة سحابياً ✓"
-                                    else
-                                        "مرفوع سحابياً: $publishedCount من ${lessons.size}",
-                                    color = if (publishedCount == lessons.size) ZEmerald else ZAmberDeep,
-                                    fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                    "المتوفر لديك: $imported درساً",
+                                    color = ZTextMuted, fontSize = 10.sp,
+                                )
+                            }
+                            if (showPublishMark && lessons.isNotEmpty()) {
+                                // حالة النشر السحابي لهذا الكورس — خضراء عند الاكتمال.
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        if (publishedCount == lessons.size) Icons.Filled.TaskAlt else Icons.Filled.CloudUpload,
+                                        null,
+                                        tint = if (publishedCount == lessons.size) ZEmerald else ZAmber,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        if (publishedCount == lessons.size)
+                                            "كل دروس هذا الكورس مرفوعة سحابياً ✓"
+                                        else
+                                            "مرفوع سحابياً: $publishedCount من ${lessons.size}",
+                                        color = if (publishedCount == lessons.size) ZEmerald else ZAmberDeep,
+                                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                LinearProgressIndicator(
+                                    progress = { completion },
+                                    modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(4.dp)),
+                                    color = Color(course.accent), trackColor = ZBorder,
+                                    gapSize = 0.dp,
+                                    drawStopIndicator = {}
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "${(completion * 100).toInt()}%",
+                                    color = Color(course.accent), fontSize = 11.sp, fontWeight = FontWeight.Black,
                                 )
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LinearProgressIndicator(
-                                progress = { completion },
-                                modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(4.dp)),
-                                color = Color(course.accent), trackColor = ZBorder,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "${(completion * 100).toInt()}%",
-                                color = Color(course.accent), fontSize = 11.sp, fontWeight = FontWeight.Black,
-                            )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    HorizontalDivider(color = ZBorder)
+                    Spacer(Modifier.height(10.dp))
+
+                    // Quick AI Studio Action Bar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { showLessonStudio = true },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(42.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = ZAmber, contentColor = Color.Black)
+                        ) {
+                            Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("توليد أو كتابة درس جديد", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = { showPasteJson = true },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(42.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ZBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ZTextSecondary)
+                        ) {
+                            Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("لصق JSON", fontSize = 11.sp)
                         }
                     }
                 }

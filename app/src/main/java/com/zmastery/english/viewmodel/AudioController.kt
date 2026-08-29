@@ -4,6 +4,7 @@ import com.zmastery.english.data.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -60,6 +61,7 @@ internal class AudioController(internal val vm: AppViewModel) {
         // Push whatever credential is already loaded so TTS works immediately.
         engine.apiKey = geminiApiKey
         engine.voice = ttsVoice
+        engine.backupApiKeys = vm.apiKeys.filter { it.rawKey.isNotBlank() }.map { it.rawKey }
     }
 
     /** Count of clips still needing generation (drives the button badge). */
@@ -78,7 +80,7 @@ internal class AudioController(internal val vm: AppViewModel) {
     val hasPendingAudio: Boolean get() = pendingAudioCount > 0
 
     /** The English text spoken for a lesson (reading/listening/story/dialogue). */
-    private fun lessonAudioText(l: Lesson): String {
+    fun lessonAudioText(l: Lesson): String {
         val parts = mutableListOf<String>()
         if (l.fullTextEn.isNotBlank()) parts += l.fullTextEn
         else if (l.readingEn.isNotBlank()) parts += l.readingEn
@@ -89,18 +91,84 @@ internal class AudioController(internal val vm: AppViewModel) {
     }
 
     /** How many Gemini TTS requests may run at the same time (rate-limit friendly). */
-    private val AUDIO_PARALLELISM = 3
+    private val AUDIO_PARALLELISM = 2
 
     private data class AudioJob(val text: String, val label: String, val longForm: Boolean, val onDone: () -> Unit)
 
     /**
-     * Scan all content for items lacking a PERMANENT AI voice and generate
-     * them via a bounded-concurrency background queue (max [AUDIO_PARALLELISM]
-     * requests in flight at once, to respect Gemini's per-minute quota without
-     * freezing the app on a huge batch). Safe to call anytime — skips whatever
-     * is already cached, and is a no-op while already running.
+     * توليد أصوات العناصر ذات الأولوية فقط (الكلمات المستحقة، قصة اليوم، الدرس الحالي)
+     * لتوفير الحصص وتجنب استهلاك حدود النماذج بسرعة.
      */
-    fun generateMissingAudio() {
+    fun generatePriorityAudio() {
+        val engine = tts ?: run { lastAudioMessage = "محرك الصوت غير جاهز بعد"; return }
+        if (!aiAudioEnabled) {
+            lastAudioMessage = "توليد الأصوات بالذكاء الاصطناعي متوقّف من الإعدادات"
+            return
+        }
+        if (isGeneratingAudio) return
+        if (!engine.hasGeminiKey) {
+            lastAudioMessage = "أضف مفتاح Gemini في الإعدادات لتوليد أصوات دائمة بالذكاء الاصطناعي"
+            return
+        }
+        if (!engine.isOnline()) {
+            lastAudioMessage = "لا يوجد اتصال — سيتم توليد الأصوات لاحقاً"
+            return
+        }
+
+        audioGenJob?.cancel()
+        audioGenJob = launch {
+            isGeneratingAudio = true
+            audioGenDone = 0
+            audioGenLabel = "تحديد العناصر ذات الأولوية…"
+
+            val jobs = mutableListOf<AudioJob>()
+
+            // 1. Due words (review items)
+            val dueWords = vocab.filter { it.dueInDays <= 0 && (!it.wordAudioReady || !it.exampleAudioReady) }.take(15)
+            dueWords.forEach { w ->
+                if (!w.wordAudioReady && w.english.isNotBlank()) {
+                    jobs += AudioJob(w.english, w.english, false) {
+                        val i = vocab.indexOfFirst { it.id == w.id }
+                        if (i >= 0) vocab[i] = vocab[i].copy(wordAudioReady = true)
+                    }
+                }
+                if (!w.exampleAudioReady && w.exampleEn.isNotBlank()) {
+                    jobs += AudioJob(w.exampleEn, "مثال: ${w.english}", false) {
+                        val i = vocab.indexOfFirst { it.id == w.id }
+                        if (i >= 0) vocab[i] = vocab[i].copy(exampleAudioReady = true)
+                    }
+                }
+            }
+
+            // 2. Latest stories
+            val pendingStories = storyArchive.filter { !it.audioReady && it.en.isNotBlank() }.take(2)
+            pendingStories.forEach { s ->
+                jobs += AudioJob(s.en, "قصة: ${s.title}", true) {
+                    val i = storyArchive.indexOfFirst { it.id == s.id }
+                    if (i >= 0) storyArchive[i] = storyArchive[i].copy(audioReady = true)
+                }
+            }
+
+            // 3. Next incomplete lesson
+            val nextLesson = lessons.firstOrNull { !it.isCompleted && !it.audioReady && lessonAudioText(it).isNotBlank() }
+            if (nextLesson != null) {
+                val t = lessonAudioText(nextLesson)
+                jobs += AudioJob(t, "درس: ${nextLesson.title}", true) {
+                    val i = lessons.indexOfFirst { it.id == nextLesson.id }
+                    if (i >= 0) lessons[i] = lessons[i].copy(audioReady = true)
+                }
+            }
+
+            executeAudioJobs(engine, jobs, "الأولوية")
+        }
+    }
+
+    /**
+     * Scan all content for items lacking a PERMANENT AI voice and generate
+     * them via a bounded-concurrency background queue.
+     * @param maxBatch أقصى عدد عناصر في هذه الدفعة لتجنب نفاذ الحصة (0 أو سالب = الكل).
+     */
+    fun generateMissingAudio(maxBatch: Int = -1) {
         val engine = tts ?: run { lastAudioMessage = "محرك الصوت غير جاهز بعد"; return }
         if (!aiAudioEnabled) {
             lastAudioMessage = "توليد الأصوات بالذكاء الاصطناعي متوقّف من الإعدادات"
@@ -157,29 +225,45 @@ internal class AudioController(internal val vm: AppViewModel) {
                 }
             }
 
-            audioGenTotal = jobs.size
-            if (jobs.isEmpty()) {
-                isGeneratingAudio = false
-                lastAudioMessage = "كل الأصوات مولّدة بالفعل ✓"
-                return@launch
-            }
+            val targetJobs = if (maxBatch > 0) jobs.take(maxBatch) else jobs
+            executeAudioJobs(engine, targetJobs, if (maxBatch > 0) "دفعة $maxBatch" else "الكل")
+        }
+    }
 
-            // Bounded-concurrency fan-out: up to AUDIO_PARALLELISM requests in
-            // flight, so a big batch finishes fast without exceeding rate limits
-            // or ever blocking the calling coroutine (and therefore the UI).
-            val semaphore = Semaphore(AUDIO_PARALLELISM)
-            val okCount = Mutex()
-            var ok = 0
+    private suspend fun executeAudioJobs(
+        engine: com.zmastery.english.audio.TtsManager,
+        jobs: List<AudioJob>,
+        modeLabel: String
+    ) {
+        audioGenTotal = jobs.size
+        if (jobs.isEmpty()) {
+            isGeneratingAudio = false
+            lastAudioMessage = "كل الأصوات المطلوبة مولّدة بالفعل ✓"
+            return
+        }
+
+        val semaphore = Semaphore(AUDIO_PARALLELISM)
+        val okCount = Mutex()
+        var ok = 0
+        var quotaExhausted = false
+
+        coroutineScope {
             val tasks = jobs.map { job ->
                 async {
                     semaphore.withPermit {
+                        if (quotaExhausted || !isGeneratingAudio) return@withPermit
                         val success = runCatching {
                             if (job.longForm) engine.generateLongFormAndCache(job.text)
                             else engine.generateAndCachePermanent(job.text)
                         }.getOrDefault(false)
+
                         if (success) {
                             job.onDone()
                             okCount.withLock { ok++ }
+                        } else {
+                            if (engine.exhaustedModels.size >= engine.ttsFallbackModels.size) {
+                                quotaExhausted = true
+                            }
                         }
                         audioGenLabel = job.label
                         audioGenDone++
@@ -187,13 +271,16 @@ internal class AudioController(internal val vm: AppViewModel) {
                 }
             }
             tasks.awaitAll()
-
-            isGeneratingAudio = false
-            audioGenLabel = ""
-            lastAudioMessage = if (ok == jobs.size) "تم توليد أصوات $ok عنصر ✓"
-                else "تم توليد $ok من ${jobs.size} — البقية ستُحاول لاحقاً"
-            vm.persist()
         }
+
+        isGeneratingAudio = false
+        audioGenLabel = ""
+        lastAudioMessage = when {
+            quotaExhausted -> "تم توليد $ok صوت — استُنفدت الحصص وسيتم إبقاء البقية لوقت لاحق"
+            ok == jobs.size -> "تم توليد أصوات $ok عنصر ($modeLabel) بنجاح عبر ${engine.activeModel} ✓"
+            else -> "تم توليد $ok من ${jobs.size} — البقية محفوظة لتوليدها لاحقاً"
+        }
+        vm.persist()
     }
 
     /**
