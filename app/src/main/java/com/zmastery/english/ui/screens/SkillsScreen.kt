@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -499,7 +498,8 @@ private fun SpeakingSkill(vm: AppViewModel, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
-            itemsIndexed(turns, key = { i, t -> "$i-${t.en.take(12)}" }) { _, turn ->
+            items(turns.size, key = { i -> "t$i-${turns[i].en.take(12)}" }) { i ->
+                val turn = turns[i]
                 ConversationBubble(turn) { vm.speakConversationLine(turn.en) }
             }
             if (vm.isConversationThinking) {
@@ -786,7 +786,7 @@ private fun PhoneticsSkill(vm: AppViewModel) {
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (playingAll) ZRose else ZAmber),
         ) {
-            Icon(if (playingAll) Icons.Filled.Stop else Icons.Filled.PlaylistPlay, null)
+            Icon(if (playingAll) Icons.Filled.Stop else Icons.Filled.PlayArrow, null)
             Spacer(Modifier.width(8.dp))
             Text(if (playingAll) "إيقاف التشغيل" else "تشغيل كل الأصوات تباعاً", fontWeight = FontWeight.Bold)
         }

@@ -93,7 +93,7 @@ object SkillsEngine {
         val cleaned = raw.trim()
             .removePrefix("```json").removePrefix("```JSON").removePrefix("```")
             .removeSuffix("```").trim()
-        val parsed = runCatching { json.decodeFromString(ConversationReplyDto.serializer(), cleaned) }.getOrNull()
+        val parsed = runCatching { json.decodeFromString<ConversationReplyDto>(cleaned) }.getOrNull()
         if (parsed != null && parsed.reply_en.isNotBlank()) {
             return ConversationReply(
                 replyEn = parsed.reply_en.trim(),
