@@ -50,10 +50,8 @@ class SpeechCapture(private val context: Context) {
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale)
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, locale)
                     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-                    putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
                 }
                 isListening = true
                 recognizer?.startListening(intent)
@@ -112,7 +110,7 @@ class SpeechCapture(private val context: Context) {
             isListening = false
             error = when (errorCode) {
                 SpeechRecognizer.ERROR_AUDIO -> "خطأ في الميكروفون"
-                SpeechRecognizer.ERROR_CLIENT -> null // stop() often fires this
+                SpeechRecognizer.ERROR_CLIENT -> null
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "نحتاج إذن الميكروفون"
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
                     "يحتاج التعرّف اتصالاً بالإنترنت"
@@ -136,6 +134,9 @@ class SpeechCapture(private val context: Context) {
             if (text.isNotBlank()) partial = text
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
+        override fun onEndOfSegmentedSession() {}
+        override fun onLanguageDetection(results: Bundle) {}
+        override fun onSegmentResults(segmentResults: Bundle) {}
     }
 
     companion object {
