@@ -37,6 +37,7 @@ import com.zmastery.english.ui.theme.*
 import com.zmastery.english.viewmodel.AppViewModel
 
 private enum class SettingsSection(val title: String, val subtitle: String, val icon: ImageVector, val colors: List<Color>) {
+    PROFILE("الملف الشخصي", "اسمك وبريدك وإحصائياتك", Icons.Filled.Person, listOf(ZIndigo, ZCyanDeep)),
     AI("الذكاء الاصطناعي", "النماذج · المفاتيح · الأصوات · الشخصيات · المطالبات", Icons.Filled.AutoAwesome, listOf(ZIndigo, ZPurple)),
     APPEARANCE("المظهر", "الوضع النهاري/الليلي والألوان", Icons.Filled.Palette, listOf(ZAmber, ZRoseDeep)),
     LEARNING("التعلم", "الهدف اليومي وطريقة عرض الكلمات", Icons.Filled.School, listOf(ZCyanDeep, ZCyan)),
@@ -106,6 +107,15 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onBackup:
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.padding(16.dp)) { SubHeader(section.title, onBack) }
             Box(Modifier.weight(1f)) { AiSettingsScreen(vm) }
+        }
+        return
+    }
+
+    // Profile renders its own scrollable content — give it a bounded box.
+    if (section == SettingsSection.PROFILE) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.padding(16.dp)) { SubHeader(section.title, onBack) }
+            Box(Modifier.weight(1f)) { ProfileContent(vm) }
         }
         return
     }
