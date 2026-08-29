@@ -57,18 +57,8 @@ import com.zmastery.english.viewmodel.AppViewModel
 fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
     // مستوى واحد مفتوح في كل لحظة — تبقى الصفحة قصيرة وواضحة.
     var expandedLevel by rememberSaveable { mutableStateOf<Int?>(null) }
-    // استوديو بناء المناهج والدروس بالذكاء الاصطناعي والتأليف المباشر
-    var showLessonStudio by remember { mutableStateOf(false) }
     var showCreateCourse by remember { mutableStateOf(false) }
     var courseToDelete by remember { mutableStateOf<Course?>(null) }
-
-    if (showLessonStudio) {
-        LessonStudioDialog(
-            vm = vm,
-            targetCourse = null,
-            onDismiss = { showLessonStudio = false }
-        )
-    }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -76,48 +66,6 @@ fun LevelsScreen(vm: AppViewModel, onOpenCourse: (Int) -> Unit) {
         modifier = Modifier.fillMaxSize(),
     ) {
         item { OverallHeader(vm) }
-
-        // ── بوابة استوديو الذكاء الاصطناعي لبناء المناهج والدروس ──
-        item {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = ZSurface,
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, ZAmber.copy(alpha = 0.55f)),
-                onClick = { showLessonStudio = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    Modifier.background(
-                        Brush.horizontalGradient(
-                            listOf(ZAmber.copy(alpha = 0.18f), ZIndigo.copy(alpha = 0.12f), Color.Transparent)
-                        )
-                    ).padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        Modifier.size(46.dp).clip(RoundedCornerShape(14.dp))
-                            .background(ZAmber.copy(alpha = 0.25f)),
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Filled.AutoAwesome, null, tint = ZAmberDeep, modifier = Modifier.size(24.dp)) }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("استوديو بناء الدروس والمناهج", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                            Spacer(Modifier.width(6.dp))
-                            Surface(shape = RoundedCornerShape(6.dp), color = ZAmber) {
-                                Text("AI + يدوي", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-                            }
-                        }
-                        Text(
-                            "توليد منهج أو درس كامل بالذكاء الاصطناعي مع الشخصيات، أو كتابته مباشرة",
-                            color = ZTextSecondary, fontSize = 11.sp, lineHeight = 16.sp,
-                        )
-                    }
-                    Icon(Icons.Filled.ChevronLeft, null, tint = ZAmberDeep, modifier = Modifier.size(20.dp))
-                }
-            }
-        }
-
 
         // ── مناهجي المخصصة: مثبّتة أعلى القائمة حتى لا «تضيع» بعد الإنشاء ──
         val customCourses = vm.courses.filter { it.key.startsWith("custom_") }

@@ -116,6 +116,7 @@ private val tabs = listOf(
     NavTab("review", "المراجعة", Icons.Filled.Psychology),
     NavTab("levels", "المستويات", Icons.Filled.Layers),
     NavTab("vocab", "القاموس", Icons.Filled.MenuBook),
+    NavTab("exams", "الاختبارات", Icons.Filled.Quiz),
 )
 
 private data class MoreItem(val route: String, val label: String, val desc: String, val icon: ImageVector, val tint: Color)
@@ -125,8 +126,9 @@ private data class MoreGroup(val title: String, val items: List<MoreItem>)
 
 /**
  * هندسة معلومات مدروسة (ترتيب رحلة المتعلم، بلا تكرار مع الشريط السفلي):
- *   مسارك → ثبّت وقيّم → تقدّمك وحماسك → حسابك.
- * «مراجعة الكلمات» في الشريط السفلي فلا تُكرر هنا.
+ *   المولّد → مسارك → تقدّمك وحماسك → النظام.
+ * «مراجعة الكلمات والدروس» في الشريط السفلي فلا تُكرر هنا، و«الاختبارات»
+ * أصبحت تبويباً رئيسياً، والملف الشخصي والنسخ الاحتياطي داخل الإعدادات.
  */
 private val moreGroups = listOf(
     MoreGroup("مسارك", listOf(
@@ -134,19 +136,12 @@ private val moreGroups = listOf(
         MoreItem("roadmap", "خريطة المنهج", "خطتك وتغطيتك", Icons.Filled.Map, ZEmerald),
         MoreItem("skills", "المهارات الخمس", "قراءة · استماع · كتابة", Icons.Filled.Interests, ZIndigo),
     )),
-    MoreGroup("ثبّت وقيّم", listOf(
-        MoreItem("lessonReview", "مراجعة الدروس", "ثبّت ما تعلمته قبل الجديد", Icons.Filled.Autorenew, ZCyanDeep),
-        MoreItem("mnemonics", "الروابط الذهنية", "صور تثبّت الكلمات", Icons.Filled.Link, ZPurple),
-        MoreItem("exams", "الاختبارات", "قيّم مستواك بصدق", Icons.Filled.Quiz, ZCyanDeep),
-    )),
     MoreGroup("تقدّمك وحماسك", listOf(
         MoreItem("analytics", "التحليلات", "مدربك الذكي ومرآة إدراكك", Icons.Filled.Analytics, ZPurple),
         MoreItem("momentum", "زخم الالتزام", "سلسلتك وصناديقك ودروعك", Icons.Filled.LocalFireDepartment, ZAmber),
     )),
-    MoreGroup("حسابك والنظام", listOf(
-        MoreItem("profile", "الملف الشخصي", "بياناتك وإحصائياتك", Icons.Filled.Person, ZIndigo),
-        MoreItem("settings", "الإعدادات", "التخصيص والمفاتيح والمزامنة", Icons.Filled.Settings, ZCyanDeep),
-        MoreItem("backup", "النسخ الاحتياطي", "صدّر واستعد بأمان", Icons.Filled.CloudSync, ZEmerald),
+    MoreGroup("النظام", listOf(
+        MoreItem("settings", "الإعدادات", "التخصيص · الملف الشخصي · النسخ الاحتياطي", Icons.Filled.Settings, ZCyanDeep),
     )),
 )
 
@@ -266,7 +261,7 @@ fun ZMasteryApp(
     // "dashboard" is ALSO deliberately excluded — it renders its own
     // Duolingo-style StreakTopBar at the very top of the screen, so the
     // generic app bar underneath it would just be redundant duplication.
-    val extraTop = listOf("stories", "stories/{focus}", "settings", "profile", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools")
+    val extraTop = listOf("generator", "stories", "stories/{focus}", "settings", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools")
     val showBars = currentRoute in (tabs.map { it.route }.filter { it != "dashboard" } + extraTop)
 
     // Navigate to a top-level destination as a SINGLE instance:
@@ -317,8 +312,7 @@ fun ZMasteryApp(
                         onOpenLesson = { lid -> nav.navigate("lesson/$lid") },
                     )
                 }
-                composable("review") { ReviewScreen(vm) }
-                composable("lessonReview") { LessonReviewScreen(vm) }
+                composable("review") { ReviewHubScreen(vm) }
                 composable("levels") { LevelsScreen(vm) { id -> nav.navigate("course/$id") } }
                 composable("vocab") {
                     VocabularyScreen(vm, onOpenMnemonics = { nav.navigate("mnemonics") })
@@ -348,7 +342,9 @@ fun ZMasteryApp(
                     DeveloperToolsScreen(vm, onOpenImport = { nav.navigate("import") })
                 }
                 composable("settings") { SettingsScreen(vm, onBackup = { goTopLevel("backup") }) }
-                composable("profile") { ProfileScreen(vm, onBack = { nav.popBackStack() }) }
+                composable("generator") {
+                    GeneratorScreen(vm, onOpenMnemonics = { nav.navigate("mnemonics") })
+                }
                 composable("course/{id}") { entry ->
                     val id = entry.arguments?.getString("id")?.toIntOrNull() ?: 1
                     CourseScreen(
@@ -493,6 +489,10 @@ private fun MoreSheetContent(vm: AppViewModel, onNavigate: (String) -> Unit) {
             }
         }
 
+        // ── المولّد: البوابة الأولى لكل التوليدات (قصة اليوم · الأصوات · المناهج · الروابط الذهنية) ──
+        Spacer(Modifier.height(20.dp))
+        GeneratorHeroCard { onNavigate("generator") }
+
         // ── المسؤول: النشر أولاً لأنه الأكثر استعمالاً للمعلم ──
         if (isAdmin) {
             Spacer(Modifier.height(20.dp))
@@ -518,6 +518,42 @@ private fun HeroChip(text: String) {
             text, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
         )
+    }
+}
+
+/** البطاقة البارزة لبوابة المولّد — تتصدّر «المزيد» لأنها مركز كل التوليدات. */
+@Composable
+private fun GeneratorHeroCard(onOpen: () -> Unit) {
+    Box(Modifier.padding(horizontal = 16.dp)) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = Color.Transparent,
+            onClick = onOpen,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                    .background(Brush.linearGradient(listOf(ZAmberDeep, ZRoseDeep)))
+                    .padding(18.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(50.dp).clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.20f)),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("المولّد والتوليدات", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                        Text(
+                            "قصة اليوم · توليد الأصوات · المناهج والدروس · الروابط الذهنية",
+                            color = Color.White.copy(alpha = 0.92f), fontSize = 11.sp, lineHeight = 16.sp,
+                        )
+                    }
+                    Icon(Icons.Filled.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
     }
 }
 
@@ -587,8 +623,8 @@ private fun MoreGroupCard(
 private fun TopBar(route: String?) {
     val title = when (route) {
         "dashboard" -> "لوحة القيادة"
-        "review" -> "مراجعة الكلمات"
-        "lessonReview" -> "مراجعة الدروس"
+        "review" -> "المراجعة"
+        "generator" -> "المولّد والتوليدات"
         "phonetics_preview" -> "درس الصوتيات"
         "levels" -> "المستويات والمناهج"
         "vocab" -> "القاموس"
@@ -667,7 +703,7 @@ private fun ZBottomBar(nav: NavHostController, currentRoute: String?, onMore: ()
             )
         }
         // More button — opens the sheet with all secondary screens (incl. importer)
-        val moreActive = currentRoute in listOf("exams", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import", "lessonReview")
+        val moreActive = currentRoute in listOf("generator", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import")
         NavigationBarItem(
             selected = moreActive,
             onClick = onMore,

@@ -26,14 +26,6 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
-    var name by remember { mutableStateOf(vm.learnerName) }
-    var email by remember { mutableStateOf(vm.learnerEmail) }
-    var editing by remember { mutableStateOf(false) }
-
-    val joinedDate = remember {
-        SimpleDateFormat("dd MMM yyyy", Locale("ar")).format(Date())
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -50,14 +42,30 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
         },
         containerColor = Color.Transparent,
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            ProfileContent(vm)
+        }
+    }
+}
+
+/** محتوى الملف الشخصي — يُستخدم داخل الإعدادات مباشرةً. */
+@Composable
+fun ProfileContent(vm: AppViewModel) {
+    var name by remember { mutableStateOf(vm.learnerName) }
+    var email by remember { mutableStateOf(vm.learnerEmail) }
+    var editing by remember { mutableStateOf(false) }
+
+    val joinedDate = remember {
+        SimpleDateFormat("dd MMM yyyy", Locale("ar")).format(Date())
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
             // Avatar + Name header
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -281,8 +289,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(80.dp))
-        }
+        Spacer(Modifier.height(80.dp))
     }
 }
 
