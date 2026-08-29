@@ -54,7 +54,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val telemetry = TelemetryController(this)
     internal val gamification = GamificationController(this)
     internal val dailyPlan = DailyPlanController(this)
-    internal val skills = SkillsController(this)
 
     /** Application context, exposed to the feature controllers. */
     internal val app: Application get() = getApplication<Application>()
@@ -713,7 +712,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Count of models with a documented free-tier allowance. */
     val freeModelCount: Int get() = aiConfig.freeModelCount
 
-    /** Candidate models for an agent — only the kinds that persona uses. */
+    /** Candidate models for an agent (declared kind first, full catalogue appended). */
     fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> = aiConfig.modelChoicesFor(agent)
 
     fun setShowFreeModelsOnly(value: Boolean) = aiConfig.setShowFreeModelsOnly(value)
@@ -721,29 +720,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun modelName(id: String) = aiConfig.modelName(id)
     fun modelById(id: String) = aiConfig.modelById(id)
     fun voiceName(id: String) = aiConfig.voiceName(id)
-
-    // ----- Training hub (live conversation + writing evaluation) -----
-    val conversationTurnsList get() = skills.conversation
-    val isConversationThinking get() = skills.isThinking
-    var conversationError
-        get() = skills.conversationError
-        set(v) { skills.conversationError = v }
-    var conversationAutoSpeak
-        get() = skills.autoSpeak
-        set(v) { skills.autoSpeak = v }
-    val conversationSceneId get() = skills.activeSceneId
-    fun conversationScenes() = skills.scenes()
-    fun startConversationScene(id: String) = skills.startScene(id)
-    fun resetConversation() = skills.resetConversation()
-    fun sendConversationUtterance(text: String) = skills.sendLearnerUtterance(text)
-    fun speakConversationLine(text: String) = skills.speakPartner(text)
-    fun stopConversationSpeech() = skills.stopPartnerSpeech()
-    val writingFeedback get() = skills.writingFeedback
-    val isEvaluatingWriting get() = skills.isEvaluatingWriting
-    val writingError get() = skills.writingError
-    fun evaluateWriting(text: String, promptEn: String, targetWord: String) =
-        skills.evaluateWriting(text, promptEn, targetWord)
-    fun clearWritingFeedback() = skills.clearWriting()
 
     // ----- Daily phrase -----
     val dailyPhrase: String get() = SampleData.dailyPhrases[java.time.LocalDate.now().dayOfYear % SampleData.dailyPhrases.size]
@@ -1078,7 +1054,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 "lesson" -> lessons.any { !it.isCompleted }
                 "quiz" -> activeVocab.size >= 4
                 "story" -> storySeedCount >= 2 || todayStory != null
-                "speak" -> true // café scene is always available
+                "speak" -> lessons.isNotEmpty()
                 else -> true
             }
         }
@@ -2139,10 +2115,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             googleWebClientId = googleWebClientId,
             dismissedAnnouncementId = dismissedAnnouncementId,
             developerUnlocked = isDeveloperUnlocked,
-            showFreeModelsOnly = showFreeModelsOnly,
         ),
         aiAgents = aiAgents.map { AiAgentDto(it.id, it.modelId, it.character, it.voiceId, it.style, it.prompt) },
-        aiModels = aiModels.map { it.toDto() },
         apiKeys = apiKeys.map {
             ApiKeyDto(
                 id = it.id, label = it.label, provider = it.provider,
