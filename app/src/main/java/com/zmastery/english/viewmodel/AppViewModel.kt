@@ -2115,10 +2115,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             googleWebClientId = googleWebClientId,
             dismissedAnnouncementId = dismissedAnnouncementId,
             developerUnlocked = isDeveloperUnlocked,
-            aiModels = aiModels.map { it.toDto() },
             showFreeModelsOnly = showFreeModelsOnly,
         ),
         aiAgents = aiAgents.map { AiAgentDto(it.id, it.modelId, it.character, it.voiceId, it.style, it.prompt) },
+        aiModels = aiModels.map { it.toDto() },
         apiKeys = apiKeys.map {
             ApiKeyDto(
                 id = it.id, label = it.label, provider = it.provider,
