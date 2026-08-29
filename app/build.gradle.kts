@@ -33,7 +33,9 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debugConfig")
+            // توقيع الـ debug يستخدم المفتاح التلقائي لأدوات البناء (يُنشأ تلقائياً)
+            // بدل الاعتماد على debug.keystore الموجود في جذر المشروع وغير المودع،
+            // حتى لا يفشل assembleDebug في بيئة CI حين لا يوجد الملف.
             isDebuggable = true
         }
         release {
