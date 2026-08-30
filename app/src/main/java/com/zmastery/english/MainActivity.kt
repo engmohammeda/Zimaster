@@ -141,6 +141,7 @@ private val moreGroups = listOf(
         MoreItem("momentum", "زخم الالتزام", "سلسلتك وصناديقك ودروعك", Icons.Filled.LocalFireDepartment, ZAmber),
     )),
     MoreGroup("النظام", listOf(
+        MoreItem("inbox", "الإشعارات", "أعطال الحصص والمفاتيح والأصوات", Icons.Filled.NotificationsActive, ZAmber),
         MoreItem("settings", "الإعدادات", "التخصيص · الملف الشخصي · النسخ الاحتياطي", Icons.Filled.Settings, ZCyanDeep),
     )),
 )
@@ -261,7 +262,7 @@ fun ZMasteryApp(
     // "dashboard" is ALSO deliberately excluded — it renders its own
     // Duolingo-style StreakTopBar at the very top of the screen, so the
     // generic app bar underneath it would just be redundant duplication.
-    val extraTop = listOf("generator", "stories", "stories/{focus}", "settings", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools")
+    val extraTop = listOf("generator", "stories", "stories/{focus}", "settings", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools", "inbox")
     val showBars = currentRoute in (tabs.map { it.route }.filter { it != "dashboard" } + extraTop)
 
     // Navigate to a top-level destination as a SINGLE instance:
@@ -287,7 +288,7 @@ fun ZMasteryApp(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                if (showBars) TopBar(currentRoute)
+                if (showBars) TopBar(currentRoute, vm.unreadAlertCount) { goTopLevel("inbox") }
             },
             bottomBar = {
                 if (currentRoute in tabs.map { it.route } || currentRoute in extraTop) {
@@ -342,6 +343,7 @@ fun ZMasteryApp(
                     DeveloperToolsScreen(vm, onOpenImport = { nav.navigate("import") })
                 }
                 composable("settings") { SettingsScreen(vm, onBackup = { goTopLevel("backup") }) }
+                composable("inbox") { InboxScreen(vm, onOpenRoute = { r -> goTopLevel(r) }) }
                 composable("generator") {
                     GeneratorScreen(vm, onOpenMnemonics = { nav.navigate("mnemonics") })
                 }
@@ -504,6 +506,7 @@ private fun MoreSheetContent(vm: AppViewModel, onNavigate: (String) -> Unit) {
             MoreGroupCard(g, onNavigate) { route ->
                 when (route) {
                     "stories" -> vm.unreadStoryCount.takeIf { it > 0 }
+                    "inbox" -> vm.unreadAlertCount.takeIf { it > 0 }
                     else -> null
                 }
             }
@@ -620,7 +623,7 @@ private fun MoreGroupCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(route: String?) {
+private fun TopBar(route: String?, unreadAlerts: Int = 0, onInbox: () -> Unit = {}) {
     val title = when (route) {
         "dashboard" -> "لوحة القيادة"
         "review" -> "المراجعة"
@@ -640,6 +643,7 @@ private fun TopBar(route: String?) {
         "devtools" -> "أدوات المطور 👑"
         "backup" -> "النسخ الاحتياطي"
         "settings" -> "الإعدادات"
+        "inbox" -> "الإشعارات"
         else -> "Z-Mastery"
     }
     CenterAlignedTopAppBar(
@@ -655,7 +659,26 @@ private fun TopBar(route: String?) {
             }
         },
         actions = {
-            // استيراد الدروس — أداة مسؤول/مطور فقط؛ الطلاب يستقبلون الدروس من السحابة.
+            IconButton(onClick = onInbox) {
+                BadgedBox(
+                    badge = {
+                        if (unreadAlerts > 0) {
+                            Badge(containerColor = ZRose) {
+                                Text(
+                                    if (unreadAlerts > 9) "9+" else unreadAlerts.toString(),
+                                    color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black,
+                                )
+                            }
+                        }
+                    },
+                ) {
+                    Icon(
+                        Icons.Filled.Notifications,
+                        contentDescription = "سجل أعطال التطبيق",
+                        tint = if (unreadAlerts > 0) ZAmber else ZTextSecondary,
+                    )
+                }
+            }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = ZSurface.copy(alpha = 0.85f),
@@ -703,7 +726,7 @@ private fun ZBottomBar(nav: NavHostController, currentRoute: String?, onMore: ()
             )
         }
         // More button — opens the sheet with all secondary screens (incl. importer)
-        val moreActive = currentRoute in listOf("generator", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import")
+        val moreActive = currentRoute in listOf("generator", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import", "inbox")
         NavigationBarItem(
             selected = moreActive,
             onClick = onMore,

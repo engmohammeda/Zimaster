@@ -119,6 +119,13 @@ internal class SkillsController(internal val vm: AppViewModel) {
         )
         if (!res.ok) {
             conversationError = res.error.ifBlank { "تعذّر الرد من النموذج — نكمل بالحوار المحفوظ" }
+            vm.pushAlert(
+                kind = com.zmastery.english.data.AlertKind.WARNING,
+                source = "محادثة",
+                title = "النموذج لم يرد",
+                detail = conversationError.orEmpty() + " — تم استخدام الحوار المحفوظ حتى لا تتوقف المحادثة.",
+                route = "settings",
+            )
             return null
         }
         return SkillsEngine.parseConversationReply(res.text, scene.script.firstOrNull().orEmpty())
@@ -129,16 +136,35 @@ internal class SkillsController(internal val vm: AppViewModel) {
         val clean = text.trim()
         if (clean.isBlank()) return
         val agent = aiAgents.firstOrNull { it.id == "conversation" }
-        val voiceId = agent?.voiceId.orEmpty()
-        val voiceName = aiVoices.firstOrNull { it.id.equals(voiceId, true) }?.displayName
-            ?: voiceId.replaceFirstChar { it.uppercase() }
-        val prev = engine.voice
-        if (voiceName.isNotBlank()) engine.voice = voiceName
+        val voiceName = com.zmastery.english.data.AlertInbox.geminiVoiceName(
+            agent?.voiceId.orEmpty(),
+            aiVoices.toList(),
+        )
         vm.vmScope.launch {
-            try {
-                engine.speakInstant(clean, "conv_partner")
-            } finally {
-                engine.voice = prev
+            val result = engine.speakNeural(clean, "conv_partner", voiceName)
+            if (!result.ok) {
+                conversationError = result.reason.ifBlank { "تعذّر نطق رد الشريك بالصوت المختار" }
+                vm.pushAlert(
+                    kind = when {
+                        result.quota -> com.zmastery.english.data.AlertKind.QUOTA
+                        result.noKey || result.offline -> com.zmastery.english.data.AlertKind.WARNING
+                        else -> com.zmastery.english.data.AlertKind.ERROR
+                    },
+                    source = "محادثة",
+                    title = com.zmastery.english.data.AlertInbox.ttsFailureTitle(
+                        quota = result.quota,
+                        hasKey = engine.hasGeminiKey,
+                        online = engine.isOnline(),
+                    ),
+                    detail = com.zmastery.english.data.AlertInbox.ttsFailureDetail(
+                        quota = result.quota,
+                        hasKey = engine.hasGeminiKey,
+                        online = engine.isOnline(),
+                        engineError = result.reason,
+                        voiceName = voiceName,
+                    ),
+                    route = "settings",
+                )
             }
         }
     }

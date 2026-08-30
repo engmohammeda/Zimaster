@@ -11,23 +11,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.zmastery.english.data.ArchivedStory
 import com.zmastery.english.data.StoryKind
 import com.zmastery.english.data.StoryLevel
@@ -367,6 +373,7 @@ private fun ArchiveChip(active: Boolean, label: String, accent: Color, onClick: 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StoryCard(
     story: ArchivedStory,
@@ -457,12 +464,17 @@ private fun StoryCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // ---- Body (clamped when collapsed) ----
-            Text(
-                story.en,
-                color = ZTextPrimary, fontSize = 15.sp, lineHeight = 26.sp,
-                maxLines = if (expanded) Int.MAX_VALUE else 3,
-            )
+            // ---- Body (clamped when collapsed) — force LTR so English
+            // punctuation never lands at the start of a line in an RTL screen.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(
+                    story.en,
+                    color = ZTextPrimary, fontSize = 15.sp, lineHeight = 26.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             AnimatedVisibility(expanded && showAr && story.ar.isNotBlank(), enter = fadeIn(tween(220)), exit = fadeOut()) {
                 Column {
@@ -488,68 +500,62 @@ private fun StoryCard(
                 }
             }
 
-            // ---- Actions (expanded only) ----
+            // ---- Actions (expanded only) — FlowRow so chips never wrap letter-by-letter.
             AnimatedVisibility(expanded, enter = fadeIn(tween(220)), exit = fadeOut()) {
+                val scope = rememberCoroutineScope()
+                val speaking = vm.tts?.speakingKey == "story_${story.id}"
                 Column {
                     Spacer(Modifier.height(12.dp))
                     HorizontalDivider(color = ZBorder)
                     Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Listen / Stop to the whole story
-                        com.zmastery.english.audio.AudioButton(
-                            text = story.en,
-                            audioKey = "story_${story.id}",
-                            accent = accent,
-                            size = 38.dp,
-                            iconSize = 19.dp,
-                        )
-                        Spacer(Modifier.width(8.dp))
-
-                        // Stop audio explicit button if speaking
-                        if (vm.tts?.speakingKey == "story_${story.id}") {
-                            IconButton(
-                                onClick = { vm.tts?.stop() },
-                                modifier = Modifier.size(34.dp).clip(CircleShape).background(ZRose.copy(alpha = 0.2f))
-                            ) {
-                                Icon(Icons.Filled.Stop, "إيقاف", tint = ZRose, modifier = Modifier.size(18.dp))
-                            }
-                            Spacer(Modifier.width(8.dp))
-                        }
-
-                        // Open in Full Estoria Interactive Reader Mode
-                        TextButton(onClick = onOpenInteractive) {
-                            Icon(Icons.Filled.AutoStories, null, tint = accent, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("وضع القراءة التفاعلي", color = accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        }
-
-                        Spacer(Modifier.weight(1f))
-                        if (story.ar.isNotBlank()) {
-                            TextButton(onClick = { showAr = !showAr }) {
-                                Icon(
-                                    if (showAr) Icons.Filled.VisibilityOff else Icons.Filled.Translate,
-                                    null, tint = ZCyan, modifier = Modifier.size(17.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    if (showAr) "إخفاء" else "الترجمة",
-                                    color = ZCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp,
-                                )
-                            }
-                        }
-                        TextButton(onClick = { vm.toggleStoryRead(story.id) }) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                if (speaking) vm.tts?.stop()
+                                else scope.launch { vm.tts?.speakInstant(story.en, "story_${story.id}") }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = if (speaking) ZRose.copy(alpha = 0.18f) else accent.copy(alpha = 0.14f),
+                                contentColor = if (speaking) ZRose else accent,
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
                             Icon(
-                                if (story.isRead) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                                null, tint = if (story.isRead) ZEmerald else ZTextMuted,
-                                modifier = Modifier.size(17.dp),
+                                if (speaking) Icons.Filled.Stop else Icons.Filled.VolumeUp,
+                                if (speaking) "إيقاف" else "استماع",
+                                modifier = Modifier.size(16.dp),
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                if (story.isRead) "مقروءة" else "علّم كمقروءة",
-                                color = if (story.isRead) ZEmerald else ZTextSecondary,
-                                fontWeight = FontWeight.SemiBold, fontSize = 12.sp,
+                                if (speaking) "إيقاف" else "استماع",
+                                fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                                maxLines = 1, softWrap = false,
                             )
                         }
+                        StoryActionChip(
+                            icon = Icons.Filled.AutoStories,
+                            label = "قراءة تفاعلية",
+                            tint = accent,
+                            onClick = onOpenInteractive,
+                        )
+                        if (story.ar.isNotBlank()) {
+                            StoryActionChip(
+                                icon = if (showAr) Icons.Filled.VisibilityOff else Icons.Filled.Translate,
+                                label = if (showAr) "إخفاء الترجمة" else "الترجمة",
+                                tint = ZCyan,
+                                onClick = { showAr = !showAr },
+                            )
+                        }
+                        StoryActionChip(
+                            icon = if (story.isRead) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                            label = if (story.isRead) "مقروءة" else "علّم كمقروءة",
+                            tint = if (story.isRead) ZEmerald else ZTextSecondary,
+                            onClick = { vm.toggleStoryRead(story.id) },
+                        )
                     }
                 }
             }
@@ -562,6 +568,37 @@ private fun StoryCard(
                     Text("اضغط للقراءة الكاملة", color = ZTextMuted, fontSize = 11.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StoryActionChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = tint.copy(alpha = 0.12f),
+        onClick = onClick,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                label,
+                color = tint,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
+            )
         }
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zmastery.english.data.*
@@ -555,6 +556,7 @@ private fun kindColor(kind: ModelKind): Color = when (kind) {
     ModelKind.OTHER -> ZTextMuted
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = ZCard, shadowElevation = 5.dp, modifier = Modifier.fillMaxWidth(), onClick = onEdit) {
@@ -574,9 +576,12 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
                 Icon(Icons.Filled.Tune, null, tint = ZTextMuted)
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Chip(Icons.Filled.Label, agent.kind.short)
-                Chip(Icons.Filled.Memory, vm.modelName(agent.modelId))
+                Chip(Icons.Filled.Memory, vm.modelName(agent.modelId), maxWidth = 200.dp)
                 if (agent.kind.usesVoice) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
             }
         }
@@ -584,12 +589,23 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
 }
 
 @Composable
-private fun Chip(icon: ImageVector, label: String) {
+private fun Chip(icon: ImageVector, label: String, maxWidth: androidx.compose.ui.unit.Dp = 160.dp) {
     Surface(shape = RoundedCornerShape(8.dp), color = ZSurfaceVariant) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 4.dp).widthIn(max = maxWidth),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(icon, null, tint = ZTextSecondary, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(4.dp))
-            Text(label, color = ZTextSecondary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                label,
+                color = ZTextSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
+            )
         }
     }
 }
@@ -776,10 +792,18 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
         }
 
         // Voice selector — TTS teachers and live conversation partners both speak.
+        // Play actually synthesizes the chosen Gemini neural voice (never Android TTS).
         if (agent.kind.usesVoice) {
+            DisposableEffect(Unit) { onDispose { vm.stopVoicePreview() } }
             EditorCard("الصوت / الشخصية الصوتية", Icons.Filled.RecordVoiceOver) {
+                Text(
+                    "اضغط التشغيل لتسمع صوت Gemini العصبي المختار. الفشل يظهر في سجل الإشعارات — لا نستخدم صوت أندرويد كاحتياط.",
+                    color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
+                )
+                Spacer(Modifier.height(8.dp))
                 vm.aiVoices.forEach { v ->
                     val sel = v.id == voiceId
+                    val previewing = vm.previewingVoiceId == v.id
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (sel) ZCyanDeep.copy(alpha = 0.10f) else ZSurfaceVariant,
@@ -793,9 +817,25 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                                 Text(v.displayName, color = ZTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                 Text("${v.gender} · ${v.accent} · ${v.sample}", color = ZTextSecondary, fontSize = 10.sp)
                             }
-                            Icon(Icons.Filled.PlayCircleOutline, null, tint = ZCyanDeep)
+                            IconButton(
+                                onClick = {
+                                    voiceId = v.id
+                                    if (previewing) vm.stopVoicePreview() else vm.previewVoice(v.id)
+                                },
+                                modifier = Modifier.size(36.dp),
+                            ) {
+                                if (previewing) {
+                                    CircularProgressIndicator(color = ZCyanDeep, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                } else {
+                                    Icon(Icons.Filled.PlayCircleOutline, "معاينة الصوت", tint = ZCyanDeep)
+                                }
+                            }
                         }
                     }
+                }
+                vm.previewVoiceMessage?.let { msg ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(msg, color = ZTextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
                 }
             }
         }

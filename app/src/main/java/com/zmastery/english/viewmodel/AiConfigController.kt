@@ -111,6 +111,15 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 apiKeys[j] = apiKeys[j].copy(status = if (res.ok) "ok" else res.error)
             }
             keyMessage = if (res.ok) (res.text.ifBlank { "المفتاح يعمل ✓" }) else res.error
+            if (!res.ok) {
+                vm.pushAlert(
+                    kind = AlertKind.ERROR,
+                    source = "مفتاح API",
+                    title = "فشل التحقق من المفتاح",
+                    detail = res.error.ifBlank { "المزوّد رفض المفتاح أو تعذّر الاتصال." },
+                    route = "settings",
+                )
+            }
             verifyingKeyId = null
             persist()
         }
@@ -169,6 +178,7 @@ internal class AiConfigController(internal val vm: AppViewModel) {
         if (cred == null || cred.rawKey.isBlank()) {
             fetchModelsFailed = true
             fetchModelsMessage = "أضف مفتاح API من هذه الشاشة أولاً"
+            vm.pushAlert(AlertKind.WARNING, "النماذج", "لا يوجد مفتاح API", fetchModelsMessage.orEmpty(), "settings")
             return
         }
         // OpenAI-compatible providers use /models; Gemini uses its own lister.
@@ -181,6 +191,13 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 if (list.isEmpty()) {
                     fetchModelsFailed = true
                     fetchModelsMessage = "تعذّر جلب النماذج من ${cred.providerEnum.label}"
+                    vm.pushAlert(
+                        kind = AlertKind.ERROR,
+                        source = "النماذج",
+                        title = "تعذّر جلب النماذج",
+                        detail = fetchModelsMessage.orEmpty(),
+                        route = "settings",
+                    )
                 } else {
                     aiModels.clear(); aiModels.addAll(list.sortedByDescending { it.familyRank })
                     fetchModelsMessage = "تم جلب ${list.size} نموذج من ${cred.providerEnum.label}"
@@ -214,6 +231,13 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 fetchModelsFailed = true
                 fetchModelsMessage = res.message
                 fetchModelsDetail = res.detail
+                vm.pushAlert(
+                    kind = AlertKind.ERROR,
+                    source = "النماذج",
+                    title = "تعذّر جلب النماذج",
+                    detail = listOfNotNull(res.message, res.detail).filter { it.isNotBlank() }.joinToString("\n"),
+                    route = "settings",
+                )
             }
         }
     }

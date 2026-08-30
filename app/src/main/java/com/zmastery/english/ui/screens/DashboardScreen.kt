@@ -93,6 +93,8 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
             conditionLabel = vm.streakConditionLabel,
             dayEarned = vm.dayEarnedStreak,
             onOpen = { onNavigate("momentum") },
+            unreadAlerts = vm.unreadAlertCount,
+            onInbox = { onNavigate("inbox") },
         )
 
         LazyColumn(

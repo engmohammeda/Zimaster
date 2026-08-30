@@ -111,6 +111,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             isLoaded = true
+            loadInbox()
             // مزامنة صامتة عند الإقلاع: تبني الصناديق الناقصة دون إشعارات.
             syncMysteryRewards(notify = false)
             syncWidget()
@@ -1868,6 +1869,131 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var audioGenLabel by mutableStateOf("")
         internal set
     var lastAudioMessage by mutableStateOf<String?>(null)
+
+    // ----- In-app diagnostic inbox (quota / keys / TTS / models) -----
+    val appAlerts = mutableStateListOf<AppAlert>()
+    val unreadAlertCount: Int get() = AlertInbox.unreadCount(appAlerts)
+    var previewingVoiceId by mutableStateOf<String?>(null)
+        internal set
+    var previewVoiceMessage by mutableStateOf<String?>(null)
+
+    fun pushAlert(
+        kind: AlertKind,
+        source: String,
+        title: String,
+        detail: String,
+        route: String? = null,
+    ) {
+        val incoming = AppAlert(
+            id = "al${System.currentTimeMillis()}",
+            kind = kind.name,
+            source = source,
+            title = title,
+            detail = detail,
+            atMillis = System.currentTimeMillis(),
+            route = route,
+        )
+        val next = AlertInbox.push(appAlerts.toList(), incoming)
+        appAlerts.clear()
+        appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun markAlertRead(id: String) {
+        val next = AlertInbox.markRead(appAlerts.toList(), id)
+        appAlerts.clear(); appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun markAllAlertsRead() {
+        val next = AlertInbox.markAllRead(appAlerts.toList())
+        appAlerts.clear(); appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun clearAlerts() {
+        appAlerts.clear()
+        persistInbox()
+    }
+
+    private fun persistInbox() {
+        val raw = runCatching {
+            kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.builtins.ListSerializer(AppAlert.serializer()),
+                appAlerts.toList(),
+            )
+        }.getOrNull() ?: return
+        getApplication<Application>()
+            .getSharedPreferences("z_inbox", android.content.Context.MODE_PRIVATE)
+            .edit().putString("alerts", raw).apply()
+    }
+
+    private fun loadInbox() {
+        val raw = getApplication<Application>()
+            .getSharedPreferences("z_inbox", android.content.Context.MODE_PRIVATE)
+            .getString("alerts", null) ?: return
+        val list = runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(AppAlert.serializer()),
+                raw,
+            )
+        }.getOrNull() ?: return
+        appAlerts.clear()
+        appAlerts.addAll(list.take(AlertInbox.CAP))
+    }
+
+    /**
+     * Play a short Gemini sample of [voiceId] so the learner can hear the
+     * difference before saving a persona. Never falls back to Android TTS.
+     */
+    fun previewVoice(voiceId: String) {
+        val engine = tts ?: run {
+            previewVoiceMessage = "محرك الصوت غير جاهز بعد"
+            pushAlert(AlertKind.ERROR, "صوت", "المحرّك غير جاهز", "أعد فتح التطبيق ثم حاول معاينة الصوت.")
+            return
+        }
+        if (previewingVoiceId == voiceId) {
+            engine.stop()
+            previewingVoiceId = null
+            return
+        }
+        engine.stop()
+        val name = AlertInbox.geminiVoiceName(voiceId, aiVoices.toList())
+        val sample = AlertInbox.previewSample(name)
+        previewVoiceMessage = null
+        previewingVoiceId = voiceId
+        vmScope.launch {
+            val result = engine.speakNeural(sample, "preview_$voiceId", name)
+            if (previewingVoiceId == voiceId) previewingVoiceId = null
+            if (result.ok) {
+                previewVoiceMessage = "هذا صوت $name"
+            } else {
+                previewVoiceMessage = result.reason.ifBlank { "تعذّرت المعاينة" }
+                pushAlert(
+                    kind = when {
+                        result.quota -> AlertKind.QUOTA
+                        result.noKey || result.offline -> AlertKind.WARNING
+                        else -> AlertKind.ERROR
+                    },
+                    source = "معاينة الصوت",
+                    title = AlertInbox.ttsFailureTitle(result.quota, engine.hasGeminiKey, engine.isOnline()),
+                    detail = AlertInbox.ttsFailureDetail(
+                        quota = result.quota,
+                        hasKey = engine.hasGeminiKey,
+                        online = engine.isOnline(),
+                        engineError = result.reason,
+                        voiceName = name,
+                    ),
+                    route = "settings",
+                )
+            }
+        }
+    }
+
+    fun stopVoicePreview() {
+        tts?.stop()
+        previewingVoiceId = null
+    }
 
     /** Count of clips still needing generation (drives the button badge). */
     val pendingAudioCount: Int get() = audio.pendingAudioCount

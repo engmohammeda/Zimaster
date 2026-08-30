@@ -12,8 +12,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +47,7 @@ import com.zmastery.english.ui.theme.*
  *  • كل الكبسولة داخل Surface بارتفاع ثابت (56dp) وحواف دائرية كاملة، تبدو
  *    كعنصر تنقّل عائم أنيق بدل شريط تطبيق تقليدي.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun StreakTopBar(
     streak: Int,
@@ -53,6 +58,8 @@ fun StreakTopBar(
     conditionLabel: String,
     dayEarned: Boolean,
     onOpen: () -> Unit,
+    unreadAlerts: Int = 0,
+    onInbox: (() -> Unit)? = null,
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = conditionProgress.coerceIn(0f, 1f),
@@ -108,6 +115,33 @@ fun StreakTopBar(
                 }
 
                 Spacer(Modifier.width(8.dp))
+
+                if (onInbox != null) {
+                    IconButton(onClick = onInbox, modifier = Modifier.size(36.dp)) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadAlerts > 0) {
+                                    Badge(containerColor = ZRose) {
+                                        Text(
+                                            if (unreadAlerts > 9) "9+" else "$unreadAlerts",
+                                            color = Color.White,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Filled.Notifications,
+                                contentDescription = "الإشعارات",
+                                tint = if (unreadAlerts > 0) ZAmber else ZTextMuted,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
 
                 // ── Compact Action Capsule ──
                 Surface(

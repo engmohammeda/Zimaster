@@ -161,6 +161,55 @@ class TtsManager(context: Context) {
     /** Alias kept for call sites that only ever want the permanent clip. */
     suspend fun playCached(text: String, key: String) = speakInstant(text, key)
 
+    /**
+     * Speak [text] with Gemini neural TTS using [voiceName] (Kore, Puck, …).
+     * Never falls back to Android TTS — a silent failure plus [lastError] is
+     * how the inbox can tell the learner *why* a voice did not play, instead
+     * of every preview sounding like the same robotic engine.
+     */
+    suspend fun speakNeural(text: String, key: String, voiceName: String? = null): NeuralSpeakResult {
+        val clean = text.trim()
+        if (clean.isEmpty()) return NeuralSpeakResult.Failed("النص فارغ")
+        val prevVoice = voice
+        if (!voiceName.isNullOrBlank()) voice = voiceName
+        speakingKey = key
+        try {
+            val cached = cacheFileFor(clean)
+            if (cached.exists() && cached.length() > 44L) {
+                withContext(Dispatchers.IO) { playFile(cached) }
+                return NeuralSpeakResult.Played
+            }
+            if (!hasGeminiKey) {
+                lastError = "لا يوجد مفتاح Gemini"
+                return NeuralSpeakResult.Failed("لا يوجد مفتاح Gemini", noKey = true)
+            }
+            if (!isOnline()) {
+                lastError = "لا يوجد اتصال"
+                return NeuralSpeakResult.Failed("لا يوجد اتصال بالإنترنت", offline = true)
+            }
+            val ok = generateAndCachePermanent(clean)
+            if (!ok) {
+                val quota = exhaustedModels.size >= ttsFallbackModels.size ||
+                    (lastError?.contains("حصة") == true) ||
+                    (lastError?.contains("استنفد") == true)
+                return NeuralSpeakResult.Failed(
+                    lastError ?: "تعذّر توليد الصوت الطبيعي",
+                    quota = quota,
+                )
+            }
+            val ready = cacheFileFor(clean)
+            if (!ready.exists() || ready.length() <= 44L) {
+                return NeuralSpeakResult.Failed(lastError ?: "الملف الصوتي فارغ")
+            }
+            withContext(Dispatchers.IO) { playFile(ready) }
+            return NeuralSpeakResult.Played
+        } finally {
+            voice = prevVoice
+            if (speakingKey == key) speakingKey = null
+        }
+    }
+
+
     fun stop() {
         isPlaybackStopped = true
         androidTts?.stop()
@@ -428,5 +477,24 @@ class TtsManager(context: Context) {
             lastError = e.message
             null
         }
+    }
+}
+
+/** Outcome of a Gemini-only speak request (preview / conversation partner). */
+data class NeuralSpeakResult(
+    val ok: Boolean,
+    val reason: String = "",
+    val quota: Boolean = false,
+    val noKey: Boolean = false,
+    val offline: Boolean = false,
+) {
+    companion object {
+        val Played = NeuralSpeakResult(ok = true)
+        fun Failed(
+            reason: String,
+            quota: Boolean = false,
+            noKey: Boolean = false,
+            offline: Boolean = false,
+        ) = NeuralSpeakResult(ok = false, reason = reason, quota = quota, noKey = noKey, offline = offline)
     }
 }
