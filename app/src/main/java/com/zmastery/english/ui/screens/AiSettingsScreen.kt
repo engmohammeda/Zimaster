@@ -1,6 +1,7 @@
 package com.zmastery.english.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,11 +45,22 @@ fun AiSettingsScreen(vm: AppViewModel) {
         item { ApiKeysCard(vm) }
         item { FetchModelsCard(vm) }
         item {
-            Text("عملاء الذكاء الاصطناعي", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
-            Text("لكل ميزة إعداداتها: النموذج · الشخصية · الصوت · الأسلوب · المطالبة", color = ZTextSecondary, fontSize = 12.sp)
+            Text("شخصيات ومطالبات المهارات", color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("كل مهارة لها شخصية ونبرة ومطالبة نظام مستقلة — التعديل هنا يصل مباشرة للمحادثة والكتابة والقصص والمدرب.", color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
         }
-        items(vm.aiAgents, key = { it.id }) { agent ->
-            AgentRow(vm, agent) { editing = agent.id }
+        AgentGroup.values().forEach { group ->
+            val members = vm.aiAgents.filter { AiPrompts.groupOf(it.id) == group }
+            if (members.isNotEmpty()) {
+                item(key = "g-${group.name}") {
+                    Column(Modifier.padding(top = 8.dp)) {
+                        Text(group.label, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text(group.subtitle, color = ZTextMuted, fontSize = 11.sp)
+                    }
+                }
+                items(members, key = { it.id }) { agent ->
+                    AgentRow(vm, agent) { editing = agent.id }
+                }
+            }
         }
         item { Spacer(Modifier.height(80.dp)) }
     }
@@ -67,7 +79,7 @@ private fun AiHeader() {
                 Text("مركز الذكاء الاصطناعي", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
             }
             Spacer(Modifier.height(8.dp))
-            Text("أدر النماذج والمفاتيح والأصوات وشخصيات ومطالبات كل ميزة من مكان واحد", color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 19.sp)
+            Text("النماذج والمفاتيح هنا، والمطالبات والنبرات لكل شخصية في البطاقات بالأسفل — هذا ما يسمعُه النموذج فعلاً.", color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, lineHeight = 19.sp)
         }
     }
 }
@@ -350,8 +362,8 @@ private fun FetchModelsCard(vm: AppViewModel) {
                     Text("النماذج المتاحة", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
                         if (fetchedCount > 0)
-                            "$total نموذج مجلوب لمفتاحك · ${vm.freeModelCount} ضمن الحصة المجانية"
-                        else "$total نموذج مبدئي · اجلب القائمة الكاملة لمفتاحك",
+                            "$total نموذج محفوظ على الجهاز · ${vm.freeModelCount} ضمن الحصة المجانية"
+                        else "$total نموذج مبدئي · اجلب القائمة مرة واحدة وتُحفظ تلقائياً",
                         color = ZTextSecondary, fontSize = 11.sp,
                     )
                 }
@@ -414,7 +426,7 @@ private fun FetchModelsCard(vm: AppViewModel) {
                 }
                 Switch(
                     checked = vm.showFreeModelsOnly,
-                    onCheckedChange = { vm.showFreeModelsOnly = it },
+                    onCheckedChange = { vm.applyFreeModelsFilter(it) },
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = ZEmerald),
                 )
             }
@@ -555,13 +567,16 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text(agent.feature, color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(agent.description, color = ZTextSecondary, fontSize = 11.sp, maxLines = 2)
+                    if (agent.character.isNotBlank()) {
+                        Text(agent.character, color = ZTextMuted, fontSize = 10.sp, maxLines = 1)
+                    }
                 }
                 Icon(Icons.Filled.Tune, null, tint = ZTextMuted)
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(Icons.Filled.Memory, vm.modelName(agent.modelId))
-                if (agent.kind == ModelKind.TTS) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
+                if (agent.kind.usesVoice) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
             }
         }
     }
@@ -599,12 +614,11 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             }
         }
 
-        // ---- Model selector: the FULL catalogue is offered for every agent ----
-        // The agent's natural kind is listed first, but every other kind is
-        // available too, so any model (including brand-new previews) can be
-        // assigned to any persona.
+        // ---- Model selector: ONLY the kinds this persona actually uses ----
+        // Voice teachers see TTS, image artists see Imagen, live partners see
+        // Live (+ text as a turn-based fallback). Nothing else leaks in.
         var modelQuery by remember { mutableStateOf("") }
-        val groups = remember(vm.aiModels.toList(), vm.showFreeModelsOnly, agent.id) {
+        val groups = remember(vm.aiModels.toList(), vm.showFreeModelsOnly, agent.id, agent.kind) {
             vm.modelChoicesFor(agent)
         }
         val filteredGroups = groups.mapNotNull { (kind, list) ->
@@ -616,7 +630,14 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
 
         EditorCard("النموذج", Icons.Filled.Memory) {
             Text(
-                "كل النماذج المتاحة لمفتاحك — اختر أي نموذج لهذه الشخصية",
+                when (agent.kind) {
+                    ModelKind.TTS -> "النماذج الصوتية فقط — هذه الشخصية تنطق ولا تكتب"
+                    ModelKind.IMAGE -> "نماذج الصور فقط — هذه الشخصية ترسم ولا تتحدث"
+                    ModelKind.VIDEO -> "نماذج الفيديو فقط"
+                    ModelKind.LIVE -> "النماذج الحيّة أولاً، ثم النصية كبديل للمحادثة"
+                    ModelKind.EMBEDDING -> "نماذج التضمين فقط"
+                    else -> "النماذج النصية فقط — هذه الشخصية تكتب ولا تنطق"
+                },
                 color = ZTextMuted, fontSize = 10.sp, lineHeight = 16.sp,
             )
             Spacer(Modifier.height(8.dp))
@@ -624,7 +645,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = if (vm.showFreeModelsOnly) ZEmerald.copy(alpha = 0.15f) else ZSurfaceVariant,
-                    onClick = { vm.showFreeModelsOnly = !vm.showFreeModelsOnly },
+                    onClick = { vm.applyFreeModelsFilter(!vm.showFreeModelsOnly) },
                 ) {
                     Row(
                         Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -747,14 +768,14 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             }
             if (filteredGroups.isEmpty()) {
                 Text(
-                    "لا توجد نماذج مطابقة — جرّب بحثاً آخر أو أوقف فلتر «المجانية فقط».",
+                    "لا توجد نماذج من نوع هذه الشخصية — اجلب القائمة أو أوقف فلتر «المجانية فقط».",
                     color = ZTextMuted, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp),
                 )
             }
         }
 
-        // Voice selector (TTS only)
-        if (agent.kind == ModelKind.TTS) {
+        // Voice selector — TTS teachers and live conversation partners both speak.
+        if (agent.kind.usesVoice) {
             EditorCard("الصوت / الشخصية الصوتية", Icons.Filled.RecordVoiceOver) {
                 vm.aiVoices.forEach { v ->
                     val sel = v.id == voiceId
@@ -778,16 +799,82 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
             }
         }
 
-        EditorCard("الشخصية / الهوية", Icons.Filled.Face) {
-            EditorField(character, { character = it }, "صف شخصية هذا العميل...", minLines = 2)
+        if (AiPrompts.isLegacy(agent)) {
+            Surface(shape = RoundedCornerShape(16.dp), color = ZAmber.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.History, null, tint = ZAmber, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "هذه مطالبة قصيرة من نسخة أقدم. استعد النسخة الاحترافية بنبرة ومخرجات محددة، أو أبقِ تعديلك.",
+                        color = ZTextSecondary, fontSize = 11.sp, lineHeight = 17.sp, modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
-        EditorCard("الأسلوب", Icons.Filled.Brush) {
-            EditorField(style, { style = it }, "صف أسلوب الأداء (النبرة/السرعة/اللهجة)...", minLines = 2)
+
+        EditorCard("الشخصية / الهوية", Icons.Filled.Face) {
+            EditorField(character, { character = it }, "صف من هو هذا العميل وكيف يتحدث مع المتعلم...", minLines = 3)
+        }
+        EditorCard("النبرة", Icons.Filled.GraphicEq) {
+            Text("اضغط نبرة لتطبيق أسلوب جاهز — يمكنك تعديل النص بعد ذلك.", color = ZTextMuted, fontSize = 10.sp)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AiPrompts.tones.forEach { t ->
+                    val sel = style == t.style
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (sel) ZIndigo.copy(alpha = 0.16f) else ZSurfaceVariant,
+                        onClick = { style = t.style },
+                    ) {
+                        Text(
+                            t.labelAr, color = if (sel) ZIndigo else ZTextSecondary,
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            EditorField(style, { style = it }, "صف النبرة والسرعة واللهجة...", minLines = 2)
         }
         EditorCard("المطالبة (System Prompt)", Icons.Filled.Terminal) {
-            EditorField(prompt, { prompt = it }, "اكتب المطالبة التي توجّه التوليد...", minLines = 5)
-            Spacer(Modifier.height(8.dp))
-            Text("يمكنك استخدام متغيرات مثل {WORDS} و {LEVEL} و {DIALOGUE} و {SOUND} و {STATS}.", color = ZTextMuted, fontSize = 10.sp)
+            val slots = AiPrompts.slotsFor(agent.id)
+            if (slots.isNotEmpty()) {
+                Text("متغيرات تُملأ تلقائياً عند التشغيل — اضغط لإدراجها:", color = ZTextMuted, fontSize = 10.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    slots.forEach { slot ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = ZIndigo.copy(alpha = 0.12f),
+                            onClick = { prompt = if (prompt.contains(slot.token)) prompt else (prompt.trimEnd() + " " + slot.token).trim() },
+                        ) {
+                            Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                Text(slot.token, color = ZIndigo, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                                Text(slot.meaningAr, color = ZTextMuted, fontSize = 9.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            EditorField(prompt, { prompt = it }, "اكتب المطالبة التي توجّه التوليد...", minLines = 8)
+        }
+
+        OutlinedButton(
+            onClick = {
+                val fresh = AiPrompts.defaultOf(agent.id) ?: return@OutlinedButton
+                character = fresh.character
+                style = fresh.style
+                prompt = fresh.prompt
+            },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = ZIndigo),
+        ) {
+            Icon(Icons.Filled.RestartAlt, null)
+            Spacer(Modifier.width(8.dp))
+            Text("استعادة المطالبة الاحترافية", fontWeight = FontWeight.Bold)
         }
 
         Button(
@@ -850,5 +937,11 @@ private fun agentIcon(name: String): ImageVector = when (name) {
     "image" -> Icons.Filled.Image
     "coach" -> Icons.Filled.Insights
     "quiz" -> Icons.Filled.Quiz
+    "write" -> Icons.Filled.EditNote
+    "ear" -> Icons.Filled.Hearing
+    "read" -> Icons.Filled.MenuBook
+    "spark" -> Icons.Filled.AutoAwesome
+    "edit" -> Icons.Filled.Edit
+    "school" -> Icons.Filled.School
     else -> Icons.Filled.AutoAwesome
 }

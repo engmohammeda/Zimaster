@@ -102,9 +102,14 @@ object GeminiStoryService {
                 appendLine(DailyStoryMaker.goalPrompt(goalTitle, goalStage, goalContext, seedWords.map { it.english }, level))
             } else {
                 // The agent's own editable prompt drives the request.
-                val filled = basePrompt
-                    .replace("{WORDS}", wordList)
-                    .replace("{LEVEL}", level)
+                val filled = AiPrompts.fill(
+                    basePrompt,
+                    mapOf(
+                        "WORDS" to wordList,
+                        "LEVEL" to level,
+                        "CONTEXT" to goalContext.takeLast(8).joinToString(" | "),
+                    ),
+                )
                 appendLine(filled.ifBlank { DailyStoryMaker.aiPrompt(words, level) })
                 appendLine()
                 appendLine("TARGET WORDS (use every one, naturally): $wordList")

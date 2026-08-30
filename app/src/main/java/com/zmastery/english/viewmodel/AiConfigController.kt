@@ -53,6 +53,19 @@ internal class AiConfigController(internal val vm: AppViewModel) {
         if (i >= 0) { aiAgents[i] = updated; persist() }
     }
 
+    /** Restore character, tone and system prompt from the professional defaults. Keeps model + voice. */
+    fun resetAgentPrompt(id: String) {
+        val fresh = AiPrompts.defaultOf(id) ?: return
+        val i = aiAgents.indexOfFirst { it.id == id }
+        if (i < 0) return
+        aiAgents[i] = aiAgents[i].copy(
+            character = fresh.character,
+            style = fresh.style,
+            prompt = fresh.prompt,
+        )
+        persist()
+    }
+
     /** Keep the legacy [geminiApiKey] field pointing at the active Gemini key
      *  so older code paths (TTS, models.list) keep working unchanged. */
     internal fun syncActiveKey() {

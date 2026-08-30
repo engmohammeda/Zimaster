@@ -456,6 +456,37 @@ private fun AiGeneratorView(
                 generatedCoursePkg = null
 
                 scope.launch {
+                    val levelName = when (level) {
+                        1 -> "A1"
+                        2 -> "A2"
+                        3 -> "B1"
+                        4 -> "B2"
+                        else -> "C1"
+                    }
+                    val creator = vm.aiAgents.firstOrNull {
+                        it.id == if (genScope == 0) "lesson_creator" else "curriculum_builder"
+                    }
+                    val studioGuidance = buildString {
+                        if (creator != null) {
+                            appendLine(
+                                AiPrompts.fill(
+                                    creator.prompt,
+                                    mapOf(
+                                        "TOPIC" to topic,
+                                        "LEVEL" to levelName,
+                                        "STYLE" to selectedPersona.toneDescription,
+                                        "COUNT" to lessonCount.toString(),
+                                    ),
+                                )
+                            )
+                            if (creator.character.isNotBlank()) appendLine("PERSONA: ${creator.character}")
+                            if (creator.style.isNotBlank()) appendLine("TONE: ${creator.style}")
+                        }
+                        if (customInstructions.isNotBlank()) {
+                            appendLine()
+                            appendLine(customInstructions)
+                        }
+                    }
                     if (genScope == 0) {
                         progressMessage = "جارٍ توليد درس «$topic» عبر ${selectedPersona.nameAr}…"
                         val res = AiLessonService.generateLesson(
@@ -475,9 +506,9 @@ private fun AiGeneratorView(
                             courseNameAr = targetCourse?.name ?: "كورس $topic",
                             courseId = targetCourse?.jsonId ?: "",
                             persona = selectedPersona,
-                            customInstructions = customInstructions,
+                            customInstructions = studioGuidance,
                             key = key,
-                            modelId = ""
+                            modelId = creator?.modelId.orEmpty(),
                         )
                         isGenerating = false
                         when (res) {

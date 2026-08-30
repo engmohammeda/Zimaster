@@ -409,12 +409,21 @@ fun InteractiveStoryReader(
                                         scope.launch {
                                             val key = vm.activeKey
                                             if (key != null) {
+                                                val explainer = vm.aiAgents.firstOrNull { it.id == "word_explainer" }
+                                                val system = com.zmastery.english.data.AiPrompts.fill(
+                                                    explainer?.prompt.orEmpty().ifBlank {
+                                                        "You are an expert English teacher. Explain words briefly and deeply for an Arabic-speaking learner."
+                                                    },
+                                                    mapOf(
+                                                        "LEVEL" to vm.cefrEstimate.first,
+                                                        "CONTEXT" to cleanWord,
+                                                    ),
+                                                )
                                                 val prompt = "اشرح كلمة '$cleanWord' في سياق القصة الإنجليزية بجملتين مركزتين: معناها الدقيق، استخداماتها الشائعة، ومثال عملي بالعربية."
-                                                val reply = com.zmastery.english.data.AiClient.complete(
-                                                    key = key,
-                                                    model = "",
-                                                    system = "أنت معلم لغة إنجليزية خبير. تشرح الكلمات باقتضاب وعمق للمتعلم العربي.",
-                                                    user = prompt
+                                                val reply = vm.aiComplete(
+                                                    system = system,
+                                                    user = prompt,
+                                                    agentId = "word_explainer",
                                                 )
                                                 wordAiExplanation = if (reply.ok) reply.text.trim() else "تعذر جلب الشرح حالياً."
                                             } else {

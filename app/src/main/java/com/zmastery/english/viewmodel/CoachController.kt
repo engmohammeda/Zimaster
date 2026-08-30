@@ -80,7 +80,15 @@ internal class CoachController(internal val vm: AppViewModel) {
         coachError = null
         launch {
             val facts = coachFacts(scope)
-            val report = CoachService.analyze(facts, geminiApiKey, nowStamp())
+            val coachAgent = vm.aiAgents.firstOrNull { it.id == "coach" }
+            val report = CoachService.analyze(
+                facts = facts,
+                apiKey = geminiApiKey,
+                stamp = nowStamp(),
+                persona = coachAgent?.character.orEmpty(),
+                style = coachAgent?.style.orEmpty(),
+                basePrompt = coachAgent?.prompt.orEmpty(),
+            )
             coachReports[scope.name] = report
             isCoaching = false
             if (report.local && hasAiKey) {

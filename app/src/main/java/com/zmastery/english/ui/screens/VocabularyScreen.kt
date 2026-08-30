@@ -211,8 +211,15 @@ private fun AddWordDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                             if (english.isBlank()) { error = "اكتب الكلمة الإنجليزية"; return@Button }
                             loading = true
                             scope.launch {
-                                val agentModel = vm.aiAgents.firstOrNull { it.id == "translator" }?.modelId.orEmpty()
-                                when (val r = com.zmastery.english.data.GeminiWordService.generate(english, context, vm.activeKey, agentModel)) {
+                                val translator = vm.aiAgents.firstOrNull { it.id == "translator" }
+                                when (val r = com.zmastery.english.data.GeminiWordService.generate(
+                                    word = english,
+                                    userContext = context,
+                                    key = vm.activeKey,
+                                    model = translator?.modelId.orEmpty(),
+                                    system = translator?.prompt.orEmpty(),
+                                    level = vm.cefrEstimate.first,
+                                )) {
                                     is com.zmastery.english.data.GeminiWordService.Result.Success -> {
                                         val w = r.word
                                         vm.addWord(w.english, w.arabic, w.exampleEn, w.exampleAr, w.phonetic, w.mentalImage)
