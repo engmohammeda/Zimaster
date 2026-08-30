@@ -74,6 +74,7 @@ fun InteractiveStoryDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InteractiveStoryReader(
     story: ArchivedStory,
@@ -638,7 +639,6 @@ private fun StoryTokensLayout(
                             fontSize = fontSizeSp.sp,
                             lineHeight = (fontSizeSp * 1.65).sp,
                             color = ZTextSecondary,
-             ry,
                             style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
                         )
                     }

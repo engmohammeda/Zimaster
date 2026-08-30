@@ -384,7 +384,7 @@ internal class AudioController(internal val vm: AppViewModel) {
             val prevVoice = engine.voice
             val readerVoice = vm.aiAgents.firstOrNull { it.id == "story_reader" }?.voiceId.orEmpty()
             if (readerVoice.isNotBlank()) {
-                engine.voice = readerVoice.replaceFirstChar { it.uppercase() }
+                engine.voice = readerVoice.replaceFirstChar { it.uppercaseChar() }
             }
             try {
                 val success = runCatching { engine.generateLongFormAndCache(story.en) }.getOrDefault(false)
