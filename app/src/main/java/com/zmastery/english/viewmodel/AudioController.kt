@@ -374,15 +374,33 @@ internal class AudioController(internal val vm: AppViewModel) {
             lastAudioMessage = "لا يوجد اتصال حالياً"
             return
         }
+        if (isGeneratingAudio) return
         launch {
-            val success = runCatching { engine.generateLongFormAndCache(story.en) }.getOrDefault(false)
-            if (success) {
-                val i = storyArchive.indexOfFirst { it.id == storyId }
-                if (i >= 0) storyArchive[i] = storyArchive[i].copy(audioReady = true)
-                vm.persist()
-                lastAudioMessage = "تم توليد صوت القصة ✓"
-            } else {
-                lastAudioMessage = "تعذّر توليد صوت القصة — حاول لاحقاً"
+            isGeneratingAudio = true
+            audioGenTotal = 1
+            audioGenDone = 0
+            audioGenLabel = "قصة: ${story.title}"
+            lastAudioMessage = "جارٍ توليد الصوت الطبيعي…"
+            val prevVoice = engine.voice
+            val readerVoice = vm.aiAgents.firstOrNull { it.id == "story_reader" }?.voiceId.orEmpty()
+            if (readerVoice.isNotBlank()) {
+                engine.voice = readerVoice.replaceFirstChar { it.uppercase() }
+            }
+            try {
+                val success = runCatching { engine.generateLongFormAndCache(story.en) }.getOrDefault(false)
+                if (success) {
+                    val i = storyArchive.indexOfFirst { it.id == storyId }
+                    if (i >= 0) storyArchive[i] = storyArchive[i].copy(audioReady = true)
+                    vm.persist()
+                    lastAudioMessage = "تم توليد صوت القصة ✓"
+                    audioGenDone = 1
+                } else {
+                    lastAudioMessage = "تعذّر توليد صوت القصة — حاول لاحقاً"
+                }
+            } finally {
+                engine.voice = prevVoice
+                isGeneratingAudio = false
+                audioGenLabel = ""
             }
         }
     }
