@@ -166,6 +166,14 @@ class SkillsEngineTest {
     }
 
     @Test
+    fun `parse reading coach JSON`() {
+        val raw = """{"gist_ar":"الشمس مشرقة.","question_en":"What is bright?"}"""
+        val note = SkillsEngine.parseReadingCoach(raw)
+        assertEquals("الشمس مشرقة.", note.gistAr)
+        assertEquals("What is bright?", note.questionEn)
+    }
+
+    @Test
     fun `parse writing JSON`() {
         val raw = """{"score":82,"corrected":"I am happy.","notes_ar":"أحسنت"}"""
         val fb = SkillsEngine.parseWritingFeedback(raw, "I is happy", "happy")

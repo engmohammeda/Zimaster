@@ -416,10 +416,11 @@ fun InteractiveStoryReader(
                                                     },
                                                     mapOf(
                                                         "LEVEL" to vm.cefrEstimate.first,
-                                                        "CONTEXT" to cleanWord,
+                                                        "CONTEXT" to story.en.take(400),
+                                                        "WORD" to cleanWord,
                                                     ),
                                                 )
-                                                val prompt = "اشرح كلمة '$cleanWord' في سياق القصة الإنجليزية بجملتين مركزتين: معناها الدقيق، استخداماتها الشائعة، ومثال عملي بالعربية."
+                                                val prompt = "Explain the English word \"$cleanWord\" in this story. Two tight sentences only."
                                                 val reply = vm.aiComplete(
                                                     system = system,
                                                     user = prompt,

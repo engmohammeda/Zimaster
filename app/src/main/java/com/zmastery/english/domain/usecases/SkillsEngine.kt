@@ -156,6 +156,53 @@ object SkillsEngine {
         appendLine("""{"score":80,"corrected":"...","notes_ar":"ملاحظات قصيرة بالعربية"}""")
     }
 
+    fun buildReadingSystem(
+        character: String,
+        style: String,
+        prompt: String,
+        passageEn: String,
+        passageAr: String,
+        level: String,
+        context: String = "",
+    ): String = buildString {
+        val filled = com.zmastery.english.data.AiPrompts.fill(
+            prompt,
+            mapOf("LEVEL" to level, "CONTEXT" to context),
+        )
+        if (filled.isNotBlank()) appendLine(filled) else {
+            appendLine("You are a reading coach for an Arabic-speaking learner (level $level).")
+            appendLine("Give a two-sentence Arabic gist, then one English question.")
+        }
+        if (character.isNotBlank()) appendLine("Persona: $character")
+        if (style.isNotBlank()) appendLine("Tone: $style")
+        appendLine("PASSAGE:")
+        appendLine(passageEn.take(2000))
+        if (passageAr.isNotBlank()) {
+            appendLine("Learner already has this Arabic (do not copy it):")
+            appendLine(passageAr.take(800))
+        }
+        appendLine("Reply ONLY with JSON:")
+        appendLine("""{"gist_ar":"...","question_en":"..."}""")
+    }
+
+    fun parseReadingCoach(raw: String): ReadingCoachNote {
+        val cleaned = raw.trim()
+            .removePrefix("```json").removePrefix("```JSON").removePrefix("```")
+            .removeSuffix("```").trim()
+        val parsed = runCatching { json.decodeFromString(ReadingCoachDto.serializer(), cleaned) }.getOrNull()
+        if (parsed != null && (parsed.gist_ar.isNotBlank() || parsed.question_en.isNotBlank())) {
+            return ReadingCoachNote(
+                gistAr = parsed.gist_ar.trim(),
+                questionEn = parsed.question_en.trim(),
+            )
+        }
+        val parts = cleaned.split(Regex("\\n\\s*\\n"), limit = 2)
+        return ReadingCoachNote(
+            gistAr = parts.getOrNull(0).orEmpty().trim(),
+            questionEn = parts.getOrNull(1).orEmpty().trim(),
+        )
+    }
+
     fun parseWritingFeedback(raw: String, original: String, targetWord: String): WritingFeedback {
         val cleaned = raw.trim()
             .removePrefix("```json").removePrefix("```JSON").removePrefix("```")
@@ -428,6 +475,11 @@ data class WritingFeedback(
     val usedTargetWord: Boolean,
 )
 
+data class ReadingCoachNote(
+    val gistAr: String,
+    val questionEn: String,
+)
+
 data class TrainingPassage(
     val id: String,
     val title: String,
@@ -475,4 +527,10 @@ internal data class WritingFeedbackDto(
     val score: Int = 0,
     val corrected: String = "",
     val notes_ar: String = "",
+)
+
+@Serializable
+internal data class ReadingCoachDto(
+    val gist_ar: String = "",
+    val question_en: String = "",
 )

@@ -287,6 +287,7 @@ private fun ReadingSkill(vm: AppViewModel) {
         PassageChooser(passages, passage) { picked ->
             index = passages.indexOf(picked).coerceAtLeast(0)
             transcript = ""; score = null
+            vm.clearReadingCoach()
         }
         Spacer(Modifier.height(12.dp))
         Text(passage.en, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp)
@@ -332,6 +333,51 @@ private fun ReadingSkill(vm: AppViewModel) {
         if (transcript.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
             Text("نصّك: $transcript", color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
+        }
+    }
+
+    SkillCard("مدرّب القراءة") {
+        Text(
+            "يلخّص المعنى بجملتين عربيتين ثم يطرح سؤالاً إنجليزياً واحداً من القطعة — من شخصية الاستوديو.",
+            color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(
+            onClick = { vm.coachReading(passage.en, passage.ar) },
+            enabled = !vm.isCoachingReading,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ZCyanDeep, disabledContainerColor = ZBorder),
+        ) {
+            if (vm.isCoachingReading) {
+                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("جارٍ التلخيص…", fontWeight = FontWeight.Bold)
+            } else {
+                Icon(Icons.Filled.AutoAwesome, null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (vm.hasAiKey) "لخّص واسأل" else "يتطلب مفتاح الذكاء الاصطناعي", fontWeight = FontWeight.Bold)
+            }
+        }
+        vm.readingCoachError?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = ZAmber, fontSize = 11.sp)
+        }
+        vm.readingCoach?.let { note ->
+            Spacer(Modifier.height(12.dp))
+            if (note.gistAr.isNotBlank()) {
+                Text(note.gistAr, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 22.sp)
+            }
+            if (note.questionEn.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Surface(shape = RoundedCornerShape(12.dp), color = ZCyanDeep.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("سؤال", color = ZCyanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text(note.questionEn, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
+                    }
+                }
+            }
         }
     }
 }

@@ -208,10 +208,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nextLessonId = maxOf(p.nextLessonId, (lessons.maxOfOrNull { it.id } ?: 0) + 1)
         nextWordId = maxOf(p.nextWordId, (vocab.maxOfOrNull { it.id } ?: 0) + 1)
 
-        // Restore AI agent overlays by id. Short leftover one-liners are treated
-        // as legacy and replaced by the professional studio prompt; a long
-        // custom prompt the learner actually edited is kept. Model and voice
-        // always overlay so a chosen catalogue id is not lost.
+        // Restore AI agent overlays by id. Older studio drafts under 1800
+        // characters are treated as legacy and replaced by the deep brief;
+        // a long custom prompt the learner actually edited is kept. Model
+        // and voice always overlay so a chosen catalogue id is not lost.
         if (s.aiAgents.isNotEmpty()) {
             s.aiAgents.forEach { dto ->
                 val i = aiAgents.indexOfFirst { it.id == dto.id }
@@ -758,6 +758,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun evaluateWriting(text: String, promptEn: String, targetWord: String) =
         skills.evaluateWriting(text, promptEn, targetWord)
     fun clearWritingFeedback() = skills.clearWriting()
+    val readingCoach get() = skills.readingCoach
+    val isCoachingReading get() = skills.isCoachingReading
+    val readingCoachError get() = skills.readingError
+    fun coachReading(passageEn: String, passageAr: String) = skills.coachReading(passageEn, passageAr)
+    fun clearReadingCoach() = skills.clearReadingCoach()
 
     // ----- Daily phrase -----
     val dailyPhrase: String get() = SampleData.dailyPhrases[java.time.LocalDate.now().dayOfYear % SampleData.dailyPhrases.size]

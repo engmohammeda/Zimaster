@@ -617,7 +617,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
 
         // ---- Model selector: ONLY the kinds this persona actually uses ----
         // Voice teachers see TTS, image artists see Imagen, live partners see
-        // Live (+ text as a turn-based fallback). Nothing else leaks in.
+        // Live only. Nothing else leaks in.
         var modelQuery by remember { mutableStateOf("") }
         val groups = remember(vm.aiModels.toList(), vm.showFreeModelsOnly, agent.id, agent.kind) {
             vm.modelChoicesFor(agent)

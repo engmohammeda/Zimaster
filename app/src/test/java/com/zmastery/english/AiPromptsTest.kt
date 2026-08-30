@@ -16,8 +16,8 @@ class AiPromptsTest {
         assertEquals(agents.size, agents.map { it.id }.toSet().size)
         assertTrue(agents.size >= 12)
         agents.forEach { a ->
-            assertTrue("${a.id} prompt too short (${a.prompt.length})", a.prompt.length >= 500)
-            assertTrue("${a.id} has no character", a.character.length >= 40)
+            assertTrue("${a.id} prompt too short (${a.prompt.length})", a.prompt.length >= 1200)
+            assertTrue("${a.id} has no character", a.character.length >= 80)
             assertTrue("${a.id} has no style", a.style.isNotBlank())
             assertEquals(listOf(a.kind), a.kind.pickerKinds)
         }
@@ -77,6 +77,27 @@ class AiPromptsTest {
         val old = fresh.copy(prompt = "حلّل {STATS}.")
         assertTrue(AiPrompts.isLegacy(old))
         assertFalse(AiPrompts.isLegacy(fresh))
+        val previousStudio = fresh.copy(prompt = "x".repeat(900))
+        assertTrue(AiPrompts.isLegacy(previousStudio))
+        val customDeep = fresh.copy(prompt = "x".repeat(2000))
+        assertFalse(AiPrompts.isLegacy(customDeep))
+    }
+
+    @Test
+    fun `reading system prompt asks for gist JSON`() {
+        val reader = AiPrompts.defaultOf("reading")!!
+        val sys = SkillsEngine.buildReadingSystem(
+            character = reader.character,
+            style = reader.style,
+            prompt = reader.prompt,
+            passageEn = "The sun is bright today.",
+            passageAr = "الشمس مشرقة اليوم.",
+            level = "A2",
+        )
+        assertTrue(sys.contains("A2"))
+        assertTrue(sys.contains("gist_ar"))
+        assertTrue(sys.contains("The sun is bright today."))
+        assertTrue(sys.contains("Persona:"))
     }
 
     @Test

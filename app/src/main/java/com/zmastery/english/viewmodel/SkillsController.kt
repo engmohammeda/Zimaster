@@ -31,6 +31,11 @@ internal class SkillsController(internal val vm: AppViewModel) {
         private set
     var writingError by mutableStateOf<String?>(null)
 
+    var readingCoach by mutableStateOf<com.zmastery.english.domain.usecases.ReadingCoachNote?>(null)
+    var isCoachingReading by mutableStateOf(false)
+        private set
+    var readingError by mutableStateOf<String?>(null)
+
     private val aiAgents get() = vm.aiAgents
     private val aiVoices get() = vm.aiVoices
     private val tts get() = vm.tts
@@ -184,5 +189,46 @@ internal class SkillsController(internal val vm: AppViewModel) {
     fun clearWriting() {
         writingFeedback = null
         writingError = null
+    }
+
+    fun coachReading(passageEn: String, passageAr: String) {
+        val clean = passageEn.trim()
+        if (clean.isBlank() || isCoachingReading) return
+        readingError = null
+        isCoachingReading = true
+        vm.vmScope.launch {
+            if (!vm.hasAiKey) {
+                readingError = "أضف مفتاح API من إعدادات الذكاء الاصطناعي لتشغيل مدرّب القراءة"
+                isCoachingReading = false
+                return@launch
+            }
+            val reader = aiAgents.firstOrNull { it.id == "reading" }
+            val system = SkillsEngine.buildReadingSystem(
+                character = reader?.character.orEmpty(),
+                style = reader?.style.orEmpty(),
+                prompt = reader?.prompt.orEmpty(),
+                passageEn = clean,
+                passageAr = passageAr,
+                level = vm.cefrEstimate.first,
+            )
+            val res = vm.aiComplete(
+                system = system,
+                user = clean,
+                agentId = "reading",
+                json = true,
+            )
+            if (res.ok) {
+                readingCoach = SkillsEngine.parseReadingCoach(res.text)
+                vm.grantXp(6)
+            } else {
+                readingError = res.error.ifBlank { "تعذّر تلخيص القطعة" }
+            }
+            isCoachingReading = false
+        }
+    }
+
+    fun clearReadingCoach() {
+        readingCoach = null
+        readingError = null
     }
 }
