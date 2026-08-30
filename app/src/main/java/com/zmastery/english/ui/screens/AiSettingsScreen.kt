@@ -635,7 +635,7 @@ private fun AgentEditor(vm: AppViewModel, agent: AiAgent, onBack: () -> Unit) {
                     ModelKind.TTS -> "النماذج الصوتية (TTS) فقط — هذه الشخصية تنطق ولا تكتب ولا ترسم"
                     ModelKind.IMAGE -> "نماذج الصور فقط — هذه الشخصية ترسم ولا تتحدث ولا تكتب نصاً"
                     ModelKind.VIDEO -> "نماذج الفيديو فقط"
-                    ModelKind.LIVE -> "النماذج الحيّة / الصوت الأصلي فقط — لا نص ولا صور ولا TTS"
+                    ModelKind.LIVE -> "النماذج الحيّة / الصوت الأصلي فقط. الردود المكتوبة تُحوَّل لنموذج نصي تلقائياً لأن النماذج الحيّة لا ترد عبر generateContent."
                     ModelKind.EMBEDDING -> "نماذج التضمين فقط"
                     else -> "النماذج النصية فقط — هذه الشخصية تكتب ولا تنطق ولا ترسم"
                 },

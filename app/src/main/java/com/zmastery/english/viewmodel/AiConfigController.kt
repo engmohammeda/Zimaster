@@ -152,7 +152,10 @@ internal class AiConfigController(internal val vm: AppViewModel) {
     ): AiClient.Reply {
         val key = activeKey
             ?: return AiClient.Reply(false, "", "أضف مفتاح API من إعدادات الذكاء الاصطناعي")
-        val model = aiAgents.firstOrNull { it.id == agentId }?.modelId.orEmpty()
+        val requested = aiAgents.firstOrNull { it.id == agentId }?.modelId.orEmpty()
+        // Conversation is LIVE (native-audio picker) but this path is still
+        // generateContent. Swap in a TEXT model; keep the LIVE id on the agent.
+        val model = AiClient.textFallbackId(requested, aiModels.toList())
         return AiClient.complete(key, model, system, user, json)
     }
 

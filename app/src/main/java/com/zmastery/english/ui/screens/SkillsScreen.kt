@@ -32,7 +32,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -645,7 +649,19 @@ private fun ConversationBubble(turn: ChatTurn, onSpeak: () -> Unit) {
                     color = if (mine) Color.White.copy(alpha = 0.8f) else ZRose,
                     fontSize = 10.sp, fontWeight = FontWeight.Bold,
                 )
-                Text(turn.en, color = if (mine) Color.White else ZTextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
+                // English must stay LTR inside the RTL screen, otherwise trailing
+                // '?' jumps to the visual start ("?Hello! Welcome...").
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        turn.en,
+                        color = if (mine) Color.White else ZTextPrimary,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        textAlign = TextAlign.Start,
+                        style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 if (turn.ar.isNotBlank() && !mine) {
                     Text(turn.ar, color = ZTextSecondary, fontSize = 12.sp)
                 }

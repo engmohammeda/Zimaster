@@ -21,6 +21,9 @@ object AiClient {
     private const val CONNECT_MS = 20_000
     private const val READ_MS = 60_000
 
+    /** generateContent-capable default when a LIVE/TTS/image id is selected. */
+    const val DEFAULT_TEXT_MODEL = "gemini-2.5-flash"
+
     /**
      * Run a chat completion.
      *
@@ -39,7 +42,9 @@ object AiClient {
         temperature: Double = 0.7,
     ): Reply = withContext(Dispatchers.IO) {
         if (key.rawKey.isBlank()) return@withContext Reply(false, "", "المفتاح فارغ")
-        val m = model.ifBlank { key.providerEnum.defaultModel }
+        val requested = model.ifBlank { key.providerEnum.defaultModel }
+        // Live / TTS / image ids cannot call generateContent. Never send them.
+        val m = if (canGenerateText(requested)) requested else DEFAULT_TEXT_MODEL
         if (m.isBlank()) return@withContext Reply(false, "", "لم يُحدَّد نموذج")
         try {
             when (key.protocol) {
@@ -242,6 +247,15 @@ object AiClient {
             }
         }.getOrDefault("").take(140)
 
+        val ldetail = detail.lowercase()
+        if (ldetail.contains("not supported for generatecontent") ||
+            ldetail.contains("native-audio") ||
+            ldetail.contains("bidigeneratecontent") ||
+            (ldetail.contains("generatecontent") && ldetail.contains("call mode"))
+        ) {
+            return "هذا نموذج حيّ/صوتي ولا يرد بالنص المكتوب"
+        }
+
         val reason = when (code) {
             400 -> "طلب غير صالح — تحقّق من اسم النموذج"
             401 -> "المفتاح غير صالح أو منتهي"
@@ -270,16 +284,55 @@ object AiClient {
         .removePrefix("```json").removePrefix("```JSON").removePrefix("```")
         .removeSuffix("```").trim()
 
-    /** Classify a model id into a [ModelKind]. */
+    /** Classify a model id into a [ModelKind]. Live/native-audio before TTS. */
     fun classify(id: String): ModelKind {
         val l = id.lowercase()
         return when {
-            l.contains("tts") || l.contains("audio") || l.contains("speech") || l.contains("whisper") -> ModelKind.TTS
+            l.contains("native-audio") || l.contains("audio-dialog") ||
+                l.contains("live") || l.contains("realtime") || l.contains("bidi") -> ModelKind.LIVE
+            l.contains("tts") || l.contains("text-to-speech") ||
+                l.contains("whisper") || l.contains("speech") || l.contains("audio") -> ModelKind.TTS
             l.contains("imagen") || l.contains("image") || l.contains("dall") || l.contains("flux") -> ModelKind.IMAGE
             l.contains("veo") || l.contains("video") || l.contains("sora") -> ModelKind.VIDEO
             l.contains("embed") -> ModelKind.EMBEDDING
-            l.contains("live") || l.contains("realtime") -> ModelKind.LIVE
             else -> ModelKind.TEXT
         }
+    }
+
+    /**
+     * True when [modelId] can be sent to `generateContent` / chat completions.
+     * Live / native-audio / TTS / image / video / embedding ids cannot.
+     */
+    fun canGenerateText(modelId: String): Boolean {
+        val lid = modelId.removePrefix("models/").lowercase().trim()
+        if (lid.isBlank()) return false
+        return when (classify(lid)) {
+            ModelKind.TEXT, ModelKind.OTHER -> true
+            else -> false
+        }
+    }
+
+    /**
+     * Pick a model that actually answers a text completion.
+     *
+     * Conversation personas are LIVE (picker shows native-audio only) but the
+     * current turn-based chat still uses generateContent. Never send a Live
+     * id down that path — swap in a TEXT sibling from the catalogue.
+     */
+    fun textFallbackId(requested: String, catalogue: List<AiModel>): String {
+        val id = requested.removePrefix("models/").trim()
+        if (canGenerateText(id)) return id
+        val text = catalogue.filter { canGenerateText(it.id) }
+        val preferred = listOf(
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash-lite",
+            "gemini-2.5-pro",
+            "gemini-2.0-flash-exp",
+        )
+        return preferred.firstOrNull { p -> text.any { it.id.equals(p, true) } }
+            ?: text.maxByOrNull { it.familyRank }?.id
+            ?: DEFAULT_TEXT_MODEL
     }
 }
