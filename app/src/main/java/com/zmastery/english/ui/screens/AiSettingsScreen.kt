@@ -575,7 +575,7 @@ private fun AgentRow(vm: AppViewModel, agent: AiAgent, onEdit: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip(Icons.Filled.Category, agent.kind.short)
+                Chip(Icons.Filled.Label, agent.kind.short)
                 Chip(Icons.Filled.Memory, vm.modelName(agent.modelId))
                 if (agent.kind.usesVoice) Chip(Icons.Filled.RecordVoiceOver, vm.voiceName(agent.voiceId))
             }

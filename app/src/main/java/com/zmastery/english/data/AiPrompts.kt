@@ -413,9 +413,11 @@ object AiPrompts {
                 Smile in the voice. Never shout. Never whisper the whole page.
                 Pause at full stops. A shorter pause at commas.
                 If {SOUND} is set it is not a phonetics drill — ignore it and read the story.
+                Keep proper names and place names as written, even if they are hard.
 
                 NEVER
                 Never introduce the story. Never say "the end". Never translate.
+                Never switch to a news-anchor voice. You are a storyteller sitting with the learner.
             """.trimIndent(),
         ),
         agent(
