@@ -49,6 +49,15 @@ object GeminiWordService {
         val clean = word.trim()
         if (clean.isEmpty()) return Result.Error("اكتب الكلمة الإنجليزية")
 
+        val systemPrompt = AiPrompts.fill(
+            system.ifBlank { SYSTEM },
+            mapOf(
+                "WORDS" to clean,
+                "CONTEXT" to userContext,
+                "LEVEL" to level,
+            ),
+        ).ifBlank { SYSTEM }
+
         val prompt = buildString {
             append("For the English word \"$clean\", return ONLY a compact JSON object ")
             append("with these exact keys: ")

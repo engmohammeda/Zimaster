@@ -526,9 +526,9 @@ private fun AiGeneratorView(
                             courseType = courseType,
                             lessonCount = lessonCount,
                             persona = selectedPersona,
-                            customInstructions = customInstructions,
+                            customInstructions = studioGuidance,
                             key = key,
-                            modelId = "",
+                            modelId = creator?.modelId.orEmpty(),
                             onProgress = { cur, total, msg ->
                                 progressMessage = msg
                             }
