@@ -155,8 +155,10 @@ class SkillsEngineTest {
     fun `pickerKinds stay inside the agent's skill`() {
         assertEquals(listOf(ModelKind.TTS), ModelKind.TTS.pickerKinds)
         assertEquals(listOf(ModelKind.IMAGE), ModelKind.IMAGE.pickerKinds)
-        assertEquals(listOf(ModelKind.LIVE, ModelKind.TEXT), ModelKind.LIVE.pickerKinds)
+        assertEquals(listOf(ModelKind.LIVE), ModelKind.LIVE.pickerKinds)
         assertEquals(listOf(ModelKind.TEXT), ModelKind.TEXT.pickerKinds)
+        assertFalse(ModelKind.LIVE.pickerKinds.contains(ModelKind.TEXT))
+        assertFalse(ModelKind.TTS.pickerKinds.contains(ModelKind.TEXT))
         assertTrue(ModelKind.TTS.usesVoice)
         assertTrue(ModelKind.LIVE.usesVoice)
         assertFalse(ModelKind.TEXT.usesVoice)

@@ -208,14 +208,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nextLessonId = maxOf(p.nextLessonId, (lessons.maxOfOrNull { it.id } ?: 0) + 1)
         nextWordId = maxOf(p.nextWordId, (vocab.maxOfOrNull { it.id } ?: 0) + 1)
 
-        // Restore AI agent overrides onto the default agents
+        // Restore AI agent overlays by id. Short leftover one-liners are treated
+        // as legacy and replaced by the professional studio prompt; a long
+        // custom prompt the learner actually edited is kept. Model and voice
+        // always overlay so a chosen catalogue id is not lost.
         if (s.aiAgents.isNotEmpty()) {
             s.aiAgents.forEach { dto ->
                 val i = aiAgents.indexOfFirst { it.id == dto.id }
-                if (i >= 0) aiAgents[i] = aiAgents[i].copy(
-                    modelId = dto.modelId, character = dto.character,
-                    voiceId = dto.voiceId, style = dto.style, prompt = dto.prompt,
+                if (i < 0) return@forEach
+                val current = aiAgents[i]
+                val overlay = current.copy(
+                    modelId = dto.modelId.ifBlank { current.modelId },
+                    character = dto.character,
+                    voiceId = dto.voiceId,
+                    style = dto.style,
+                    prompt = dto.prompt,
                 )
+                aiAgents[i] = if (AiPrompts.isLegacy(overlay)) {
+                    current.copy(modelId = overlay.modelId, voiceId = overlay.voiceId)
+                } else overlay
             }
         }
         if (s.aiModels.isNotEmpty()) {
@@ -718,7 +729,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Count of models with a documented free-tier allowance. */
     val freeModelCount: Int get() = aiConfig.freeModelCount
 
-    /** Candidate models for an agent (declared kind first, full catalogue appended). */
+    /** Candidate models for an agent — strictly that persona's kind. */
     fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> = aiConfig.modelChoicesFor(agent)
 
     fun modelName(id: String) = aiConfig.modelName(id)

@@ -16,9 +16,10 @@ class AiPromptsTest {
         assertEquals(agents.size, agents.map { it.id }.toSet().size)
         assertTrue(agents.size >= 12)
         agents.forEach { a ->
-            assertTrue("${a.id} prompt too short", a.prompt.length >= 80)
-            assertTrue("${a.id} has no character", a.character.isNotBlank())
+            assertTrue("${a.id} prompt too short (${a.prompt.length})", a.prompt.length >= 500)
+            assertTrue("${a.id} has no character", a.character.length >= 40)
             assertTrue("${a.id} has no style", a.style.isNotBlank())
+            assertEquals(listOf(a.kind), a.kind.pickerKinds)
         }
     }
 

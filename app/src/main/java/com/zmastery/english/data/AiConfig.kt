@@ -24,22 +24,11 @@ enum class ModelKind(val label: String, val short: String) {
     OTHER("نماذج أخرى", "أخرى");
 
     /**
-     * Kinds offered in this agent's model picker.
-     *
-     * A voice-only persona never sees image/text catalogues, an image persona
-     * never sees TTS, and so on. LIVE includes TEXT as a turn-based fallback
-     * so conversation still works when the key has no native-audio models.
+     * Kinds offered in this agent's model picker — strictly this kind, nothing
+     * else. A TTS teacher never sees Gemini text or Imagen; an image artist
+     * never sees voices; a live partner never sees a writing model.
      */
-    val pickerKinds: List<ModelKind>
-        get() = when (this) {
-            TEXT -> listOf(TEXT)
-            TTS -> listOf(TTS)
-            LIVE -> listOf(LIVE, TEXT)
-            IMAGE -> listOf(IMAGE)
-            VIDEO -> listOf(VIDEO)
-            EMBEDDING -> listOf(EMBEDDING)
-            OTHER -> listOf(OTHER)
-        }
+    val pickerKinds: List<ModelKind> get() = listOf(this)
 
     /** Whether this kind speaks aloud and therefore needs a voice picker. */
     val usesVoice: Boolean get() = this == TTS || this == LIVE
