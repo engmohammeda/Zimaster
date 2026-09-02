@@ -1,16 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Z-Mastery home widget — «القيادة المدمجة + كلمة اللحظة».
-     
-     التصميم القديم كدّس العناصر رأسياً داخل ودجت عريض (4×2)، فأهدر العرض
-     المتاح وضغط كل عنصر. هذا التخطيط يقلبها إلى ثلاثة أعمدة أفقية:
-     
-       [ الشعلة ] │ [ الحالة + الهدف + أسبوع ] │ [ زر ]
-       ─────────────────────────────────────────────────
-       [ كلمة اللحظة: EN + IPA + AR              🔊 ]
-     
-     صف الكلمة يظهر فقط حين تتوفر كلمة مستحقة (setViewVisibility) — فيتكيّف
-     الودجت مع 4×2 (بلا كلمة) و 4×3 (مع كلمة) دون تخطيط ثانٍ.
-     100% RemoteViews — لا حلقات دائرية ولا Canvas، متوافق مع كل المشغّلات. -->
+<!-- Z-Mastery home widget — streak-first design (يوم الحماسة).
+     Hero = the streak flame + whether today is "secured"; a daily-goal bar;
+     the dynamic daily quote; a single CTA. Mood-aware backgrounds for the
+     cracking / rescue states. 100% RemoteViews (compatible everywhere). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -36,34 +28,31 @@
         android:contentDescription="@null" />
 
     <LinearLayout
+        android:id="@+id/widget_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:gravity="center_horizontal"
+        android:padding="14dp">
 
-        <!-- ══════════ الصف العلوي: ثلاثة أعمدة ══════════ -->
+        <!-- ── HERO: the streak flame ── -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:baselineAligned="false">
+            android:gravity="center_vertical">
 
-            <!-- ── العمود ①: الشعلة (مرساة بصرية) ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔥"
+                android:textSize="30sp" />
+
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:minWidth="62dp"
-                android:paddingEnd="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🔥"
-                    android:textSize="22sp" />
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/widget_streak_number"
@@ -71,248 +60,126 @@
                     android:layout_height="wrap_content"
                     android:text="0"
                     android:textColor="#FFFFFF"
-                    android:textSize="26sp"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:includeFontPadding="false"
                     android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/widget_streak_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="يوم"
+                    android:text="يوم متتالية"
                     android:textColor="#E8EAF8"
-                    android:textSize="10sp"
-                    android:maxLines="1" />
+                    android:textSize="11sp" />
             </LinearLayout>
-
-            <!-- فاصل رأسي خفيف -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="4dp"
-                android:background="#33FFFFFF" />
-
-            <!-- ── العمود ②: الحالة + الهدف + نقاط الأسبوع ── -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:paddingStart="10dp"
-                android:paddingEnd="8dp">
-
-                <TextView
-                    android:id="@+id/widget_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ابدأ يومك"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-
-                <!-- هدف اليوم: شريط + كسر على سطر واحد -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ProgressBar
-                        android:id="@+id/widget_progressbar"
-                        style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="7dp"
-                        android:progressDrawable="@drawable/widget_progress"
-                        android:max="100"
-                        android:progress="0" />
-
-                    <TextView
-                        android:id="@+id/widget_progress_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="0/30"
-                        android:textColor="#E8EAF8"
-                        android:textSize="10sp"
-                        android:maxLines="1" />
-                </LinearLayout>
-
-                <!-- ✦ جديد: نقاط الأسبوع السبع — تُظهر النمط لا الرقم فقط.
-                     كل نقطة يوم؛ الممتلئة = يوم دُرِس فعلاً. -->
-                <LinearLayout
-                    android:id="@+id/widget_week_row"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="7dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/widget_day_0"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_4"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_5"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-
-                    <TextView
-                        android:id="@+id/widget_day_6"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="○"
-                        android:textColor="#E8EAF8"
-                        android:textSize="11sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- ── العمود ③: زر الإجراء ── -->
-            <TextView
-                android:id="@+id/widget_cta"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/widget_cta"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="9dp"
-                android:paddingBottom="9dp"
-                android:text="ابدأ"
-                android:textColor="#4148B8"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:gravity="center" />
         </LinearLayout>
 
-        <!-- ══════════ صف كلمة اللحظة (يظهر عند توفر كلمة مستحقة) ══════════
-             القيمة: كل نظرة للهاتف = تعرّض لكلمة تستحق المراجعة الآن (FSRS).
-             الودجت يُعلّم، لا يُذكّر بالشعلة فقط. -->
+        <!-- Day-status pill (secured / at-risk / start) -->
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/widget_pill"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="ابدأ يومك"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <!-- Quote grows to fill available space -->
         <LinearLayout
-            android:id="@+id/widget_word_row"
+            android:id="@+id/widget_quote_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="vertical"
+            android:background="@drawable/widget_quote_card"
+            android:padding="10dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_quote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="\u201Cاستمر في التعلم يومياً.\u201D"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:maxLines="3"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_author"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="\u2014 Z-Mastery"
+                android:textColor="#E8EAF8"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Daily learning goal -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/widget_progress_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:text="هدف اليوم"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_progress_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="0 / 30"
+                    android:textColor="#E8EAF8"
+                    android:textSize="11sp" />
+            </RelativeLayout>
+
+            <ProgressBar
+                android:id="@+id/widget_progressbar"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:progressDrawable="@drawable/widget_progress"
+                android:max="100"
+                android:progress="0" />
+        </LinearLayout>
+
+        <!-- Single clear CTA -->
+        <TextView
+            android:id="@+id/widget_cta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/widget_quote_card"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/widget_word_en"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="word"
-                        android:textColor="#FFFFFF"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:includeFontPadding="false"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-
-                    <TextView
-                        android:id="@+id/widget_word_ipa"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text=""
-                        android:textColor="#C9CCE8"
-                        android:textSize="11sp"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/widget_word_ar"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textColor="#E8EAF8"
-                    android:textSize="12sp"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/widget_word_action"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:background="@drawable/widget_pill"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:text="راجِع"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:maxLines="1" />
-        </LinearLayout>
+            android:background="@drawable/widget_cta"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp"
+            android:text="ابدأ المراجعة الآن ⚡"
+            android:textColor="#4148B8"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:gravity="center" />
     </LinearLayout>
 </FrameLayout>

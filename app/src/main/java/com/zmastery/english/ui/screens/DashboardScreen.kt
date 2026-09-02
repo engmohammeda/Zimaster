@@ -36,9 +36,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zmastery.english.data.ArchivedStory
+import com.zmastery.english.data.DailyTask
 import com.zmastery.english.data.DayStat
 import com.zmastery.english.data.Engagement
 import com.zmastery.english.data.LearnerStage
@@ -78,7 +80,7 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
     val eng = vm.engagement
     var rescueWin by remember { mutableStateOf(0) }
     var storyToRead by remember { mutableStateOf<ArchivedStory?>(null) }
-    val (cefr, cefrProgress) = Telemetry.estimatedCefr(vm.masteredCount, vm.completedLessons, vm.lifetime.examAvg)
+    val (cefr, _) = Telemetry.estimatedCefr(vm.masteredCount, vm.completedLessons, vm.lifetime.examAvg)
 
     Column(Modifier.fillMaxSize()) {
         // ═══ شريط الحماسة العلوي (بأسلوب Duolingo) — بوابة كل ما يخص الزخم ═══
@@ -138,59 +140,23 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
                 item { MicroHabitRow(vm) { onNavigate(vm.microHabit.route) } }
             }
 
-            // ── 4 · بطاقة البطل — «ماذا أفعل الآن؟» بإجابة واحدة لا قائمة ──
-            //
-            // بدل صف مهام متساوية الوزن يتنافس بعضها مع بعض، تُرفع المهمة
-            // التالية غير المنجزة إلى بطاقة مهيمنة، ويُطوى الباقي في شريط
-            // حلقات مضغوط تحتها. القرار البصري صار واحداً بدل خمسة.
+            // ── 4 · خطة اليوم — قلب الشاشة (أقصر مسافة بصرية للأهم) ──
+            item {
+                SectionTitle(
+                    "خطة اليوم",
+                    if (vm.activeDailyTasks.isEmpty()) vm.planRationale
+                    else "${vm.activeTasksDone} / ${vm.activeDailyTasks.size} مكتملة · ${todayLabel()}",
+                )
+            }
             if (vm.activeDailyTasks.isEmpty()) {
-                item { SectionTitle("خطة اليوم", vm.planRationale) }
                 item { NoTasksYet(onNavigate) }
             } else {
-                val nextTask = vm.activeDailyTasks.firstOrNull { !it.done }
-                item {
-                    NextActionHero(
-                        task = nextTask,
-                        doneCount = vm.activeTasksDone,
-                        totalCount = vm.activeDailyTasks.size,
-                        dayLabel = todayLabel(),
-                        allDone = vm.planCompleteToday,
-                        onStart = {
-                            onNavigate(routeForTask(nextTask?.id ?: "review"))
-                        },
-                    )
-                }
-                // بقية المهام — مرئية بلا منافسة، بترتيب: غير المنجزة أولاً.
-                val rest = vm.activeDailyTasks
-                    .filter { it.id != nextTask?.id }
-                    .sortedBy { it.done }
-                if (rest.isNotEmpty()) {
-                    item {
-                        RemainingTasksStrip(rest) { task ->
-                            onNavigate(routeForTask(task.id))
-                        }
-                    }
-                }
                 item { PlanTierNote(vm) }
-            }
-
-            // ── 4.5 · لوحة الإتقان — «كم تقدمت فعلاً؟» ──
-            //
-            // الجواب المباشر على «445 يوماً بلا شعور بتقدم»: عدّاد الأيام
-            // يقيس الحضور، وهذه اللوحة تقيس التعلّم — كلمات متقنة ومستوى
-            // CEFR ودقة. أرقام لا تنمو إلا بالفهم.
-            if (eng.stage != LearnerStage.EMPTY) {
-                item {
-                    MasteryPanel(
-                        mastered = vm.masteredCount,
-                        totalWords = vm.activeVocab.size,
-                        lessonsDone = vm.completedLessons,
-                        reviewsToday = vm.totalReviewsToday,
-                        accuracyPct = vm.accuracy,
-                        cefr = cefr,
-                        cefrProgress = cefrProgress,
-                        onOpenAnalytics = { onNavigate("analytics") },
-                    )
+                items(vm.activeDailyTasks, key = { it.id }) { task ->
+                    TaskRow(task) { onNavigate(routeForTask(task.id)) }
+                }
+                if (vm.planCompleteToday) {
+                    item { AllDoneBanner() }
                 }
             }
 
@@ -457,6 +423,72 @@ private fun NoTasksYet(onNavigate: (String) -> Unit) {
 }
 
 @Composable
+private fun TaskRow(task: DailyTask, onStart: () -> Unit) {
+    SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (task.done) ZEmerald.copy(alpha = 0.18f) else ZSurfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (task.done) Icon(Icons.Filled.Check, null, tint = ZEmerald)
+                else Icon(taskIcon(task.icon), null, tint = ZCyan, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    task.title,
+                    color = if (task.done) ZTextMuted else ZTextPrimary,
+                    fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    textDecoration = if (task.done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                )
+                Text(task.subtitle, color = ZTextSecondary, fontSize = 11.sp)
+                if (task.target > 1) {
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { (task.progress.toFloat() / task.target).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)),
+                        color = if (task.done) ZEmerald else ZCyan, trackColor = ZBorder,
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            if (task.done) {
+                Icon(Icons.Filled.CheckCircle, null, tint = ZEmerald)
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (task.target > 1) {
+                        Text(
+                            "${task.progress}/${task.target}",
+                            color = ZTextSecondary, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
+                    Surface(shape = RoundedCornerShape(50), color = ZIndigo, onClick = onStart) {
+                        Icon(
+                            Icons.Filled.PlayArrow, "ابدأ", tint = Color.White,
+                            modifier = Modifier.padding(8.dp).size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun taskIcon(k: String): ImageVector = when (k) {
+    "book" -> Icons.Filled.MenuBook
+    "brain" -> Icons.Filled.Psychology
+    "quiz" -> Icons.Filled.Quiz
+    "talk" -> Icons.Filled.Forum
+    "story" -> Icons.Filled.AutoStories
+    "add" -> Icons.Filled.AddCircle
+    "ear" -> Icons.Filled.Hearing
+    "link" -> Icons.Filled.Link
+    else -> Icons.Filled.Star
+}
+
+@Composable
 private fun PlanCard(item: PlanItem, onClick: () -> Unit) {
     SoftCard(modifier = Modifier.fillMaxWidth(), radius = 16.dp, onClick = onClick) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -467,6 +499,18 @@ private fun PlanCard(item: PlanItem, onClick: () -> Unit) {
                 Text("كورس ${item.courseName}", color = ZTextSecondary, fontSize = 12.sp)
             }
             Icon(Icons.Filled.PlayCircle, null, tint = Color(item.accent))
+        }
+    }
+}
+
+/** Only rendered when real tasks existed AND every one of them is finished. */
+@Composable
+private fun AllDoneBanner() {
+    Surface(shape = RoundedCornerShape(16.dp), color = ZEmerald.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Celebration, null, tint = ZEmerald)
+            Spacer(Modifier.width(12.dp))
+            Text("رائع! أنهيت خطة اليوم بالكامل \uD83C\uDF89", color = ZEmerald, fontWeight = FontWeight.Bold)
         }
     }
 }

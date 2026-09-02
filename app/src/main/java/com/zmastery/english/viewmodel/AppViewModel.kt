@@ -363,17 +363,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      *  Widget refresh is throttled to 5 minutes to avoid excessive broadcasts. */
     fun syncWidget() {
         val ctx = getApplication<Application>()
-        // كلمة اللحظة للودجت: أكثر كلمة استحقاقاً للمراجعة الآن (FSRS).
-        // لا كلمة مستحقة ⇒ حقول فارغة ⇒ الصف يختفي من الودجت تلقائياً.
-        val widgetWord = dueWords.firstOrNull()
-        // نمط الأسبوع: 7 أحرف، أقدم يوم أولاً وآخرها اليوم.
-        val todayEpoch = Telemetry.today()
-        val weekPattern = (6 downTo 0).joinToString("") { back ->
-            val row = dayStats[todayEpoch - back]
-            val studied = row != null &&
-                (row.reviews > 0 || row.lessonsCompleted > 0 || row.wordsAdded > 0)
-            if (studied) "1" else "0"
-        }
         ProgressStore.save(
             ctx,
             streak = streak,
@@ -386,10 +375,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             chestMood = decayState.mood.name,
             decaySeverity = decayState.severity,
             minimumDone = microHabitDone || tasksDone >= dailyTasks.size,
-            wordEn = widgetWord?.english.orEmpty(),
-            wordAr = widgetWord?.arabic.orEmpty(),
-            wordIpa = widgetWord?.phonetic.orEmpty(),
-            weekPattern = weekPattern,
         )
         // Throttle widget refresh to avoid excessive broadcasts
         if (widgetThrottle.allow()) {
