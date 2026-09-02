@@ -21,6 +21,14 @@ object ProgressStore {
     /** أُنجز الحد الأدنى اليومي — يسمح للودجت بإعادة الحساب بنفسه. */
     private const val KEY_MIN_DONE = "min_done"
 
+    // ── الودجت الجديد: كلمة اللحظة + نمط الأسبوع ──
+    /** الكلمة المستحقة للمراجعة الآن (FSRS) — يعرضها الودجت ليُعلّم لا ليُذكّر. */
+    private const val KEY_WORD_EN = "word_en"
+    private const val KEY_WORD_AR = "word_ar"
+    private const val KEY_WORD_IPA = "word_ipa"
+    /** سبعة أحرف 0/1 — أقدم يوم أولاً، آخرها اليوم. يُظهر النمط لا الرقم. */
+    private const val KEY_WEEK = "week_pattern"
+
     fun save(
         context: Context,
         streak: Int,
@@ -33,6 +41,10 @@ object ProgressStore {
         chestMood: String = "IDLE",
         decaySeverity: Float = 0f,
         minimumDone: Boolean = false,
+        wordEn: String = "",
+        wordAr: String = "",
+        wordIpa: String = "",
+        weekPattern: String = "",
     ) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_STREAK, streak)
@@ -45,6 +57,10 @@ object ProgressStore {
             .putString(KEY_CHEST_MOOD, chestMood)
             .putFloat(KEY_DECAY_SEVERITY, decaySeverity)
             .putBoolean(KEY_MIN_DONE, minimumDone)
+            .putString(KEY_WORD_EN, wordEn)
+            .putString(KEY_WORD_AR, wordAr)
+            .putString(KEY_WORD_IPA, wordIpa)
+            .putString(KEY_WEEK, weekPattern)
             .apply()
     }
 
@@ -59,10 +75,25 @@ object ProgressStore {
         val chestMood: String = "IDLE",
         val decaySeverity: Float = 0f,
         val minimumDone: Boolean = false,
+        val wordEn: String = "",
+        val wordAr: String = "",
+        val wordIpa: String = "",
+        val weekPattern: String = "",
     ) {
         /** الصندوق متصدّع ويحتاج إنقاذاً عاجلاً. */
         val isCracking: Boolean get() = chestMood == "CRACKING"
         val isBroken: Boolean get() = chestMood == "BROKEN"
+
+        /** صف كلمة اللحظة يظهر فقط حين توجد كلمة فعلية — لا بطاقة فارغة. */
+        val hasWord: Boolean get() = wordEn.isNotBlank()
+
+        /**
+         * نمط الأسبوع كقائمة منطقية بطول 7 (أقدم يوم أولاً).
+         * أي قيمة محفوظة تالفة أو ناقصة تسقط آمناً على 7 أيام فارغة.
+         */
+        val weekDays: List<Boolean>
+            get() = if (weekPattern.length == 7) weekPattern.map { it == '1' }
+            else List(7) { false }
     }
 
     /**
@@ -105,6 +136,10 @@ object ProgressStore {
             chestMood = recomputed.first,
             decaySeverity = recomputed.second,
             minimumDone = minDone,
+            wordEn = p.getString(KEY_WORD_EN, "").orEmpty(),
+            wordAr = p.getString(KEY_WORD_AR, "").orEmpty(),
+            wordIpa = p.getString(KEY_WORD_IPA, "").orEmpty(),
+            weekPattern = p.getString(KEY_WEEK, "").orEmpty(),
         )
     }
 }

@@ -13,16 +13,21 @@ import android.widget.RemoteViews
 import com.zmastery.english.MainActivity
 import com.zmastery.english.R
 import com.zmastery.english.data.ProgressStore
-import com.zmastery.english.data.QuoteStore
 
 /**
- * Z-Mastery home-screen widget — streak-first design focused on "يوم الحماسة".
+ * Z-Mastery home-screen widget — تخطيط «القيادة المدمجة + كلمة اللحظة».
  *
- * Hero: the streak flame + a clear day-status pill (secured / at-risk / start).
- * A daily learning-goal bar, the dynamic daily quote (cloud-synced), and one CTA.
+ * التخطيط القديم كدّس العناصر رأسياً داخل ودجت عريض، فأهدر العرض وضغط كل
+ * عنصر، وأعطى الاقتباس أكبر مساحة رغم أنه لا يُعلّم شيئاً. الجديد:
  *
- * Engineered for 100% compatibility across Samsung (OneUI), Xiaomi (MIUI/HyperOS),
- * Huawei (EMUI), Google Pixel, Oppo, Vivo, and generic Android launchers.
+ *   • ثلاثة أعمدة أفقية: شعلة │ حالة + هدف + نقاط أسبوع │ زر.
+ *   • نقاط الأسبوع السبع — تُظهر نمط المواظبة لا الرقم المجرد.
+ *   • صف «كلمة اللحظة»: الكلمة المستحقة للمراجعة الآن (FSRS) بالنطق
+ *     والترجمة — فكل نظرة للهاتف تصير تعرّضاً حقيقياً للمفردة.
+ *     يختفي الصف تلقائياً حين لا توجد كلمة مستحقة.
+ *
+ * 100% RemoteViews — لا Canvas ولا حلقات دائرية، متوافق مع Samsung (OneUI)
+ * وXiaomi (MIUI/HyperOS) وHuawei (EMUI) وPixel وOppo وVivo والمشغّلات العامة.
  */
 class ZMasteryWidget : AppWidgetProvider() {
 
@@ -83,14 +88,6 @@ class ZMasteryWidget : AppWidgetProvider() {
                     null
                 }
 
-                // Dynamic daily quote — merges built-in + cloud-synced quotes.
-                val quote = try {
-                    QuoteStore.today(context)
-                } catch (e: Throwable) {
-                    Log.w(TAG, "Failed to load quote", e)
-                    null
-                }
-
                 val streak = data?.streak ?: 0
                 val reviews = data?.reviewsToday ?: 0
                 val goal = (data?.dailyGoal ?: 30).coerceAtLeast(1)
@@ -130,17 +127,44 @@ class ZMasteryWidget : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_smoke, View.GONE)
                 }
 
-                // 3. HERO — streak number + label
+                // 3. العمود ① — رقم الشعلة (الوسم صار كلمة واحدة: العرض ضيق)
                 try {
                     views.setTextViewText(R.id.widget_streak_number, streak.toString())
                     val streakLabel = when {
-                        broken -> "أنقذ شعلتك"
-                        streak > 0 -> "يوم متتالية 🔥"
-                        else -> "ابدأ سلسلتك"
+                        broken -> "أنقذها"
+                        streak > 0 -> "يوم"
+                        else -> "ابدأ"
                     }
                     views.setTextViewText(R.id.widget_streak_label, streakLabel)
                 } catch (e: Throwable) {
                     Log.e(TAG, "Failed to set streak hero", e)
+                }
+
+                // 3b. نقاط الأسبوع السبع — النمط لا الرقم.
+                // النقطة الممتلئة = يوم دُرِس فعلاً؛ الأخيرة هي اليوم.
+                try {
+                    val week = data?.weekDays ?: List(7) { false }
+                    val dayIds = intArrayOf(
+                        R.id.widget_day_0, R.id.widget_day_1, R.id.widget_day_2,
+                        R.id.widget_day_3, R.id.widget_day_4, R.id.widget_day_5,
+                        R.id.widget_day_6,
+                    )
+                    for (i in dayIds.indices) {
+                        val studied = week.getOrElse(i) { false }
+                        views.setTextViewText(dayIds[i], if (studied) "●" else "○")
+                        // اليوم الحالي (الأخير) يُبرز بالأبيض الكامل حتى لو لم يُدرس بعد.
+                        val isToday = i == dayIds.lastIndex
+                        views.setTextColor(
+                            dayIds[i],
+                            when {
+                                studied -> 0xFFFFFFFF.toInt()
+                                isToday -> 0xFFE8EAF8.toInt()
+                                else -> 0x66FFFFFF
+                            },
+                        )
+                    }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to set week dots", e)
                 }
 
                 // 4. Day-status pill — the heart of "يوم الحماسة"
@@ -157,59 +181,81 @@ class ZMasteryWidget : AppWidgetProvider() {
                     Log.e(TAG, "Failed to set status", e)
                 }
 
-                // 5. Dynamic daily quote
+                // 5. صف «كلمة اللحظة» — الودجت يُعلّم لا يُذكّر فقط.
+                //
+                // يعرض الكلمة الأكثر استحقاقاً للمراجعة الآن (FSRS). لا كلمة
+                // مستحقة ⇒ يختفي الصف بالكامل، فيبقى الودجت نظيفاً في 4×2
+                // ويتمدّد لعرضها في 4×3 — بلا تخطيط ثانٍ.
                 try {
-                    val quoteText = quote?.text ?: "استمر في التعلم يومياً لتصل إلى الطلاقة."
-                    val authorText = "— ${quote?.author?.takeIf { it.isNotBlank() } ?: "Z-Mastery"}"
-                    views.setTextViewText(R.id.widget_quote, "\u201C$quoteText\u201D")
-                    views.setTextViewText(R.id.widget_author, authorText)
+                    val wordEn = data?.wordEn.orEmpty()
+                    if (wordEn.isNotBlank()) {
+                        views.setViewVisibility(R.id.widget_word_row, View.VISIBLE)
+                        views.setTextViewText(R.id.widget_word_en, wordEn)
+                        views.setTextViewText(R.id.widget_word_ipa, data?.wordIpa.orEmpty())
+                        views.setTextViewText(R.id.widget_word_ar, data?.wordAr.orEmpty())
+                    } else {
+                        views.setViewVisibility(R.id.widget_word_row, View.GONE)
+                    }
                 } catch (e: Throwable) {
-                    Log.e(TAG, "Failed to set quote", e)
+                    Log.e(TAG, "Failed to set word row", e)
+                    try {
+                        views.setViewVisibility(R.id.widget_word_row, View.GONE)
+                    } catch (_: Throwable) {
+                    }
                 }
 
-                // 6. Daily learning-goal progress
+                // 6. Daily learning-goal progress (الوسم انتقل إلى حبة الحالة)
                 try {
                     val pct = ((reviews.toFloat() / goal) * 100).toInt().coerceIn(0, 100)
                     views.setProgressBar(R.id.widget_progressbar, 100, pct, false)
-                    views.setTextViewText(R.id.widget_progress_value, "$reviews / $goal")
-                    val labelText = when {
-                        cracking -> "السلسلة في خطر!"
-                        broken -> "استعد شعلتك"
-                        pct >= 100 -> "اكتمل هدف اليوم 🎉"
-                        else -> "هدف اليوم"
-                    }
-                    views.setTextViewText(R.id.widget_progress_label, labelText)
+                    views.setTextViewText(R.id.widget_progress_value, "$reviews/$goal")
                 } catch (e: Throwable) {
                     Log.e(TAG, "Failed to set progress", e)
                 }
 
-                // 7. CTA
+                // 7. CTA — نص قصير جداً: الزر صار عموداً ضيقاً لا شريطاً عريضاً
                 try {
                     val ctaText = when {
-                        cracking -> "أنقذ سلسلتك الآن 🔥"
-                        broken -> "مهمة إنقاذ عاجلة ⚡"
-                        reviews >= goal -> "راجع المزيد ✨"
-                        else -> "ابدأ المراجعة الآن ⚡"
+                        cracking -> "أنقذ"
+                        broken -> "إنقاذ"
+                        reviews >= goal -> "المزيد"
+                        else -> "ابدأ"
                     }
                     views.setTextViewText(R.id.widget_cta, ctaText)
                 } catch (e: Throwable) {
                     Log.e(TAG, "Failed to set cta text", e)
                 }
 
-                // 8. Click → open app (to review when at risk)
+                // 8. النقر → فتح التطبيق. الجذر والزر يفتحان المسار العام،
+                //    وصف الكلمة يفتح المراجعة مباشرة (نية منفصلة بطلب مختلف
+                //    حتى لا يدهس أحدهما الآخر في ذاكرة PendingIntent).
                 try {
-                    val openIntent = Intent(context, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        if (cracking || broken) putExtra("nav_route", "review")
-                    }
                     val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     } else {
                         PendingIntent.FLAG_UPDATE_CURRENT
                     }
+
+                    val openIntent = Intent(context, MainActivity::class.java).apply {
+                        this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        if (cracking || broken) putExtra("nav_route", "review")
+                    }
                     val pending = PendingIntent.getActivity(context, widgetId, openIntent, flags)
                     views.setOnClickPendingIntent(R.id.widget_root, pending)
                     views.setOnClickPendingIntent(R.id.widget_cta, pending)
+
+                    val reviewIntent = Intent(context, MainActivity::class.java).apply {
+                        this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra("nav_route", "review")
+                    }
+                    val reviewPending = PendingIntent.getActivity(
+                        context,
+                        // مُعرّف طلب مختلف — وإلا أعاد النظام نفس النية للاثنين.
+                        widgetId + 100_000,
+                        reviewIntent,
+                        flags,
+                    )
+                    views.setOnClickPendingIntent(R.id.widget_word_row, reviewPending)
                 } catch (e: Throwable) {
                     Log.e(TAG, "Failed to set pending intent", e)
                 }
