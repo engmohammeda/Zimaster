@@ -174,6 +174,8 @@ cd Zimaster
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | دليل المعمارية وحالات الاستخدام |
 | [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) | الخطة المرجعية للمشروع |
 | [UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md](UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md) | الصيغة الموحدة لملفات الدروس |
+| [docs/ideas/](docs/ideas/) | 💡 دفتر الأفكار — مقترحات مجمَّدة للنقاش لاحقاً (**غير مُنفَّذة**) |
+| [designs/README.md](designs/README.md) | 🎨 برومت توليد تصورات إعادة التصميم + قيود التنفيذ |
 
 ---
 
