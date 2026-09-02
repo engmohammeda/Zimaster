@@ -280,6 +280,25 @@ internal class AudioController(internal val vm: AppViewModel) {
             ok == jobs.size -> "تم توليد أصوات $ok عنصر ($modeLabel) بنجاح عبر ${engine.activeModel} ✓"
             else -> "تم توليد $ok من ${jobs.size} — البقية محفوظة لتوليدها لاحقاً"
         }
+        if (quotaExhausted) {
+            vm.pushAlert(
+                kind = AlertKind.QUOTA,
+                source = "توليد الصوت",
+                title = "نفدت حصة الصوت",
+                detail = lastAudioMessage.orEmpty() +
+                    (engine.lastError?.let { "\n$it" } ?: "") +
+                    "\nالنموذج النشط: ${engine.activeModel}",
+                route = "settings",
+            )
+        } else if (ok < jobs.size) {
+            vm.pushAlert(
+                kind = AlertKind.WARNING,
+                source = "توليد الصوت",
+                title = "لم يكتمل توليد كل الأصوات",
+                detail = lastAudioMessage.orEmpty() + (engine.lastError?.let { "\n$it" } ?: ""),
+                route = "settings",
+            )
+        }
         vm.persist()
     }
 
@@ -368,21 +387,49 @@ internal class AudioController(internal val vm: AppViewModel) {
         if (story.audioReady || story.en.isBlank()) return
         if (!engine.hasGeminiKey) {
             lastAudioMessage = "أضف مفتاح Gemini في الإعدادات لتوليد صوت طبيعي لهذه القصة"
+            vm.pushAlert(AlertKind.WARNING, "قصة", "لا يوجد مفتاح API", lastAudioMessage.orEmpty(), "settings")
             return
         }
         if (!engine.isOnline()) {
             lastAudioMessage = "لا يوجد اتصال حالياً"
+            vm.pushAlert(AlertKind.WARNING, "قصة", "لا يوجد اتصال", lastAudioMessage.orEmpty(), "stories")
             return
         }
+        if (isGeneratingAudio) return
         launch {
-            val success = runCatching { engine.generateLongFormAndCache(story.en) }.getOrDefault(false)
-            if (success) {
-                val i = storyArchive.indexOfFirst { it.id == storyId }
-                if (i >= 0) storyArchive[i] = storyArchive[i].copy(audioReady = true)
-                vm.persist()
-                lastAudioMessage = "تم توليد صوت القصة ✓"
-            } else {
-                lastAudioMessage = "تعذّر توليد صوت القصة — حاول لاحقاً"
+            isGeneratingAudio = true
+            audioGenTotal = 1
+            audioGenDone = 0
+            audioGenLabel = "قصة: ${story.title}"
+            lastAudioMessage = "جارٍ توليد الصوت الطبيعي…"
+            val prevVoice = engine.voice
+            val readerVoice = vm.aiAgents.firstOrNull { it.id == "story_reader" }?.voiceId.orEmpty()
+            if (readerVoice.isNotBlank()) {
+                engine.voice = readerVoice.replaceFirstChar { it.uppercaseChar() }
+            }
+            try {
+                val success = runCatching { engine.generateLongFormAndCache(story.en) }.getOrDefault(false)
+                if (success) {
+                    val i = storyArchive.indexOfFirst { it.id == storyId }
+                    if (i >= 0) storyArchive[i] = storyArchive[i].copy(audioReady = true)
+                    vm.persist()
+                    lastAudioMessage = "تم توليد صوت القصة ✓"
+                    audioGenDone = 1
+                } else {
+                    lastAudioMessage = "تعذّر توليد صوت القصة — حاول لاحقاً"
+                    vm.pushAlert(
+                        kind = if (engine.exhaustedModels.isNotEmpty()) AlertKind.QUOTA else AlertKind.ERROR,
+                        source = "قصة",
+                        title = "تعذّر توليد صوت القصة",
+                        detail = (engine.lastError ?: lastAudioMessage.orEmpty()) +
+                            "\nأضف مفتاحاً صالحاً أو انتظر إعادة تعيين الحصة.",
+                        route = "stories",
+                    )
+                }
+            } finally {
+                engine.voice = prevVoice
+                isGeneratingAudio = false
+                audioGenLabel = ""
             }
         }
     }

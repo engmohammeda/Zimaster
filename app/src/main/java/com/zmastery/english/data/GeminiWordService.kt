@@ -30,20 +30,33 @@ object GeminiWordService {
             "You always reply with a single raw JSON object and nothing else — no prose, no markdown fences."
 
     /**
-     * @param key   the active credential (any provider)
-     * @param model model id to use ("" → the provider default)
+     * @param key    the active credential (any provider)
+     * @param model  model id to use ("" → the provider default)
+     * @param system optional translator-agent prompt (placeholders filled here)
+     * @param level  CEFR hint forwarded into {LEVEL}
      */
     suspend fun generate(
         word: String,
         userContext: String,
         key: ApiKeyEntry?,
         model: String = "",
+        system: String = "",
+        level: String = "",
     ): Result {
         if (key == null || key.rawKey.isBlank()) {
             return Result.Error("أضف مفتاح API من إعدادات الذكاء الاصطناعي أولاً")
         }
         val clean = word.trim()
         if (clean.isEmpty()) return Result.Error("اكتب الكلمة الإنجليزية")
+
+        val systemPrompt = AiPrompts.fill(
+            system.ifBlank { SYSTEM },
+            mapOf(
+                "WORDS" to clean,
+                "CONTEXT" to userContext,
+                "LEVEL" to level,
+            ),
+        ).ifBlank { SYSTEM }
 
         val prompt = buildString {
             append("For the English word \"$clean\", return ONLY a compact JSON object ")
@@ -60,7 +73,7 @@ object GeminiWordService {
         }
 
         val reply = AiClient.complete(
-            key = key, model = model, system = SYSTEM, user = prompt,
+            key = key, model = model, system = systemPrompt, user = prompt,
             json = true, temperature = 0.7,
         )
         if (!reply.ok) return Result.Error("فشل التوليد: ${reply.error}")

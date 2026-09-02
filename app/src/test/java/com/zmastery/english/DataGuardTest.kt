@@ -111,4 +111,34 @@ class DataGuardTest {
         assertTrue(encoded.endsWith("}"))
         assertTrue(encoded.contains("\"courses\""))
     }
+
+    @Test
+    fun `fetched models round-trip so the catalogue survives restart`() {
+        val models = listOf(
+            com.zmastery.english.data.AiModelDto(
+                id = "gemini-2.5-flash",
+                displayName = "Gemini 2.5 Flash",
+                kind = "TEXT",
+                fetched = true,
+            ),
+            com.zmastery.english.data.AiModelDto(
+                id = "gemini-2.5-flash-preview-tts",
+                displayName = "Flash TTS",
+                kind = "TTS",
+                fetched = true,
+            ),
+        )
+        val original = sampleState(name = "Test").copy(
+            aiModels = models,
+            profile = ProfileDto(learnerName = "Test", showFreeModelsOnly = true),
+        )
+        val decoded = com.zmastery.english.data.Persistence.decode(
+            com.zmastery.english.data.Persistence.encode(original),
+        )
+        assertNotNull(decoded)
+        assertEquals(2, decoded!!.aiModels.size)
+        assertTrue(decoded.aiModels.all { it.fetched })
+        assertEquals("TTS", decoded.aiModels[1].kind)
+        assertTrue(decoded.profile.showFreeModelsOnly)
+    }
 }

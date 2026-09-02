@@ -154,11 +154,18 @@ object CoachService {
      * Ask Gemini for a structured report. Falls back to [localReport] when
      * there is no key or the call fails, so the UI is never left empty.
      */
-    suspend fun analyze(facts: CoachFacts, apiKey: String, stamp: String): CoachReport =
+    suspend fun analyze(
+        facts: CoachFacts,
+        apiKey: String,
+        stamp: String,
+        persona: String = "",
+        style: String = "",
+        basePrompt: String = "",
+    ): CoachReport =
         withContext(Dispatchers.IO) {
             if (apiKey.isBlank()) return@withContext localReport(facts, stamp)
             try {
-                val prompt = buildPrompt(facts)
+                val prompt = buildPrompt(facts, persona, style, basePrompt)
                 val body = JSONObject().apply {
                     put("contents", JSONArray().put(JSONObject().apply {
                         put("parts", JSONArray().put(JSONObject().apply { put("text", prompt) }))
@@ -215,12 +222,24 @@ object CoachService {
             }
         }
 
-    private fun buildPrompt(facts: CoachFacts): String = buildString {
-        appendLine("You are an elite, warm and honest personal English coach for an ARABIC-speaking learner.")
-        appendLine("You are given real telemetry from their study app. Analyse it like a professional trainer:")
-        appendLine("be specific, quote their real numbers and real word examples, and never give generic advice.")
-        appendLine()
-        append(facts.brief())
+    private fun buildPrompt(
+        facts: CoachFacts,
+        persona: String = "",
+        style: String = "",
+        basePrompt: String = "",
+    ): String = buildString {
+        val filled = AiPrompts.fill(basePrompt, mapOf("STATS" to facts.brief()))
+        if (filled.isNotBlank()) {
+            appendLine(filled)
+        } else {
+            appendLine("You are an elite, warm and honest personal English coach for an ARABIC-speaking learner.")
+            appendLine("You are given real telemetry from their study app. Analyse it like a professional trainer:")
+            appendLine("be specific, quote their real numbers and real word examples, and never give generic advice.")
+            appendLine()
+            append(facts.brief())
+        }
+        if (persona.isNotBlank()) appendLine("PERSONA: $persona")
+        if (style.isNotBlank()) appendLine("TONE: $style")
         appendLine()
         appendLine("TASK")
         appendLine("Return ONLY a raw JSON object (no markdown, no code fences) with exactly these keys:")

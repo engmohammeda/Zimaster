@@ -93,6 +93,8 @@ fun DashboardScreen(vm: AppViewModel, onNavigate: (String) -> Unit, onOpenLesson
             conditionLabel = vm.streakConditionLabel,
             dayEarned = vm.dayEarnedStreak,
             onOpen = { onNavigate("momentum") },
+            unreadAlerts = vm.unreadAlertCount,
+            onInbox = { onNavigate("inbox") },
         )
 
         LazyColumn(
@@ -217,11 +219,11 @@ private fun PlanTierNote(vm: AppViewModel) {
 }
 
 private fun routeForTask(id: String): String = when (id) {
-    "review", "listen" -> "review"
+    "review" -> "review"
+    "listen", "speak" -> "skills"
     "lesson" -> "levels"
     "quiz" -> "exams"
     "story" -> "stories"
-    "speak" -> "skills"
     "addword" -> "vocab"
     "mnemonic" -> "mnemonics"
     else -> "levels"

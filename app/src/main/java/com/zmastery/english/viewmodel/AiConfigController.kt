@@ -53,6 +53,19 @@ internal class AiConfigController(internal val vm: AppViewModel) {
         if (i >= 0) { aiAgents[i] = updated; persist() }
     }
 
+    /** Restore character, tone and system prompt from the professional defaults. Keeps model + voice. */
+    fun resetAgentPrompt(id: String) {
+        val fresh = AiPrompts.defaultOf(id) ?: return
+        val i = aiAgents.indexOfFirst { it.id == id }
+        if (i < 0) return
+        aiAgents[i] = aiAgents[i].copy(
+            character = fresh.character,
+            style = fresh.style,
+            prompt = fresh.prompt,
+        )
+        persist()
+    }
+
     /** Keep the legacy [geminiApiKey] field pointing at the active Gemini key
      *  so older code paths (TTS, models.list) keep working unchanged. */
     internal fun syncActiveKey() {
@@ -98,6 +111,15 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 apiKeys[j] = apiKeys[j].copy(status = if (res.ok) "ok" else res.error)
             }
             keyMessage = if (res.ok) (res.text.ifBlank { "المفتاح يعمل ✓" }) else res.error
+            if (!res.ok) {
+                vm.pushAlert(
+                    kind = AlertKind.ERROR,
+                    source = "مفتاح API",
+                    title = "فشل التحقق من المفتاح",
+                    detail = res.error.ifBlank { "المزوّد رفض المفتاح أو تعذّر الاتصال." },
+                    route = "settings",
+                )
+            }
             verifyingKeyId = null
             persist()
         }
@@ -139,7 +161,10 @@ internal class AiConfigController(internal val vm: AppViewModel) {
     ): AiClient.Reply {
         val key = activeKey
             ?: return AiClient.Reply(false, "", "أضف مفتاح API من إعدادات الذكاء الاصطناعي")
-        val model = aiAgents.firstOrNull { it.id == agentId }?.modelId.orEmpty()
+        val requested = aiAgents.firstOrNull { it.id == agentId }?.modelId.orEmpty()
+        // Conversation is LIVE (native-audio picker) but this path is still
+        // generateContent. Swap in a TEXT model; keep the LIVE id on the agent.
+        val model = AiClient.textFallbackId(requested, aiModels.toList())
         return AiClient.complete(key, model, system, user, json)
     }
 
@@ -153,6 +178,7 @@ internal class AiConfigController(internal val vm: AppViewModel) {
         if (cred == null || cred.rawKey.isBlank()) {
             fetchModelsFailed = true
             fetchModelsMessage = "أضف مفتاح API من هذه الشاشة أولاً"
+            vm.pushAlert(AlertKind.WARNING, "النماذج", "لا يوجد مفتاح API", fetchModelsMessage.orEmpty(), "settings")
             return
         }
         // OpenAI-compatible providers use /models; Gemini uses its own lister.
@@ -165,6 +191,13 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 if (list.isEmpty()) {
                     fetchModelsFailed = true
                     fetchModelsMessage = "تعذّر جلب النماذج من ${cred.providerEnum.label}"
+                    vm.pushAlert(
+                        kind = AlertKind.ERROR,
+                        source = "النماذج",
+                        title = "تعذّر جلب النماذج",
+                        detail = fetchModelsMessage.orEmpty(),
+                        route = "settings",
+                    )
                 } else {
                     aiModels.clear(); aiModels.addAll(list.sortedByDescending { it.familyRank })
                     fetchModelsMessage = "تم جلب ${list.size} نموذج من ${cred.providerEnum.label}"
@@ -198,6 +231,13 @@ internal class AiConfigController(internal val vm: AppViewModel) {
                 fetchModelsFailed = true
                 fetchModelsMessage = res.message
                 fetchModelsDetail = res.detail
+                vm.pushAlert(
+                    kind = AlertKind.ERROR,
+                    source = "النماذج",
+                    title = "تعذّر جلب النماذج",
+                    detail = listOfNotNull(res.message, res.detail).filter { it.isNotBlank() }.joinToString("\n"),
+                    route = "settings",
+                )
             }
         }
     }
@@ -225,22 +265,19 @@ internal class AiConfigController(internal val vm: AppViewModel) {
     val freeModelCount: Int get() = aiModels.count { GeminiQuotas.isFree(it.id) }
 
     /**
-     * Candidate models for an agent. The agent's declared kind comes first, but
-     * the FULL catalogue is always appended so the user can pick any model for
-     * any persona — including brand-new previews we could not classify.
+     * Candidate models for an agent — **only this persona's kind**.
+     * A TTS teacher never sees Imagen or Gemini text; an image artist never
+     * sees voices; a live partner never sees a writing model.
      */
-    fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> {
-        val primary = modelsOfKind(agent.kind)
-        val rest = ModelKind.values()
-            .filter { it != agent.kind }
-            .mapNotNull { k ->
-                val l = modelsOfKind(k)
-                if (l.isEmpty()) null else k to l
-            }
-        return buildList {
-            if (primary.isNotEmpty()) add(agent.kind to primary)
-            addAll(rest)
+    fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> =
+        agent.kind.pickerKinds.mapNotNull { k ->
+            val list = modelsOfKind(k)
+            if (list.isEmpty()) null else k to list
         }
+
+    fun setShowFreeModelsOnly(value: Boolean) {
+        vm.showFreeModelsOnly = value
+        persist()
     }
 
     fun modelName(id: String) = aiModels.firstOrNull { it.id == id }?.displayName ?: id

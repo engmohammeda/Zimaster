@@ -21,7 +21,17 @@ enum class ModelKind(val label: String, val short: String) {
     IMAGE("نماذج الصور", "صور"),
     VIDEO("نماذج الفيديو", "فيديو"),
     EMBEDDING("نماذج التضمين (Embedding)", "تضمين"),
-    OTHER("نماذج أخرى", "أخرى"),
+    OTHER("نماذج أخرى", "أخرى");
+
+    /**
+     * Kinds offered in this agent's model picker — strictly this kind, nothing
+     * else. A TTS teacher never sees Gemini text or Imagen; an image artist
+     * never sees voices; a live partner never sees a writing model.
+     */
+    val pickerKinds: List<ModelKind> get() = listOf(this)
+
+    /** Whether this kind speaks aloud and therefore needs a voice picker. */
+    val usesVoice: Boolean get() = this == TTS || this == LIVE
 }
 
 /**
@@ -124,145 +134,22 @@ object AiDefaults {
         AiModel("imagen-3.0", "Imagen 3.0", ModelKind.IMAGE, "توليد صور سريع"),
     )
 
-    // ---- Voices ----
+    // ---- Voices (Gemini-style ids + a learner-facing tone note) ----
     val builtinVoices = listOf(
-        AiVoice("achernar", "Achernar", "أنثى", "أمريكي", "صوت دافئ واضح"),
-        AiVoice("puck", "Puck", "ذكر", "أمريكي", "صوت شبابي حيوي"),
-        AiVoice("kore", "Kore", "أنثى", "بريطاني", "صوت هادئ رسمي"),
-        AiVoice("charon", "Charon", "ذكر", "بريطاني", "صوت عميق واثق"),
-        AiVoice("fenrir", "Fenrir", "ذكر", "أمريكي", "صوت قوي للسرد"),
-        AiVoice("aoede", "Aoede", "أنثى", "أمريكي", "صوت لطيف للقصص"),
+        AiVoice("puck", "Puck", "ذكر", "أمريكي", "شبابي حيوي — شريك محادثة"),
+        AiVoice("kore", "Kore", "أنثى", "بريطاني", "هادئ رسمي — استماع وصوتيات"),
+        AiVoice("aoede", "Aoede", "أنثى", "أمريكي", "دافئ قصصي — راوية"),
+        AiVoice("charon", "Charon", "ذكر", "بريطاني", "عميق واثق — سرد رصين"),
+        AiVoice("fenrir", "Fenrir", "ذكر", "أمريكي", "قوي للسرد الدرامي"),
+        AiVoice("achernar", "Achernar", "أنثى", "أمريكي", "واضح دافئ — شرح بطيء"),
+        AiVoice("leda", "Leda", "أنثى", "أمريكي", "ناعم قريب — تشجيع"),
+        AiVoice("orus", "Orus", "ذكر", "أمريكي", "محايد واضح — اختبارات"),
     )
 
     // No sample keys: a fake masked entry can never authenticate,
     // which is exactly what made "add a key first" appear after adding one.
     val sampleKeys = emptyList<ApiKeyEntry>()
 
-    /**
-     * The AI agents currently wired into the app's features.
-     * Each corresponds to a real capability we already ship.
-     * As we add features, we append new agents here.
-     */
-    fun agents(): List<AiAgent> = listOf(
-        AiAgent(
-            id = "translator",
-            feature = "مترجم الكلمات والجمل",
-            description = "يولّد الترجمة العربية للكلمات والأمثلة عند الاستيراد والمراجعة.",
-            icon = "translate",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-flash",
-            character = "مترجم لغوي دقيق ثنائي اللغة (عربي/إنجليزي)",
-            voiceId = "",
-            style = "دقيق، مختصر، يحافظ على المعنى والسياق",
-            prompt = "أنت مترجم محترف. ترجم النص الإنجليزي إلى عربية فصحى واضحة مع الحفاظ على المعنى الدقيق والسياق. قدّم الترجمة فقط دون شرح إضافي.",
-        ),
-        AiAgent(
-            id = "story_writer",
-            feature = "كاتب القصص",
-            description = "يكتب قصصاً قصيرة تدمج الكلمات المكتملة من دروسك لتثبيتها في سياق.",
-            icon = "book",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-pro",
-            character = "راوٍ مبدع يكتب قصصاً تعليمية بسيطة وممتعة",
-            voiceId = "",
-            style = "سلس، مشوّق، مستوى لغوي متدرّج حسب المتعلم",
-            prompt = "اكتب قصة قصيرة (5-7 جمل) باللغة الإنجليزية تستخدم الكلمات التالية بشكل طبيعي: {WORDS}. اجعلها مناسبة لمتعلم بمستوى {LEVEL}، ممتعة وسهلة الفهم، ثم أرفق ترجمة عربية.",
-        ),
-        AiAgent(
-            id = "story_reader",
-            feature = "قارئ القصص (صوت)",
-            description = "ينطق القصص المولّدة بصوت طبيعي معبّر.",
-            icon = "headphones",
-            kind = ModelKind.TTS,
-            modelId = "gemini-2.5-pro-tts",
-            character = "راوٍ صوتي هادئ ومعبّر",
-            voiceId = "aoede",
-            style = "سرد قصصي بإيقاع متوسط، نبرة دافئة",
-            prompt = "اقرأ النص التالي بنبرة قصصية دافئة وواضحة، بسرعة متوسطة مناسبة لمتعلمي اللغة.",
-        ),
-        AiAgent(
-            id = "conversation",
-            feature = "شريك المحادثة",
-            description = "يحاورك بناءً على حوارات الدرس المستوردة (ليس عشوائياً).",
-            icon = "talk",
-            kind = ModelKind.TTS,
-            modelId = "gemini-2.5-flash-tts",
-            character = "صديق أمريكي ودود يساعدك على التدرّب",
-            voiceId = "puck",
-            style = "عفوي، مشجّع، يصحّح الأخطاء بلطف",
-            prompt = "أنت شريك محادثة ودود. تحدث بالإنجليزية البسيطة ضمن سياق الحوار الحالي: {DIALOGUE}. شجّع المتعلم وصحّح أخطاءه بلطف واطرح أسئلة متابعة قصيرة.",
-        ),
-        AiAgent(
-            id = "phonetics",
-            feature = "معلّم الصوتيات",
-            description = "ينطق الحروف والأصوات في كورس الصوتيات بدقة.",
-            icon = "sound",
-            kind = ModelKind.TTS,
-            modelId = "gemini-2.5-flash-tts",
-            character = "معلّم نطق واضح يركّز على مخارج الحروف",
-            voiceId = "kore",
-            style = "بطيء وواضح، يبالغ قليلاً في نطق الصوت المستهدف",
-            prompt = "انطق الصوت أو الحرف التالي بوضوح وبطء مع أمثلة كلمات: {SOUND}. ركّز على مخرج الصوت الصحيح.",
-        ),
-        AiAgent(
-            id = "mental_image",
-            feature = "مولّد الصور الذهنية",
-            description = "يولّد صوراً ذهنية مركّبة تربط الكلمة بمعناها بصرياً.",
-            icon = "image",
-            kind = ModelKind.IMAGE,
-            modelId = "imagen-4.0",
-            character = "فنان يرسم روابط بصرية سهلة التذكّر",
-            voiceId = "",
-            style = "صور حيّة، خلية واحدة واضحة لكل كلمة، بأحجام متساوية",
-            prompt = "أنشئ صورة مركّبة (شبكة خلايا متساوية للقص لاحقاً) توضّح كل كلمة ومثالها: {WORDS}. أسلوب حيّ سهل التذكّر.",
-        ),
-        AiAgent(
-            id = "coach",
-            feature = "المدرب الذكي",
-            description = "يحلّل أداءك أسبوعياً ويقترح خطة علاجية.",
-            icon = "coach",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-pro",
-            character = "مدرّب لغة محفّز يقدّم نصائح عملية",
-            voiceId = "",
-            style = "تحليلي، إيجابي، عملي ومختصر",
-            prompt = "حلّل بيانات تعلّم المستخدم التالية: {STATS}. حدّد نقاط القوة والضعف واقترح خطة علاجية عملية لأسبوع، بنبرة محفّزة ومختصرة.",
-        ),
-        AiAgent(
-            id = "quiz_maker",
-            feature = "مولّد الاختبارات",
-            description = "يبني أسئلة اختبار من كلمات وقواعد الدروس المكتملة.",
-            icon = "quiz",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-flash",
-            character = "مصمّم اختبارات يقيس الفهم بدقة",
-            voiceId = "",
-            style = "أسئلة متنوعة متدرجة الصعوبة، بلا غموض",
-            prompt = "ولّد {N} سؤال اختبار من الكلمات والقواعد التالية: {CONTENT}. نوّع بين المعنى وإكمال الجملة والإملاء، مع خيار صحيح واحد وثلاثة مموّهات منطقية.",
-        ),
-        AiAgent(
-            id = "lesson_creator",
-            feature = "مؤلف ومصمم الدروس",
-            description = "يولّد دروساً تعليمية غنية ومصممة بدقة وبلوكات متكاملة وفق الشخصية والمستوى المحدد.",
-            icon = "edit",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-pro",
-            character = "أستاذ لغة إنجليزية محترف يصمم دروساً تفاعلية تجمع بين المفردات والحوار والقواعد والتمارين",
-            voiceId = "kore",
-            style = "تفاعلي، متدرج، غني بالأمثلة الواقعية والتطبيقات العملية",
-            prompt = "أنت معلم لغة إنجليزية خبير. صمم درساً تعليمياً متكاملاً بالموضوع {TOPIC} للمستوى {LEVEL} بالأسلوب {STYLE}. اتبع مخطط JSON للدرس بدقة شاملاً المفردات، الحوار، القواعد، القراءة، والتمارين.",
-        ),
-        AiAgent(
-            id = "curriculum_builder",
-            feature = "مهندس المناهج والمسارات",
-            description = "يبني كورسات ومناهج تعليمية كاملة متسلسلة تدريجياً لتعلم موضوع أو مسار محدد.",
-            icon = "school",
-            kind = ModelKind.TEXT,
-            modelId = "gemini-2.5-pro",
-            character = "خبير تخطيط مناهج أكاديمية وتخصصية متقدمة",
-            voiceId = "",
-            style = "منهجي، متسلسل، يبني المهارة خطوة بخطوة بلا فجوات",
-            prompt = "أنت خبير تصميم مناهج لغة إنجليزية. صمم سلسلة دروس متكاملة متدرجة الصعوبة تغطي المسار أو المنهج المطلوب {TOPIC} للمستوى {LEVEL} بعدد دروس {COUNT}.",
-        ),
-    )
+    /** Every wired persona — prompts, tones and groups live in [AiPrompts]. */
+    fun agents(): List<AiAgent> = AiPrompts.agents()
 }

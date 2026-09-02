@@ -54,6 +54,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val telemetry = TelemetryController(this)
     internal val gamification = GamificationController(this)
     internal val dailyPlan = DailyPlanController(this)
+    internal val skills = SkillsController(this)
 
     /** Application context, exposed to the feature controllers. */
     internal val app: Application get() = getApplication<Application>()
@@ -110,6 +111,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             isLoaded = true
+            loadInbox()
             // مزامنة صامتة عند الإقلاع: تبني الصناديق الناقصة دون إشعارات.
             syncMysteryRewards(notify = false)
             syncWidget()
@@ -207,16 +209,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nextLessonId = maxOf(p.nextLessonId, (lessons.maxOfOrNull { it.id } ?: 0) + 1)
         nextWordId = maxOf(p.nextWordId, (vocab.maxOfOrNull { it.id } ?: 0) + 1)
 
-        // Restore AI agent overrides onto the default agents
+        // Restore AI agent overlays by id. Older studio drafts under 1800
+        // characters are treated as legacy and replaced by the deep brief;
+        // a long custom prompt the learner actually edited is kept. Model
+        // and voice always overlay so a chosen catalogue id is not lost.
         if (s.aiAgents.isNotEmpty()) {
             s.aiAgents.forEach { dto ->
                 val i = aiAgents.indexOfFirst { it.id == dto.id }
-                if (i >= 0) aiAgents[i] = aiAgents[i].copy(
-                    modelId = dto.modelId, character = dto.character,
-                    voiceId = dto.voiceId, style = dto.style, prompt = dto.prompt,
+                if (i < 0) return@forEach
+                val current = aiAgents[i]
+                val overlay = current.copy(
+                    modelId = dto.modelId.ifBlank { current.modelId },
+                    character = dto.character,
+                    voiceId = dto.voiceId,
+                    style = dto.style,
+                    prompt = dto.prompt,
                 )
+                aiAgents[i] = if (AiPrompts.isLegacy(overlay)) {
+                    current.copy(modelId = overlay.modelId, voiceId = overlay.voiceId)
+                } else overlay
             }
         }
+        if (s.aiModels.isNotEmpty()) {
+            aiModels.clear()
+            aiModels.addAll(s.aiModels.map { it.toDomain() })
+            AiDefaults.builtinModels.forEach { b ->
+                if (aiModels.none { it.id == b.id }) aiModels.add(b)
+            }
+        }
+        showFreeModelsOnly = p.showFreeModelsOnly
         apiKeys.clear()
         apiKeys.addAll(
             s.apiKeys
@@ -651,6 +672,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateAgent(updated: AiAgent) = aiConfig.updateAgent(updated)
 
+    fun resetAgentPrompt(id: String) = aiConfig.resetAgentPrompt(id)
+
+    /** Named so it does not clash with the `showFreeModelsOnly` property setter. */
+    fun applyFreeModelsFilter(value: Boolean) = aiConfig.setShowFreeModelsOnly(value)
+
     /** The credential currently used by every AI feature (null = none). */
     val activeKey: ApiKeyEntry?
         get() = apiKeys.firstOrNull { it.active } ?: apiKeys.firstOrNull()
@@ -704,12 +730,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Count of models with a documented free-tier allowance. */
     val freeModelCount: Int get() = aiConfig.freeModelCount
 
-    /** Candidate models for an agent (declared kind first, full catalogue appended). */
+    /** Candidate models for an agent — strictly that persona's kind. */
     fun modelChoicesFor(agent: AiAgent): List<Pair<ModelKind, List<AiModel>>> = aiConfig.modelChoicesFor(agent)
 
     fun modelName(id: String) = aiConfig.modelName(id)
     fun modelById(id: String) = aiConfig.modelById(id)
     fun voiceName(id: String) = aiConfig.voiceName(id)
+
+    // ----- Training hub (live conversation + writing evaluation) -----
+    val conversationTurnsList get() = skills.conversation
+    val isConversationThinking get() = skills.isThinking
+    var conversationError
+        get() = skills.conversationError
+        set(v) { skills.conversationError = v }
+    var conversationAutoSpeak
+        get() = skills.autoSpeak
+        set(v) { skills.autoSpeak = v }
+    val conversationSceneId get() = skills.activeSceneId
+    fun conversationScenes() = skills.scenes()
+    fun startConversationScene(id: String) = skills.startScene(id)
+    fun resetConversation() = skills.resetConversation()
+    fun sendConversationUtterance(text: String) = skills.sendLearnerUtterance(text)
+    fun speakConversationLine(text: String) = skills.speakPartner(text)
+    fun stopConversationSpeech() = skills.stopPartnerSpeech()
+    val writingFeedback get() = skills.writingFeedback
+    val isEvaluatingWriting get() = skills.isEvaluatingWriting
+    val writingError get() = skills.writingError
+    fun evaluateWriting(text: String, promptEn: String, targetWord: String) =
+        skills.evaluateWriting(text, promptEn, targetWord)
+    fun clearWritingFeedback() = skills.clearWriting()
+    val readingCoach get() = skills.readingCoach
+    val isCoachingReading get() = skills.isCoachingReading
+    val readingCoachError get() = skills.readingError
+    fun coachReading(passageEn: String, passageAr: String) = skills.coachReading(passageEn, passageAr)
+    fun clearReadingCoach() = skills.clearReadingCoach()
 
     // ----- Daily phrase -----
     val dailyPhrase: String get() = SampleData.dailyPhrases[java.time.LocalDate.now().dayOfYear % SampleData.dailyPhrases.size]
@@ -1044,7 +1098,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 "lesson" -> lessons.any { !it.isCompleted }
                 "quiz" -> activeVocab.size >= 4
                 "story" -> storySeedCount >= 2 || todayStory != null
-                "speak" -> lessons.isNotEmpty()
+                "speak" -> true // café scene is always available
                 else -> true
             }
         }
@@ -1816,6 +1870,131 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         internal set
     var lastAudioMessage by mutableStateOf<String?>(null)
 
+    // ----- In-app diagnostic inbox (quota / keys / TTS / models) -----
+    val appAlerts = mutableStateListOf<AppAlert>()
+    val unreadAlertCount: Int get() = AlertInbox.unreadCount(appAlerts)
+    var previewingVoiceId by mutableStateOf<String?>(null)
+        internal set
+    var previewVoiceMessage by mutableStateOf<String?>(null)
+
+    fun pushAlert(
+        kind: AlertKind,
+        source: String,
+        title: String,
+        detail: String,
+        route: String? = null,
+    ) {
+        val incoming = AppAlert(
+            id = "al${System.currentTimeMillis()}",
+            kind = kind.name,
+            source = source,
+            title = title,
+            detail = detail,
+            atMillis = System.currentTimeMillis(),
+            route = route,
+        )
+        val next = AlertInbox.push(appAlerts.toList(), incoming)
+        appAlerts.clear()
+        appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun markAlertRead(id: String) {
+        val next = AlertInbox.markRead(appAlerts.toList(), id)
+        appAlerts.clear(); appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun markAllAlertsRead() {
+        val next = AlertInbox.markAllRead(appAlerts.toList())
+        appAlerts.clear(); appAlerts.addAll(next)
+        persistInbox()
+    }
+
+    fun clearAlerts() {
+        appAlerts.clear()
+        persistInbox()
+    }
+
+    private fun persistInbox() {
+        val raw = runCatching {
+            kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.builtins.ListSerializer(AppAlert.serializer()),
+                appAlerts.toList(),
+            )
+        }.getOrNull() ?: return
+        getApplication<Application>()
+            .getSharedPreferences("z_inbox", android.content.Context.MODE_PRIVATE)
+            .edit().putString("alerts", raw).apply()
+    }
+
+    private fun loadInbox() {
+        val raw = getApplication<Application>()
+            .getSharedPreferences("z_inbox", android.content.Context.MODE_PRIVATE)
+            .getString("alerts", null) ?: return
+        val list = runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(AppAlert.serializer()),
+                raw,
+            )
+        }.getOrNull() ?: return
+        appAlerts.clear()
+        appAlerts.addAll(list.take(AlertInbox.CAP))
+    }
+
+    /**
+     * Play a short Gemini sample of [voiceId] so the learner can hear the
+     * difference before saving a persona. Never falls back to Android TTS.
+     */
+    fun previewVoice(voiceId: String) {
+        val engine = tts ?: run {
+            previewVoiceMessage = "محرك الصوت غير جاهز بعد"
+            pushAlert(AlertKind.ERROR, "صوت", "المحرّك غير جاهز", "أعد فتح التطبيق ثم حاول معاينة الصوت.")
+            return
+        }
+        if (previewingVoiceId == voiceId) {
+            engine.stop()
+            previewingVoiceId = null
+            return
+        }
+        engine.stop()
+        val name = AlertInbox.geminiVoiceName(voiceId, aiVoices.toList())
+        val sample = AlertInbox.previewSample(name)
+        previewVoiceMessage = null
+        previewingVoiceId = voiceId
+        vmScope.launch {
+            val result = engine.speakNeural(sample, "preview_$voiceId", name)
+            if (previewingVoiceId == voiceId) previewingVoiceId = null
+            if (result.ok) {
+                previewVoiceMessage = "هذا صوت $name"
+            } else {
+                previewVoiceMessage = result.reason.ifBlank { "تعذّرت المعاينة" }
+                pushAlert(
+                    kind = when {
+                        result.quota -> AlertKind.QUOTA
+                        result.noKey || result.offline -> AlertKind.WARNING
+                        else -> AlertKind.ERROR
+                    },
+                    source = "معاينة الصوت",
+                    title = AlertInbox.ttsFailureTitle(result.quota, engine.hasGeminiKey, engine.isOnline()),
+                    detail = AlertInbox.ttsFailureDetail(
+                        quota = result.quota,
+                        hasKey = engine.hasGeminiKey,
+                        online = engine.isOnline(),
+                        engineError = result.reason,
+                        voiceName = name,
+                    ),
+                    route = "settings",
+                )
+            }
+        }
+    }
+
+    fun stopVoicePreview() {
+        tts?.stop()
+        previewingVoiceId = null
+    }
+
     /** Count of clips still needing generation (drives the button badge). */
     val pendingAudioCount: Int get() = audio.pendingAudioCount
 
@@ -2105,8 +2284,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             googleWebClientId = googleWebClientId,
             dismissedAnnouncementId = dismissedAnnouncementId,
             developerUnlocked = isDeveloperUnlocked,
+            showFreeModelsOnly = showFreeModelsOnly,
         ),
         aiAgents = aiAgents.map { AiAgentDto(it.id, it.modelId, it.character, it.voiceId, it.style, it.prompt) },
+        aiModels = aiModels.map { it.toDto() },
         apiKeys = apiKeys.map {
             ApiKeyDto(
                 id = it.id, label = it.label, provider = it.provider,

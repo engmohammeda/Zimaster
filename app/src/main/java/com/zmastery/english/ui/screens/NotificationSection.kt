@@ -67,6 +67,32 @@ fun NotificationSection(vm: AppViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
+        SettingsGroup("سجل أعطال التطبيق") {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.BugReport, null, tint = ZPurple)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("كل ما لا يعمل يظهر هنا", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            if (vm.appAlerts.isEmpty()) "لا أعطال مسجّلة حالياً"
+                            else "${vm.unreadAlertCount} غير مقروء · ${vm.appAlerts.size} إشعاراً",
+                            color = ZTextSecondary, fontSize = 11.sp,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "حصص النماذج، فشل المفاتيح، معاينة الأصوات، صوت المحادثة، توليد القصص — كلها تُسجَّل مع السبب حتى تعرف ماذا تصلح.",
+                    color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
+                )
+                vm.appAlerts.take(3).forEach { a ->
+                    Spacer(Modifier.height(8.dp))
+                    Text("• ${a.source}: ${a.title}", color = ZTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
         // ===== Hero preview =====
         Box(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))

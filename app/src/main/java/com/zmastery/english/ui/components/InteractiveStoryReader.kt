@@ -20,18 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.zmastery.english.audio.LocalTts
 import com.zmastery.english.data.ArchivedStory
-import com.zmastery.english.data.VocabWord
 import com.zmastery.english.ui.theme.*
 import com.zmastery.english.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
@@ -43,7 +41,7 @@ import kotlinx.coroutines.launch
  *  • Every single word is clickable for instant translation, IPA pronunciation & TTS.
  *  • Words can be added directly to the learner's vocabulary & FSRS spaced repetition queue.
  *  • Interactive AI word inspector provides instant deep contextual nuances on demand.
- *  • Dedicated Play and STOP buttons give complete audio playback control.
+ *  • One play/stop toggle plus on-demand Gemini neural narration.
  *  • Configurable Arabic visibility (inline, sheet, or tap-to-reveal).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +74,7 @@ fun InteractiveStoryDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InteractiveStoryReader(
     story: ArchivedStory,
@@ -92,13 +91,16 @@ fun InteractiveStoryReader(
     var wordExplanationLoading by remember { mutableStateOf(false) }
     var wordAiExplanation by remember { mutableStateOf<String?>(null) }
 
-    val isPlaying = tts?.speakingKey == "story_${story.id}"
+    val liveStory = vm.storyArchive.firstOrNull { it.id == story.id } ?: story
+    val audioReady = liveStory.audioReady
+    val isPlaying = tts?.speakingKey == "story_${liveStory.id}"
     val accent = ZIndigo
+    val generatingAi = vm.isGeneratingAudio && !audioReady
 
     // Split text into tokens (words + punctuation/whitespace)
-    val tokens = remember(story.en) {
+    val tokens = remember(liveStory.en) {
         val regex = Regex("([a-zA-Z0-9'-]+|[^a-zA-Z0-9'-]+)")
-        regex.findAll(story.en).map { it.value }.toList()
+        regex.findAll(liveStory.en).map { it.value }.toList()
     }
 
     val userVocabSet = remember(vm.vocab.size) {
@@ -171,23 +173,22 @@ fun InteractiveStoryReader(
                     }
 
                     // Persistent Audio & Mode Bar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(ZCard)
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        // Audio Controls (Play & Dedicated STOP)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.fillMaxWidth().background(ZCard)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // One button: play when idle, stop when speaking.
                             FilledTonalButton(
                                 onClick = {
                                     if (isPlaying) {
                                         tts?.stop()
                                     } else {
                                         scope.launch {
-                                            tts?.speakInstant(story.en, "story_${story.id}")
+                                            tts?.speakInstant(liveStory.en, "story_${liveStory.id}")
                                         }
                                     }
                                 },
@@ -199,47 +200,87 @@ fun InteractiveStoryReader(
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Icon(
-                                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    null,
+                                    if (isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                                    if (isPlaying) "إيقاف" else "استماع",
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (isPlaying) "إيقاف مؤقت" else "استماع للقصة", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (isPlaying) "إيقاف" else "استماع للقصة",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
                             }
 
-                            // Dedicated STOP button
-                            if (isPlaying) {
-                                IconButton(
-                                    onClick = { tts?.stop() },
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(ZRose.copy(alpha = 0.2f))
+                            // Gemini neural narration — cached permanently.
+                            if (audioReady) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = ZEmerald.copy(alpha = 0.15f),
                                 ) {
-                                    Icon(Icons.Filled.Stop, "إيقاف تام", tint = ZRose, modifier = Modifier.size(18.dp))
+                                    Row(
+                                        Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(Icons.Filled.AutoAwesome, null, tint = ZEmerald, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("صوت AI جاهز", color = ZEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            } else {
+                                TextButton(
+                                    onClick = { vm.generateStoryAudio(liveStory.id) },
+                                    enabled = !generatingAi,
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                ) {
+                                    if (generatingAi) {
+                                        CircularProgressIndicator(
+                                            color = ZPurple,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                    } else {
+                                        Icon(Icons.Filled.AutoAwesome, null, tint = ZPurple, modifier = Modifier.size(15.dp))
+                                    }
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        if (generatingAi) "جارٍ التوليد…" else "صوت طبيعي AI",
+                                        color = ZPurple,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp,
+                                    )
                                 }
                             }
-                        }
 
-                        // Arabic translation switcher
-                        FilterChip(
-                            selected = showFullArabic,
-                            onClick = { showFullArabic = !showFullArabic },
-                            label = { Text("الترجمة الكاملة", fontSize = 11.sp) },
-                            leadingIcon = {
-                                Icon(
-                                    if (showFullArabic) Icons.Filled.Visibility else Icons.Filled.Translate,
-                                    null,
-                                    modifier = Modifier.size(14.dp)
+                            Spacer(Modifier.weight(1f))
+
+                            FilterChip(
+                                selected = showFullArabic,
+                                onClick = { showFullArabic = !showFullArabic },
+                                label = { Text("الترجمة الكاملة", fontSize = 11.sp) },
+                                leadingIcon = {
+                                    Icon(
+                                        if (showFullArabic) Icons.Filled.Visibility else Icons.Filled.Translate,
+                                        null,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ZCyanDeep.copy(alpha = 0.2f),
+                                    selectedLabelColor = ZCyanDeep,
+                                    selectedLeadingIconColor = ZCyanDeep
                                 )
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = ZCyanDeep.copy(alpha = 0.2f),
-                                selectedLabelColor = ZCyanDeep,
-                                selectedLeadingIconColor = ZCyanDeep
                             )
-                        )
+                        }
+                        vm.lastAudioMessage?.let { msg ->
+                            Text(
+                                msg,
+                                color = ZTextMuted,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -273,12 +314,15 @@ fun InteractiveStoryReader(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        cleanWord,
-                                        color = ZTextPrimary,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
+                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                        Text(
+                                            cleanWord,
+                                            color = ZTextPrimary,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Black,
+                                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                                        )
+                                    }
                                     Spacer(Modifier.width(10.dp))
                                     IconButton(
                                         onClick = {
@@ -409,12 +453,22 @@ fun InteractiveStoryReader(
                                         scope.launch {
                                             val key = vm.activeKey
                                             if (key != null) {
-                                                val prompt = "اشرح كلمة '$cleanWord' في سياق القصة الإنجليزية بجملتين مركزتين: معناها الدقيق، استخداماتها الشائعة، ومثال عملي بالعربية."
-                                                val reply = com.zmastery.english.data.AiClient.complete(
-                                                    key = key,
-                                                    model = "",
-                                                    system = "أنت معلم لغة إنجليزية خبير. تشرح الكلمات باقتضاب وعمق للمتعلم العربي.",
-                                                    user = prompt
+                                                val explainer = vm.aiAgents.firstOrNull { it.id == "word_explainer" }
+                                                val system = com.zmastery.english.data.AiPrompts.fill(
+                                                    explainer?.prompt.orEmpty().ifBlank {
+                                                        "You are an expert English teacher. Explain words briefly and deeply for an Arabic-speaking learner."
+                                                    },
+                                                    mapOf(
+                                                        "LEVEL" to vm.cefrEstimate.first,
+                                                        "CONTEXT" to story.en.take(400),
+                                                        "WORD" to cleanWord,
+                                                    ),
+                                                )
+                                                val prompt = "Explain the English word \"$cleanWord\" in this story. Two tight sentences only."
+                                                val reply = vm.aiComplete(
+                                                    system = system,
+                                                    user = prompt,
+                                                    agentId = "word_explainer",
                                                 )
                                                 wordAiExplanation = if (reply.ok) reply.text.trim() else "تعذر جلب الشرح حالياً."
                                             } else {
@@ -490,26 +544,29 @@ fun InteractiveStoryReader(
                 Spacer(Modifier.height(24.dp))
                 Text("المفردات المستهدفة بالقصة:", color = ZTextMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    story.words.forEach { w ->
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = accent.copy(alpha = 0.12f),
-                            modifier = Modifier.clickable {
-                                selectedWord = w
-                                wordAiExplanation = null
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        liveStory.words.forEach { w ->
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = accent.copy(alpha = 0.12f),
+                                modifier = Modifier.clickable {
+                                    selectedWord = w
+                                    wordAiExplanation = null
+                                }
+                            ) {
+                                Text(
+                                    w,
+                                    color = accent,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                                )
                             }
-                        ) {
-                            Text(
-                                w,
-                                color = accent,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
                         }
                     }
                 }
@@ -534,51 +591,57 @@ private fun StoryTokensLayout(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        FlowRow(
-            modifier = Modifier.padding(20.dp),
-            horizontalArrangement = Arrangement.Start,
-            verticalArrangement = Arrangement.Center
-        ) {
-            tokens.forEach { token ->
-                val isWord = token.any { it.isLetter() }
-                if (isWord) {
-                    val clean = token.trim().filter { it.isLetter() }
-                    val isKnownInVocab = userVocabSet.contains(clean.lowercase())
-                    val isSelected = selectedWord?.equals(clean, ignoreCase = true) == true
+        // Force LTR: FlowRow in an RTL screen lays tokens out right-to-left,
+        // which reverses the English paragraph ("yellow the off reflects sun The").
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            FlowRow(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
+                tokens.forEach { token ->
+                    val isWord = token.any { it.isLetter() }
+                    if (isWord) {
+                        val clean = token.trim().filter { it.isLetter() }
+                        val isKnownInVocab = userVocabSet.contains(clean.lowercase())
+                        val isSelected = selectedWord?.equals(clean, ignoreCase = true) == true
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                when {
-                                    isSelected -> ZIndigo.copy(alpha = 0.35f)
-                                    isKnownInVocab -> ZEmerald.copy(alpha = 0.12f)
-                                    else -> Color.Transparent
-                                }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    when {
+                                        isSelected -> ZIndigo.copy(alpha = 0.35f)
+                                        isKnownInVocab -> ZEmerald.copy(alpha = 0.12f)
+                                        else -> Color.Transparent
+                                    }
+                                )
+                                .clickable { onWordClick(clean) }
+                                .padding(horizontal = 2.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = token,
+                                fontSize = fontSizeSp.sp,
+                                lineHeight = (fontSizeSp * 1.65).sp,
+                                fontWeight = if (isSelected || isKnownInVocab) FontWeight.Bold else FontWeight.Normal,
+                                color = when {
+                                    isSelected -> ZIndigo
+                                    isKnownInVocab -> ZEmerald
+                                    else -> ZTextPrimary
+                                },
+                                style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
                             )
-                            .clickable { onWordClick(clean) }
-                            .padding(horizontal = 2.dp, vertical = 1.dp)
-                    ) {
+                        }
+                    } else {
+                        // Punctuation or whitespace
                         Text(
                             text = token,
                             fontSize = fontSizeSp.sp,
                             lineHeight = (fontSizeSp * 1.65).sp,
-                            fontWeight = if (isSelected || isKnownInVocab) FontWeight.Bold else FontWeight.Normal,
-                            color = when {
-                                isSelected -> ZIndigo
-                                isKnownInVocab -> ZEmerald
-                                else -> ZTextPrimary
-                            }
+                            color = ZTextSecondary,
+                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
                         )
                     }
-                } else {
-                    // Punctuation or whitespace
-                    Text(
-                        text = token,
-                        fontSize = fontSizeSp.sp,
-                        lineHeight = (fontSizeSp * 1.65).sp,
-                        color = ZTextSecondary
-                    )
                 }
             }
         }
