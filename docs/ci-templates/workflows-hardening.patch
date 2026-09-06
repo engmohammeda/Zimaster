@@ -1,0 +1,637 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# تعديلات .github/workflows/ — جاهزة لكنها لم تُدفع
+#
+# السبب: توكن Arena لا يملك صلاحية `workflows` على هذا المستودع، فـ GitHub يرفض
+# أي دفع يلمس .github/workflows/:
+#
+#   ! [remote rejected] (refusing to allow a GitHub App to create or update
+#     workflow `.github/workflows/android-release.yml` without `workflows` permission)
+#
+# التطبيق على جهازك (من جذر المستودع، بعد سحب main):
+#
+#   git apply docs/ci-templates/workflows-hardening.patch
+#   git add .github/workflows && git commit -m "ci: harden the Supabase workflows"
+#   git push
+#
+# أو امنح Arena صلاحية Workflows ثم اطلب مني دفعها مباشرة.
+#
+# الأساس: 2e67dab   المحتوى الكامل محفوظ أيضًا في الالتزام المحلي 6b2b0bd
+# ═══════════════════════════════════════════════════════════════════════════
+diff --git a/.github/workflows/android-release.yml b/.github/workflows/android-release.yml
+index afa80d8..4b98277 100644
+--- a/.github/workflows/android-release.yml
++++ b/.github/workflows/android-release.yml
+@@ -64,18 +64,50 @@ jobs:
+           SB_URL: ${{ secrets.SUPABASE_URL }}
+           SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+         run: |
++          # Fed to Gradle through TWO channels on purpose:
++          #   • exported env vars → resolved first by app/build.gradle.kts
++          #   • local.properties  → the historical CI path, now actually read
++          # If neither secret is set the build still succeeds using the public
++          # values committed in gradle.properties (they are not sensitive), so a
++          # fork or a secret-less run never produces a dummy-credential APK.
++          if [ -n "$SB_URL" ]; then echo "SUPABASE_URL=$SB_URL" >> "$GITHUB_ENV"; fi
++          if [ -n "$SB_KEY" ]; then echo "SUPABASE_ANON_KEY=$SB_KEY" >> "$GITHUB_ENV"; fi
+           if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
+             echo "SUPABASE_URL=$SB_URL" >> local.properties
+             echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
++            echo "✔ Supabase credentials injected from repository secrets."
++          else
++            echo "ℹ SUPABASE_URL / SUPABASE_ANON_KEY secrets not set — falling back to gradle.properties."
+           fi
+ 
+       - name: Unit tests (بوابة الجودة)
++        id: tests
++        continue-on-error: true
+         run: |
+           chmod +x gradlew
+-          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache
++          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache 2>&1 | tee gradle-tests.log
+ 
+       - name: Build Debug (فحص ترجمة)
+-        run: ./gradlew :app:assembleDebug --stacktrace --build-cache
++        id: build
++        continue-on-error: true
++        run: ./gradlew :app:assembleDebug --stacktrace --build-cache 2>&1 | tee gradle-build.log
++
++      # Raw job logs live on a blob host that is not reachable from every
++      # environment (proxied or sandboxed CI observers only see "Process
++      # completed with exit code 1"). Re-emitting the real compiler and task
++      # failures as annotations keeps them readable through the checks API.
++      - name: Surface Gradle failures as annotations
++        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
++        run: |
++          for f in gradle-tests.log gradle-build.log; do
++            [ -f "$f" ] || continue
++            # POSIX ERE only — no lookarounds. The Gradle stacktrace itself is
++            # noise here; the compiler/task lines above it are the diagnosis.
++            grep -E "^e: |error:|FAILURE:|What went wrong|^> Task .* FAILED|^Caused by:|^> [A-Z].*" "$f" \
++              | grep -vE "^[[:space:]]+at |org\.gradle\.internal" | head -25 \
++              | while IFS= read -r line; do echo "::error title=$f::${line}"; done
++          done
++          exit 1
+ 
+       - name: Upload CI APK
+         uses: actions/upload-artifact@v4
+@@ -127,9 +159,20 @@ jobs:
+           SB_URL: ${{ secrets.SUPABASE_URL }}
+           SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+         run: |
++          # Fed to Gradle through TWO channels on purpose:
++          #   • exported env vars → resolved first by app/build.gradle.kts
++          #   • local.properties  → the historical CI path, now actually read
++          # If neither secret is set the build still succeeds using the public
++          # values committed in gradle.properties (they are not sensitive), so a
++          # fork or a secret-less run never produces a dummy-credential APK.
++          if [ -n "$SB_URL" ]; then echo "SUPABASE_URL=$SB_URL" >> "$GITHUB_ENV"; fi
++          if [ -n "$SB_KEY" ]; then echo "SUPABASE_ANON_KEY=$SB_KEY" >> "$GITHUB_ENV"; fi
+           if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
+             echo "SUPABASE_URL=$SB_URL" >> local.properties
+             echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
++            echo "✔ Supabase credentials injected from repository secrets."
++          else
++            echo "ℹ SUPABASE_URL / SUPABASE_ANON_KEY secrets not set — falling back to gradle.properties."
+           fi
+ 
+       - name: Prepare Signing Keystore
+@@ -144,6 +187,8 @@ jobs:
+               echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}"
+               echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD || 'android' }}"
+             } >> "$GITHUB_ENV"
++            # Legacy fallback: app/build.gradle.kts reads RELEASE_STORE_FILE
++            # directly now, but the copy keeps older branches building too.
+             cp "$RUNNER_TEMP/keystore/app.keystore" debug.keystore
+             echo "enabled=true" >> "$GITHUB_OUTPUT"
+           elif [ -f debug.keystore ]; then
+diff --git a/.github/workflows/quality.yml b/.github/workflows/quality.yml
+index e553fd2..321e802 100644
+--- a/.github/workflows/quality.yml
++++ b/.github/workflows/quality.yml
+@@ -1,5 +1,20 @@
+ name: Code Quality & Security
+ 
++# ═══════════════════════════════════════════════════════════════════════════
++# Fast, dependency-light gates that must pass on every push and PR.
++#
++# Deliberately NO Gradle job here: the Android build and the unit tests already
++# run in android-release.yml (the `ci` job on PRs, the `release` job on main),
++# where the SDK, build-tools and Gradle cache are properly provisioned. Running
++# a second, under-provisioned `./gradlew` job here only duplicated ~10 minutes
++# of CI per PR and failed for environmental rather than code reasons.
++#
++# What runs instead — all of it in seconds:
++#   • Gitleaks        → secrets accidentally committed
++#   • check_sql.py    → migration filenames, ordering, RLS coverage, no secrets,
++#                       and a real PostgreSQL grammar parse (pglast/libpg_query)
++#   • check_artifacts.py → the Supabase migration integrity checklist
++# ═══════════════════════════════════════════════════════════════════════════
+ on:
+   push:
+     branches: [ "main", "master" ]
+@@ -7,6 +22,9 @@ on:
+     branches: [ "main", "master" ]
+   workflow_dispatch:
+ 
++permissions:
++  contents: read
++
+ jobs:
+   security:
+     name: Gitleaks Secret Scan
+@@ -23,20 +41,38 @@ jobs:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         continue-on-error: true
+ 
+-  lint:
+-    name: Android Lint & Check
++  migrations:
++    name: Supabase Migration Lint
++    runs-on: ubuntu-latest
++    steps:
++      - name: Checkout
++        uses: actions/checkout@v4
++
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: "3.12"
++
++      - name: Install pglast (PostgreSQL grammar parser)
++        # Optional: tools/check_sql.py degrades to a warning if this fails, so a
++        # wheel problem can never block an unrelated change.
++        continue-on-error: true
++        run: pip install pglast
++
++      - name: Lint supabase/migrations
++        run: python3 tools/check_sql.py
++
++  artifacts:
++    name: Supabase Integration Checklist
+     runs-on: ubuntu-latest
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v4
+ 
+-      - name: Set up JDK 17
+-        uses: actions/setup-java@v4
++      - name: Set up Python
++        uses: actions/setup-python@v5
+         with:
+-          distribution: temurin
+-          java-version: "17"
++          python-version: "3.12"
+ 
+-      - name: Unit Tests
+-        run: |
+-          chmod +x gradlew || true
+-          ./gradlew :app:testDebugUnitTest
++      - name: Run integrity verification
++        run: python3 check_artifacts.py
+diff --git a/.github/workflows/supabase-backup.yml b/.github/workflows/supabase-backup.yml
+index a275f5d..e4b4ed4 100644
+--- a/.github/workflows/supabase-backup.yml
++++ b/.github/workflows/supabase-backup.yml
+@@ -1,42 +1,141 @@
+ name: Supabase Daily Backup
+ 
++# ═══════════════════════════════════════════════════════════════════════════
++# Nightly logical backup of the whole database, kept as a CI artifact for 90 days.
++#
++# Required secrets:
++#   SUPABASE_DB_PASSWORD    password of the `postgres` user
++#   SUPABASE_PROJECT_REF    eduobulbcwgcjruzphgc (falls back to supabase/config.toml)
++# Optional secret:
++#   SUPABASE_DB_REGION      e.g. eu-central-1 — only needed for the IPv4
++#                           session-pooler fallback below.
++#
++# Why two hosts? Newer Supabase projects expose `db.<ref>.supabase.co` over
++# IPv6 only. GitHub-hosted runners are IPv4, so a direct pg_dump to that host
++# fails with "network unreachable". The session pooler
++# (`aws-0-<region>.pooler.supabase.com:5432`, user `postgres.<ref>`) is the
++# IPv4-compatible direct connection Supabase documents for exactly this case.
++# The job tries the direct host first and falls back to the pooler.
++# ═══════════════════════════════════════════════════════════════════════════
+ on:
+   schedule:
+     - cron: '17 3 * * *'
+   workflow_dispatch:
+ 
++permissions:
++  contents: read
++
++concurrency:
++  group: supabase-backup
++  cancel-in-progress: false
++
+ jobs:
+   backup:
+     runs-on: ubuntu-latest
+     steps:
++      - name: Checkout
++        uses: actions/checkout@v4
++
+       - name: Setup PostgreSQL client
+         run: |
+           sudo apt-get update -qq
+           sudo apt-get install -y -qq postgresql-client
+ 
++      - name: Resolve project ref
++        id: ref
++        env:
++          REF_SECRET: ${{ secrets.SUPABASE_PROJECT_REF }}
++        run: |
++          set -euo pipefail
++          REF="$REF_SECRET"
++          if [ -z "$REF" ]; then
++            REF=$(sed -nE 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' supabase/config.toml | head -n1)
++          fi
++          if [ -z "$REF" ]; then
++            echo "::error::Cannot resolve the project ref (set SUPABASE_PROJECT_REF or project_id in supabase/config.toml)."
++            exit 1
++          fi
++          echo "project_ref=$REF" >> "$GITHUB_OUTPUT"
++
+       - name: Dump Supabase Database
+         env:
+           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+-          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
++          PROJECT_REF: ${{ steps.ref.outputs.project_ref }}
++          DB_REGION: ${{ secrets.SUPABASE_DB_REGION }}
+         run: |
+-          if [ -z "$PROJECT_REF" ] || [ -z "$DB_PASSWORD" ]; then
+-            echo "Skipping backup: SUPABASE_PROJECT_REF or SUPABASE_DB_PASSWORD not configured"
++          set -uo pipefail
++          if [ -z "$DB_PASSWORD" ]; then
++            echo "::warning::SUPABASE_DB_PASSWORD is not set — skipping the backup."
++            echo "skipped=true" >> "$GITHUB_ENV"
+             exit 0
+           fi
++          echo "skipped=false" >> "$GITHUB_ENV"
+           mkdir -p backups
+-          BACKUP_FILE="backups/supabase_backup_$(date +'%Y%m%d_%H%M%S').sql.gz"
+-          PGPASSWORD="$DB_PASSWORD" pg_dump \
+-            -h "db.${PROJECT_REF}.supabase.co" \
+-            -p 5432 \
+-            -U postgres \
+-            -d postgres \
+-            --clean --if-exists --no-owner --no-privileges \
+-            | gzip > "$BACKUP_FILE"
++          BACKUP_FILE="backups/supabase_backup_$(date -u +'%Y%m%d_%H%M%S').sql.gz"
++
++          dump() {
++            local host="$1" user="$2" label="$3"
++            echo "→ trying $label ($host, user=$user)"
++            PGPASSWORD="$DB_PASSWORD" pg_dump \
++              -h "$host" -p 5432 -U "$user" -d postgres \
++              --clean --if-exists --no-owner --no-privileges \
++              2>/tmp/pgdump.err | gzip > "$BACKUP_FILE"
++            local status=${PIPESTATUS[0]}
++            if [ "$status" -ne 0 ]; then
++              echo "  ✗ $label failed (exit $status):"
++              sed 's/^/    /' /tmp/pgdump.err | head -20
++              rm -f "$BACKUP_FILE"
++              return 1
++            fi
++            echo "  ✔ $label succeeded"
++            echo "host=$host" >> "$GITHUB_ENV"
++            return 0
++          }
++
++          if dump "db.${PROJECT_REF}.supabase.co" "postgres" "direct connection"; then
++            :
++          elif [ -n "$DB_REGION" ] && \
++               dump "aws-0-${DB_REGION}.pooler.supabase.com" "postgres.${PROJECT_REF}" "session pooler"; then
++            echo "::warning::The direct host was unreachable (IPv6-only project). Fell back to the session pooler. Set SUPABASE_DB_REGION to keep this deterministic."
++          else
++            echo "::error::pg_dump failed on every known host."
++            echo "::error::If the project is IPv6-only, set SUPABASE_DB_REGION (Dashboard → Project Settings → Database → Connection string → Session pooler)."
++            exit 1
++          fi
++
++          # Never publish an empty or truncated dump as a "backup".
++          SIZE=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || echo 0)
++          if [ "$SIZE" -lt 2048 ]; then
++            echo "::error::Dump is suspiciously small ($SIZE bytes) — refusing to keep it."
++            exit 1
++          fi
+           echo "Backup created at $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
++          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_ENV"
++          echo "backup_size=$SIZE" >> "$GITHUB_ENV"
+ 
+       - name: Upload Backup Artifact
++        if: env.skipped != 'true'
+         uses: actions/upload-artifact@v4
+         with:
+           name: supabase-database-backup
+           path: backups/*.sql.gz
+           retention-days: 90
++          if-no-files-found: error
++
++      - name: Summary
++        if: always()
++        run: |
++          {
++            echo "## 🗄️ Supabase nightly backup"
++            echo ""
++            echo "- **Project:** \`${{ steps.ref.outputs.project_ref }}\`"
++            if [ "${skipped:-false}" = "true" ]; then
++              echo "- **Result:** ⚠️ skipped — SUPABASE_DB_PASSWORD is not set"
++            elif [ -n "${backup_file:-}" ]; then
++              echo "- **Host:** \`${host:-unknown}\`"
++              echo "- **File:** \`${backup_file}\` (${backup_size} bytes, kept 90 days)"
++              echo "- **Result:** ✅ success"
++            else
++              echo "- **Result:** ❌ failed — see the log above"
++            fi
++          } >> "$GITHUB_STEP_SUMMARY"
+diff --git a/.github/workflows/supabase-keepalive.yml b/.github/workflows/supabase-keepalive.yml
+index 91d0fbf..46ac4d3 100644
+--- a/.github/workflows/supabase-keepalive.yml
++++ b/.github/workflows/supabase-keepalive.yml
+@@ -1,10 +1,26 @@
+ name: Supabase Keepalive
+ 
++# ═══════════════════════════════════════════════════════════════════════════
++# Proves, end to end, that the credentials the APP uses actually work:
++#   URL reachable → API key accepted → PostgREST up → `lessons` exposed →
++#   RLS policy for anon/authenticated in place.
++#
++# This is the cheapest possible "is production healthy?" signal, and it fails
++# the run instead of printing a status code and exiting 0. A green checkmark on
++# a 401 tells you nothing; a red one tells you exactly what to fix.
++#
++# Required secrets: SUPABASE_URL, SUPABASE_ANON_KEY
++# (Both are public values — see gradle.properties. They are read from secrets so
++# they can be rotated without a code change.)
++# ═══════════════════════════════════════════════════════════════════════════
+ on:
+   schedule:
+     - cron: '0 */6 * * *'
+   workflow_dispatch:
+ 
++permissions:
++  contents: read
++
+ jobs:
+   keepalive:
+     runs-on: ubuntu-latest
+@@ -14,12 +30,92 @@ jobs:
+           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+         run: |
++          set -uo pipefail
++          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+-            echo "Skipping keepalive: SUPABASE_URL or SUPABASE_ANON_KEY not set"
++            if [ "$MANUAL" = "true" ]; then
++              echo "::error::Manual run requested but SUPABASE_URL / SUPABASE_ANON_KEY are not set."
++              echo "::error::Add them at Settings → Secrets and variables → Actions (docs/SUPABASE_SETUP.md §2)."
++              exit 1
++            fi
++            echo "::warning::Skipping keepalive — SUPABASE_URL or SUPABASE_ANON_KEY is not set."
++            echo "state=skipped" >> "$GITHUB_ENV"
+             exit 0
+           fi
+-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
++          echo "state=ok" >> "$GITHUB_ENV"
++
++          ENDPOINT="$SUPABASE_URL/rest/v1/lessons?select=doc_id&limit=1"
++          BODY_FILE=$(mktemp)
++          HTTP_STATUS=$(curl -s -o "$BODY_FILE" -w "%{http_code}" --max-time 30 \
+             -H "apikey: $SUPABASE_ANON_KEY" \
+             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+-            "$SUPABASE_URL/rest/v1/lessons?select=doc_id&limit=1")
+-          echo "Supabase keepalive ping response: $HTTP_STATUS"
++            -H "Accept: application/json" \
++            "$ENDPOINT")
++          echo "GET $ENDPOINT → HTTP $HTTP_STATUS"
++          echo "http_status=$HTTP_STATUS" >> "$GITHUB_ENV"
++          head -c 400 "$BODY_FILE"; echo
++
++          case "$HTTP_STATUS" in
++            200|206)
++              echo "✅ Supabase is reachable, the API key is valid and public.lessons is readable."
++              ;;
++            401|403)
++              echo "::error::HTTP $HTTP_STATUS — the API key was rejected. Re-copy it from Dashboard → Project Settings → API and update the SUPABASE_ANON_KEY secret."
++              exit 1
++              ;;
++            404)
++              echo "::error::HTTP 404 — the endpoint or the \`lessons\` table does not exist. Either SUPABASE_URL is wrong, or the migrations have not been applied yet (Actions → Supabase Migrations → Run workflow)."
++              exit 1
++              ;;
++            000)
++              echo "::error::No response at all — DNS or network failure. Check SUPABASE_URL ($SUPABASE_URL)."
++              exit 1
++              ;;
++            *)
++              echo "::error::Unexpected HTTP $HTTP_STATUS from Supabase."
++              exit 1
++              ;;
++          esac
++
++      - name: Ping Auth endpoint
++        if: env.state == 'ok'
++        env:
++          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
++          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
++        run: |
++          set -uo pipefail
++          # CloudAuth.ensureSignedIn() depends on anonymous sign-in being enabled.
++          HTTP_STATUS=$(curl -s -o /tmp/settings.json -w "%{http_code}" --max-time 30 \
++            -H "apikey: $SUPABASE_ANON_KEY" \
++            "$SUPABASE_URL/auth/v1/settings")
++          echo "GET $SUPABASE_URL/auth/v1/settings → HTTP $HTTP_STATUS"
++          echo "auth_status=$HTTP_STATUS" >> "$GITHUB_ENV"
++          if [ "$HTTP_STATUS" != "200" ]; then
++            echo "::error::GoTrue settings endpoint returned HTTP $HTTP_STATUS."
++            exit 1
++          fi
++          if grep -q '"external"' /tmp/settings.json && grep -q '"google":true' /tmp/settings.json; then
++            echo "✅ Google sign-in is enabled on the project."
++            echo "google_enabled=true" >> "$GITHUB_ENV"
++          else
++            echo "::warning::Google sign-in does not appear to be enabled — CloudAuth.signInWithIdToken(Google) will fail. Enable it at Dashboard → Authentication → Providers → Google."
++            echo "google_enabled=false" >> "$GITHUB_ENV"
++          fi
++          if grep -q '"anon_users_enabled":true\|"external":{' /tmp/settings.json; then
++            echo "ℹ Auth settings retrieved; verify anonymous sign-in is ON (Dashboard → Authentication → Providers → Anonymous)."
++          fi
++
++      - name: Summary
++        if: always()
++        run: |
++          {
++            echo "## 💓 Supabase keepalive"
++            echo ""
++            if [ "${state:-}" = "skipped" ]; then
++              echo "⚠️ Skipped — SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set."
++            else
++              echo "- **REST (PostgREST):** HTTP \`${http_status:-?}\`"
++              echo "- **Auth (GoTrue):** HTTP \`${auth_status:-?}\`"
++              echo "- **Google provider:** ${google_enabled:-unknown}"
++            fi
++          } >> "$GITHUB_STEP_SUMMARY"
+diff --git a/.github/workflows/supabase-migrations.yml b/.github/workflows/supabase-migrations.yml
+index 43cfae0..914a023 100644
+--- a/.github/workflows/supabase-migrations.yml
++++ b/.github/workflows/supabase-migrations.yml
+@@ -1,16 +1,44 @@
+ name: Supabase Migrations
+ 
++# ═══════════════════════════════════════════════════════════════════════════
++# Applies supabase/migrations/*.sql to the remote project.
++#
++#   • push to main / master touching supabase/migrations/**  → apply
++#   • pull request touching supabase/migrations/**           → dry-run only
++#   • workflow_dispatch (manual "Run workflow")              → apply, and FAIL
++#     loudly if the secrets are missing (a green run that quietly did nothing
++#     is worse than a red one)
++#
++# Required repository secrets (Settings → Secrets and variables → Actions):
++#   SUPABASE_ACCESS_TOKEN   personal access token — https://supabase.com/dashboard/account/tokens
++#   SUPABASE_DB_PASSWORD    password of the `postgres` database user
++#   SUPABASE_PROJECT_REF    eduobulbcwgcjruzphgc (optional — falls back to
++#                           project_id in supabase/config.toml)
++# See docs/SUPABASE_SETUP.md §2 and §6.
++# ═══════════════════════════════════════════════════════════════════════════
+ on:
+   push:
+     branches: [ "main", "master" ]
+     paths:
+       - "supabase/migrations/**"
++      - "supabase/config.toml"
++      - ".github/workflows/supabase-migrations.yml"
+   pull_request:
+     branches: [ "main", "master" ]
+     paths:
+       - "supabase/migrations/**"
++      - "supabase/config.toml"
++      - ".github/workflows/supabase-migrations.yml"
+   workflow_dispatch:
+ 
++permissions:
++  contents: read
++
++concurrency:
++  # Migrations must never run twice against the same project at the same time.
++  group: supabase-migrations-${{ github.ref }}
++  cancel-in-progress: false
++
+ jobs:
+   deploy:
+     runs-on: ubuntu-latest
+@@ -23,28 +51,96 @@ jobs:
+         with:
+           version: latest
+ 
+-      - name: Verify / Dry run migrations (PR)
+-        if: ${{ github.event_name == 'pull_request' }}
++      - name: Resolve project ref (secret → supabase/config.toml)
++        id: ref
+         env:
+-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
++          REF_SECRET: ${{ secrets.SUPABASE_PROJECT_REF }}
++        run: |
++          set -euo pipefail
++          REF="$REF_SECRET"
++          if [ -z "$REF" ]; then
++            REF=$(sed -nE 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' supabase/config.toml | head -n1)
++          fi
++          if [ -z "$REF" ]; then
++            echo "::error::Could not resolve the project ref. Set the SUPABASE_PROJECT_REF secret or project_id in supabase/config.toml."
++            exit 1
++          fi
++          echo "project_ref=$REF" >> "$GITHUB_OUTPUT"
++          echo "✔ Target project: $REF"
++
++      - name: Verify credentials are configured
++        env:
++          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
++          DB_PASS: ${{ secrets.SUPABASE_DB_PASSWORD }}
+         run: |
+-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+-            supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+-            supabase db push --dry-run
++          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
++          MISSING=""
++          [ -z "$TOKEN" ]   && MISSING="$MISSING SUPABASE_ACCESS_TOKEN"
++          [ -z "$DB_PASS" ] && MISSING="$MISSING SUPABASE_DB_PASSWORD"
++          if [ -n "$MISSING" ]; then
++            if [ "$MANUAL" = "true" ]; then
++              # A manual run means somebody expects a deployment to happen.
++              echo "::error::Manual run requested but these secrets are missing:$MISSING"
++              echo "::error::Add them at Settings → Secrets and variables → Actions (docs/SUPABASE_SETUP.md §2)."
++              exit 1
++            fi
++            echo "::warning::Skipping migration push — missing:$MISSING"
++            echo "skip=true" >> "$GITHUB_ENV"
+           else
+-            echo "Skipping push: SUPABASE_ACCESS_TOKEN not set"
++            echo "skip=false" >> "$GITHUB_ENV"
+           fi
+ 
+-      - name: Apply migrations (main)
+-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
++      - name: List pending migration files
++        run: |
++          echo "Migrations in this repository:"
++          ls -1 supabase/migrations/*.sql 2>/dev/null || echo "  (none)"
++
++      - name: Link project
++        if: env.skip != 'true'
++        env:
++          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
++          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
++        run: supabase link --project-ref "${{ steps.ref.outputs.project_ref }}"
++
++      - name: Verify / dry-run migrations (PR)
++        if: env.skip != 'true' && github.event_name == 'pull_request'
++        env:
++          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
++          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
++        run: supabase db push --dry-run
++
++      - name: Apply migrations (main / manual)
++        if: env.skip != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
++        env:
++          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
++          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
++        run: yes | supabase db push
++
++      - name: Run security & performance advisors
++        if: env.skip != 'true' && always()
++        continue-on-error: true
+         env:
+           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+         run: |
+-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+-            supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+-            yes | supabase db push
+-          else
+-            echo "Skipping push: SUPABASE_ACCESS_TOKEN not set"
+-          fi
++          # Flags missing RLS policies, unindexed foreign keys, exposed
++          # auth.users, missing indexes and long-lived transactions.
++          # Uses the project linked by the `supabase link` step above.
++          supabase db advisors || true
++
++      - name: Summary
++        if: always()
++        run: |
++          {
++            echo "## 🗄️ Supabase Migrations"
++            echo ""
++            echo "- **Project:** \`${{ steps.ref.outputs.project_ref }}\`"
++            echo "- **Event:** \`${{ github.event_name }}\`"
++            if [ "${skip:-false}" = "true" ]; then
++              echo "- **Result:** ⚠️ skipped — repository secrets are not configured"
++            elif [ "${{ github.event_name }}" = "pull_request" ]; then
++              echo "- **Result:** 🧪 dry-run only (nothing was applied)"
++            else
++              echo "- **Result:** ✅ migrations applied"
++            fi
++          } >> "$GITHUB_STEP_SUMMARY"
