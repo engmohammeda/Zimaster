@@ -50,6 +50,10 @@ object CloudAuth {
 
     private val auth: Auth get() = SupabaseClientProvider.client.auth
 
+    // supabase-kt 3.2.x types UserInfo.emailConfirmedAt as kotlin.time.Instant,
+    // which is still @ExperimentalTime. The opt-in is scoped to this mapper so
+    // the rest of the module stays free of experimental API surface.
+    @OptIn(kotlin.time.ExperimentalTime::class)
     private fun UserInfo.toCloudUser(): CloudUser {
         val meta = userMetadata
         val name = meta?.get("full_name")?.jsonPrimitive?.content
