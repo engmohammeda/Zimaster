@@ -1,0 +1,81 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Zimaster — Supabase project configuration
+#
+# This file is the equivalent of running `supabase init` inside the repository:
+# it tells the Supabase CLI where the migrations live and how to reach the
+# remote project. Committing it means every contributor and every CI runner
+# gets the same, reproducible setup — no `supabase init` step required.
+#
+# Remote project (already linked by ref — no `supabase link` needed for reads):
+#   ref       : eduobulbcwgcjruzphgc
+#   API URL   : https://eduobulbcwgcjruzphgc.supabase.co
+#   Dashboard : https://supabase.com/dashboard/project/eduobulbcwgcjruzphgc
+#
+# Secrets are read from the environment, never from this file:
+#   SUPABASE_ACCESS_TOKEN  personal access token (https://supabase.com/dashboard/account/tokens)
+#   SUPABASE_DB_PASSWORD   database password for user `postgres`
+# See docs/SUPABASE_SETUP.md §2 for the full list.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# A string used to distinguish different Supabase projects on the same host.
+project_id = "eduobulbcwgcjruzphgc"
+
+[api]
+enabled = true
+# Port to use for the API URL.
+port = 54321
+# Schemas to expose in your API. Tables, views and functions in this schema
+# will get API endpoints. `public` and `graphql_public` are the defaults.
+schemas = ["public", "graphql_public"]
+# Extra schemas to add to the search_path of every request.
+extra_search_path = ["public", "extensions"]
+# The maximum number of rows returned from a table or view. Limits payload size
+# for accidental or malicious requests.
+max_rows = 1000
+
+[db]
+# Port to use for the local database URL.
+port = 54322
+# The database major version to use. Must match the remote project's version.
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+
+[auth]
+enabled = true
+# The base URL of your website. Used as an allow-list for redirects.
+site_url = "https://eduobulbcwgcjruzphgc.supabase.co"
+# A list of *exact* URLs that auth providers are permitted to redirect to.
+additional_redirect_urls = ["https://eduobulbcwgcjruzphgc.supabase.co"]
+# How long tokens are valid for, in seconds. Defaults to 1 hour.
+jwt_expiry = 3600
+# Allow/disallow new user signups to your project.
+enable_signup = true
+
+[auth.anonymous_users]
+# The app signs every learner in anonymously on first launch (CloudAuth.ensureSignedIn)
+# and upgrades that identity later via Google or email — so this MUST stay on.
+enabled = true
+
+[auth.email]
+# Disallow sign-ups with duplicate emails — the app relies on one profile per learner.
+enable_signup = true
+# Require confirmation of the email address before the account can sign in.
+# Kept true so `is_email_verified()` and profiles.email stay trustworthy.
+enable_confirmations = true
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[storage]
+enabled = false
+
+[realtime]
+enabled = true

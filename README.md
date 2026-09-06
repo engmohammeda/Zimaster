@@ -123,7 +123,8 @@ Controller مستقل يمر عبر حالات استخدام نقية قابل�
 
 - أدوات الاستيراد والنشر **تظهر للمسؤول فقط** — المتعلّم لا يرى ولا يستطيع استيراد أي ملف
 - تحديث درس منشور = إعادة نشره، فيصل للجميع في أول فتح
-- دليل الإعداد السحابي الكامل: **[docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)**
+- السحابة: **Supabase** (مشروع `eduobulbcwgcjruzphgc`) — Postgres + Auth + Realtime
+- دليل الإعداد السحابي الكامل: **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)**
 
 ---
 
@@ -138,13 +139,30 @@ cd Zimaster
 ./gradlew assembleRelease bundleRelease   # نسخة الإصدار (R8) + حزمة Play
 ```
 
-**المتطلبات:** JDK 17 · Android SDK (compileSdk 36) · ملف `app/google-services.json`
-(من Firebase Console ← إعدادات المشروع ← تطبيقات Android).
+**المتطلبات:** JDK 17 · Android SDK (compileSdk 36).
+
+لا يحتاج البناء إلى أي ملف بيانات اعتماد: رابط مشروع Supabase والمفتاح العام
+(وهما قيمتان عامتان بطبيعتهما) مودعان في `gradle.properties`، ويقرأهما
+`app/build.gradle.kts` بترتيب أولوية واضح: **متغيرات البيئة ← `local.properties`
+← `gradle.properties`**. للتفاصيل والفحوصات: **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)**.
+
+```bash
+python3 check_artifacts.py    # 59 فحصًا لسلامة تكامل Supabase
+python3 tools/check_sql.py    # فحص الترحيلات: الأسماء، الترتيب، RLS، نحو SQL
+```
 
 > سير عمل **GitHub Actions** يبني تلقائياً مع كل دفعة: Debug APK + Release APK (مُحسَّن
 > بـ R8) + AAB جاهزة للنشر، ويرفعها إلى Releases.
 >
-> قالب سير عمل ثانٍ جاهز (`docs/ci-templates/firebase-deploy.yml.template`)
+> **أربعة سيور إضافية تدير السحابة بلا أي تدخل يدوي:**
+> | السير | المهمة |
+> |-------|--------|
+> | `supabase-migrations.yml` | نشر ترحيلات `supabase/migrations/` تلقائياً عند وصولها إلى `main`، وفحص جاف على كل PR |
+> | `supabase-keepalive.yml` | كل 6 ساعات: يتحقق أن الرابط والمفتاح والجداول وسياسات RLS ومزوّد Google تعمل فعلاً — **ويفشل بصراحة** لا بمجرد طباعة رمز HTTP |
+> | `supabase-backup.yml` | نسخة `pg_dump` ليلية تُحفظ 90 يوماً، مع ارتداد تلقائي إلى Session Pooler |
+> | `quality.yml` | Gitleaks + فحص الترحيلات بمحلّل PostgreSQL حقيقي + 59 فحص سلامة |
+>
+> قالب سير عمل ثانٍ جاهز (`docs/ci-templates/firebase-deploy.yml.template`) — **إرث Firebase، لم يعد التطبيق يستخدمه**
 > **ينشر قواعد وفهارس Firestore تلقائياً** إلى مشروع Firebase الحقيقي في كل
 > مرة يتغيّر فيها `firestore.rules` أو `firestore.indexes.json` على `main` —
 > بلا أي أمر يدوي بعد تفعيله، وبلا أي مفتاح JSON (متوافق مع سياسة
@@ -159,9 +177,17 @@ cd Zimaster
 
 - مفاتيح الـ API **مشفّرة داخل Android Keystore** ولا تغادر الجهاز أبداً — تُستبعد حتى من
   النسخ الاحتياطية والمزامنة السحابية
-- قواعد Firestore تضمن: قراءة المحتوى العام للموقّعين فقط · النشر للمسؤول فقط ·
-  **استحالة انتحال صلاحيات** (الدور يوثَّق من Firebase ID Token) · كل مستخدم ببياناته حصراً
-- لوحة الصدارة العامة لا تحمل إيميلات أو بيانات خاصة
+- **Row Level Security مفعّلة على كل جدول** في Supabase (17 سياسة)، تفرض: قراءة
+  المحتوى العام · النشر للمسؤول فقط · **استحالة انتحال صلاحيات** (الدور مخزَّن في
+  `user_roles` ولا تملك أي سياسة كتابة عليه — يُمنح فقط من دالة `security definer`
+  داخل القاعدة) · كل مستخدم ببياناته حصراً
+- **لا يمكن لهوية مجهولة أن تصبح مسؤولاً:** التطبيق يسجّل كل متعلّم مجهولاً عند أول
+  تشغيل، لذا admin يُمنح فقط لحساب حقيقي (Google/بريد) — راجع
+  [docs/SUPABASE_SETUP.md §8](docs/SUPABASE_SETUP.md#8-ما-الذي-تم-إصلاحه-في-هذه-الجولة)
+- المفتاح المضمّن في التطبيق عام بطبيعته (`sb_publishable_…`) ولا يمنح أي صلاحية
+  بذاته؛ مفاتيح `service_role` وكلمة سر القاعدة لا تدخل المستودع ولا الـ APK إطلاقاً
+- عرض `leaderboard` العام لا يحمل إيميلات ولا أدواراً
+- بوابة CI (`tools/check_sql.py`) ترفض أي ترحيل ينشئ جدولاً في `public` بلا RLS
 - حرس بيانات ثلاثي: نسخة احتياطية تلقائية قبل كل حفظ + استشفاء ذاتي + كشف الفقدان
 
 ---
@@ -170,7 +196,9 @@ cd Zimaster
 
 | الملف | المحتوى |
 |-------|---------|
-| [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) | إعداد Firebase ونشر الدروس — من الصفر خطوة بخطوة |
+| [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) | ☁️ **الدليل السحابي الحالي** — الأسرار، CLI، MCP، النشر، التحقق، حل المشاكل |
+| [docs/mcp/antigravity.mcp_config.json](docs/mcp/antigravity.mcp_config.json) | 🤖 قالب MCP لخادم Supabase (Antigravity/Gemini) |
+| [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) | 🗄️ *إرث* — إعداد Firebase، لم يعد التطبيق يستخدمه |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | دليل المعمارية وحالات الاستخدام |
 | [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) | الخطة المرجعية للمشروع |
 | [UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md](UNIFIED_LESSON_EXTRACTOR_MASTER_PROMPT.md) | الصيغة الموحدة لملفات الدروس |

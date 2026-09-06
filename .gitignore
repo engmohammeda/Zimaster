@@ -28,3 +28,18 @@ __pycache__/
 serviceAccountKey.json
 firebase-service-account*.json
 *-firebase-adminsdk-*.json
+
+# ============ Supabase — NEVER in the repo ============
+# Local environment for the admin/CLI scripts. Copy .env.example → .env.
+.env
+.env.*
+!.env.example
+
+# Supabase CLI scratch space: `supabase link` writes the project ref and a
+# short-lived access token cache here. Regenerated on demand.
+supabase/.temp/
+supabase/.branches/
+
+# Service-role / secret keys in any stray local file shape.
+*service_role*key*
+sb_secret_*
