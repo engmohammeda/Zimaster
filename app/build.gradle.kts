@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -38,6 +39,35 @@ fun supabaseProperty(name: String, fallback: String): String {
     return fallback
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Signing keystore resolution
+//
+// BUG FIXED: the repository intentionally ships no keystore (*.keystore is
+// git-ignored), yet signingConfigs pointed at ${rootDir}/debug.keystore
+// unconditionally. On every checkout except the `release` CI job — which
+// generates that file with keytool — the build died at:
+//
+//   > Task :app:validateSigningDebug FAILED
+//   Keystore file '<repo>/debug.keystore' not found for signing config 'debugConfig'
+//
+// so the `ci` job's `assembleDebug` could never succeed.
+//
+// Also: android-release.yml exports RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD
+// / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD, and nothing ever read them — the
+// workflow had to copy the real keystore over debug.keystore as a workaround.
+// They are honoured here now.
+//
+// Resolution order:
+//   1. RELEASE_STORE_FILE      — the CI release keystore
+//   2. ${rootDir}/debug.keystore — a locally provided debug keystore
+//   3. none → AGP's built-in `debug` signing config, which generates
+//      ~/.android/debug.keystore on demand (how a normal project builds)
+// ═══════════════════════════════════════════════════════════════════════════
+val signingStoreFile: File? = listOfNotNull(
+    System.getenv("RELEASE_STORE_FILE")?.takeIf { it.isNotBlank() }?.let { file(it) },
+    file("${rootDir}/debug.keystore"),
+).firstOrNull { it.exists() }
+
 android {
     namespace = "com.zmastery.english"
     compileSdk = 36
@@ -72,6 +102,9 @@ android {
         logger.lifecycle(
             "Supabase → url=$supabaseUrl | key source=$keySource | provisioned=$looksProvisioned"
         )
+        logger.lifecycle(
+            "Signing  → keystore=${signingStoreFile?.name ?: "AGP built-in debug (~/.android/debug.keystore)"}"
+        )
         if (!looksProvisioned) {
             logger.warn(
                 "⚠️  SUPABASE credentials are placeholders — this build cannot sync to the cloud. " +
@@ -82,18 +115,25 @@ android {
     }
 
     signingConfigs {
-        create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        // Declared only when a keystore actually exists — see the note above.
+        signingStoreFile?.let { keystore ->
+            create("projectSigning") {
+                storeFile = keystore
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "android"
+            }
         }
     }
 
     buildTypes {
         debug {
             isDebuggable = true
-            signingConfig = signingConfigs.getByName("debugConfig")
+            // Left unset when no keystore is present so AGP uses its built-in
+            // `debug` config and generates ~/.android/debug.keystore itself.
+            if (signingStoreFile != null) {
+                signingConfig = signingConfigs.getByName("projectSigning")
+            }
         }
         release {
             isMinifyEnabled = true
@@ -102,7 +142,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("debugConfig")
+            signingConfig = signingConfigs.getByName(
+                if (signingStoreFile != null) "projectSigning" else "debug"
+            )
         }
     }
 
