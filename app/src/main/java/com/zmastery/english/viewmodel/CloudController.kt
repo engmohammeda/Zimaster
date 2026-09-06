@@ -5,7 +5,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Controller for Cloud sync (Firebase): pulling new lessons, backing up &
+ * Controller for Cloud sync (Supabase): pulling new lessons, backing up &
  * restoring the learner's own progress, admin features, announcements and the
  * leaderboard.
  *
@@ -165,36 +165,33 @@ internal class CloudController(internal val vm: AppViewModel) {
             )
 
     /**
-     * يترجم أخطاء Firestore إلى سبب مفهوم + الحل المباشر.
-     *
-     * قبل هذا كانت الرسالة الخام (PERMISSION_DENIED: Missing or insufficient
-     * permissions) تُعرض كما هي وبلا تمييز بين «لا يوجد حساب» و«القواعد لم
-     * تُنشر» و«الحساب ليس مسؤولاً» — ولهذا بدا النشر وكأنه «لا يعمل» بلا سبب.
+     * يترجم أخطاء Supabase إلى سبب مفهوم + الحل المباشر.
      */
     private fun describeCloudError(e: Throwable): String {
         val raw = "${e.javaClass.simpleName}: ${e.message.orEmpty()}".trim().trimEnd(':')
         return when {
             // انتهت المهلة — الرسالة عربية بالفعل فلا نُضيف عليها.
             e is java.util.concurrent.TimeoutException -> e.message.orEmpty().ifBlank { raw }
-            raw.contains("PERMISSION_DENIED", true) || raw.contains("Missing or insufficient permissions", true) ->
-                "رفضت قواعد Firestore الكتابة.\nالسبب المرجّح: $raw\n" +
+            raw.contains("42501", true) || raw.contains("permission denied", true) ||
+                raw.contains("new row violates row-level security policy", true) ||
+                raw.contains("PERMISSION_DENIED", true) ->
+                "رفضت قواعد الأمان (RLS) في Supabase هذه العملية (كود 42501).\n" +
                     (if (ownerEmailUnverified)
                         "بريدك مطابق لحساب المالك لكنه **غير موثّق** — افتح بريدك واضغط رابط " +
-                            "التأكيد الذي أرسلناه، ثم أعد فتح التطبيق وحاول مجدداً.\n"
+                            "التأكيد، ثم أعد فتح التطبيق وحاول مجدداً.\n"
                      else "") +
-                    "الحل (بأيٍّ منهما):\n" +
-                    "١) سجّل الدخول بحساب المالك $OWNER_EMAIL (وبريد موثّق)\n" +
-                    "٢) أو انشر القواعد: firebase deploy --only firestore:rules\n" +
-                    "٣) أو اجعل دور هذا الحساب admin في مستند /users/{uid}"
-            raw.contains("UNAUTHENTICATED", true) ->
+                    "الحل:\n" +
+                    "١) سجّل الدخول بحساب يحمل صلاحية admin في جدول user_roles\n" +
+                    "٢) أو تأكد من تطبيق ملفات تهيئة Supabase RLS (supabase db push)"
+            raw.contains("UNAUTHENTICATED", true) || raw.contains("invalid_token", true) ||
+                raw.contains("JWT", true) ->
                 "الجلسة السحابية غير صالحة ($raw) — أعد تسجيل الدخول ثم جرّب مجدداً."
             raw.contains("UNAVAILABLE", true) || raw.contains("DEADLINE_EXCEEDED", true) ||
+                raw.contains("ConnectException", true) || raw.contains("UnknownHostException", true) ||
                 raw.contains("network", true) || raw.contains("NETWORK", true) ->
                 "تعذّر الوصول إلى السحابة ($raw) — تحقق من الاتصال بالإنترنت وأعد المحاولة."
-            raw.contains("FAILED_PRECONDITION", true) && raw.contains("index", true) ->
-                "ينقص فهرس في Firestore ($raw) — نفّذ: firebase deploy --only firestore:indexes"
-            raw.contains("NOT_FOUND", true) || raw.contains("no project", true) ->
-                "مشروع Firebase غير مرتبط بهذا البناء ($raw) — تأكد من وجود google-services.json الصحيح."
+            raw.contains("PGRST", true) ->
+                "خطأ في قاعدة بيانات Supabase ($raw) — تحقق من هيكل الجداول في Supabase."
             else -> raw.ifBlank { "حدث خطأ غير متوقع أثناء الاتصال بالسحابة" }
         }
     }
@@ -259,7 +256,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Auto-provision or update user profile and progress in Firestore under /users/{uid}
+     * Auto-provision or update user profile and progress in Supabase profiles
      */
     fun syncUserProfileToCloud() {
         val user = com.zmastery.english.cloud.CloudAuth.currentUser ?: return
@@ -422,7 +419,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * معرّف مستند Firestore لدرس محلي — نفس القاعدة المستخدمة في
+     * معرّف درس سحابي لدرس محلي — نفس القاعدة المستخدمة في
      * [com.zmastery.english.cloud.CloudSync.publishLessonToCloud] وفي سكربت
      * `upload_lessons.py`: `{courseId}_lesson_{lessonNo}`.
      * وجودها في مكان واحد هو ما يجعل شارة «تم الرفع» مطابقة للحقيقة.
@@ -517,7 +514,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Publish a single lesson package to Firestore (Admin only)
+     * Publish a single lesson package to Supabase (Admin only)
      */
     fun publishLessonToCloud(pkg: LessonPackage, onResult: (Boolean, String) -> Unit) {
         launch {
@@ -534,7 +531,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Publish multiple lesson packages to Firestore in a batch (Admin only)
+     * Publish multiple lesson packages to Supabase in a batch (Admin only)
      */
     fun publishLessonsBatchToCloud(packages: List<LessonPackage>, onResult: (Boolean, String) -> Unit) {
         launch {
@@ -552,7 +549,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Publish ALL locally stored lessons to Firestore `/lessons` collection.
+     * Publish ALL locally stored lessons to Supabase lessons table.
      */
     fun publishAllLocalLessonsToCloud(onResult: (Boolean, String) -> Unit) {
         launch {
@@ -699,7 +696,7 @@ internal class CloudController(internal val vm: AppViewModel) {
     }
 
     /**
-     * Pull every lesson document added/changed in Firestore since the last
+     * Pull every lesson document added/changed in Supabase since the last
      * sync and import them exactly like a manual batch import — instant,
      * fully local once downloaded, and audio generation (if enabled) queues
      * separately afterwards so this never freezes the UI.
@@ -755,7 +752,7 @@ internal class CloudController(internal val vm: AppViewModel) {
         }
     }
 
-    /** Push the CURRENT local state to Firestore under this learner's uid.
+    /** Push the CURRENT local state to Supabase under this learner's uid.
      *  API keys are stripped before pushing — they must NEVER leave the device. */
     fun pushProgressToCloud() {
         if (!cloudSyncEnabled) return
@@ -777,20 +774,34 @@ internal class CloudController(internal val vm: AppViewModel) {
         val msg = e.message.orEmpty()
         return when {
             msg.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) ||
+                msg.contains("invalid login credentials", ignoreCase = true) ||
                 msg.contains("wrong-password", ignoreCase = true) ||
                 msg.contains("invalid-credential", ignoreCase = true) ->
                 "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-            msg.contains("user-not-found", ignoreCase = true) || msg.contains("USER_NOT_FOUND", ignoreCase = true) ->
+            msg.contains("user-not-found", ignoreCase = true) ||
+                msg.contains("USER_NOT_FOUND", ignoreCase = true) ||
+                msg.contains("user not found", ignoreCase = true) ->
                 "لا يوجد حساب مسجل بهذا البريد الإلكتروني"
-            msg.contains("email-already-in-use", ignoreCase = true) || msg.contains("EMAIL_EXISTS", ignoreCase = true) ->
+            msg.contains("email-already-in-use", ignoreCase = true) ||
+                msg.contains("already registered", ignoreCase = true) ||
+                msg.contains("user_already_exists", ignoreCase = true) ||
+                msg.contains("EMAIL_EXISTS", ignoreCase = true) ->
                 "هذا البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك"
-            msg.contains("weak-password", ignoreCase = true) || msg.contains("WEAK_PASSWORD", ignoreCase = true) ->
+            msg.contains("weak-password", ignoreCase = true) ||
+                msg.contains("WEAK_PASSWORD", ignoreCase = true) ||
+                msg.contains("at least 6 characters", ignoreCase = true) ->
                 "كلمة المرور يجب ألا تقل عن 6 أحرف"
-            msg.contains("invalid-email", ignoreCase = true) || msg.contains("INVALID_EMAIL", ignoreCase = true) ->
+            msg.contains("invalid-email", ignoreCase = true) ||
+                msg.contains("INVALID_EMAIL", ignoreCase = true) ||
+                msg.contains("invalid format", ignoreCase = true) ->
                 "صيغة البريد الإلكتروني غير صحيحة"
-            msg.contains("network", ignoreCase = true) || msg.contains("NETWORK", ignoreCase = true) ->
+            msg.contains("network", ignoreCase = true) ||
+                msg.contains("NETWORK", ignoreCase = true) ||
+                msg.contains("ConnectException", ignoreCase = true) ||
+                msg.contains("UnknownHostException", ignoreCase = true) ->
                 "تعذّر الاتصال بالإنترنت، يرجى التحقق من الشبكة والمحاولة مجدداً"
-            msg.contains("too-many-requests", ignoreCase = true) ->
+            msg.contains("too-many-requests", ignoreCase = true) ||
+                msg.contains("rate limit", ignoreCase = true) ->
                 "تم تعطيل المحاولات مؤقتاً لكثرة المحاولات، يرجى المحاولة لاحقاً"
             else -> msg.ifBlank { "حدث خطأ أثناء المصادقة، يرجى المحاولة مجدداً" }
         }

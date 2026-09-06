@@ -125,7 +125,7 @@ data class Lesson(
      *      موجود فعلاً في `/lessons` — فيشمل أيضاً ما رفعه سكربت البايثون.
      */
     var publishedAtMillis: Long = 0L,
-    /** معرّف مستند Firestore الذي نُشر تحته الدرس (`{courseId}_lesson_{no}`). */
+    /** معرّف درس السحابة الذي نُشر تحته الدرس (`{courseId}_lesson_{no}`). */
     var publishedDocId: String = "",
 ) {
     /** A completed lesson becomes due for review as its interval elapses. */

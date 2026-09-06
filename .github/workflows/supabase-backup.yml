@@ -1,0 +1,42 @@
+name: Supabase Daily Backup
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Dump Supabase Database
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$PROJECT_REF" ] || [ -z "$DB_PASSWORD" ]; then
+            echo "Skipping backup: SUPABASE_PROJECT_REF or SUPABASE_DB_PASSWORD not configured"
+            exit 0
+          fi
+          mkdir -p backups
+          BACKUP_FILE="backups/supabase_backup_$(date +'%Y%m%d_%H%M%S').sql.gz"
+          PGPASSWORD="$DB_PASSWORD" pg_dump \
+            -h "db.${PROJECT_REF}.supabase.co" \
+            -p 5432 \
+            -U postgres \
+            -d postgres \
+            --clean --if-exists --no-owner --no-privileges \
+            | gzip > "$BACKUP_FILE"
+          echo "Backup created at $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+
+      - name: Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-database-backup
+          path: backups/*.sql.gz
+          retention-days: 90

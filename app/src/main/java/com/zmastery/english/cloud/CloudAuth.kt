@@ -16,41 +16,68 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.auth
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.user.UserInfo
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 /**
- * Authentication for the learner's personal account.
+ * Representation of an authenticated user in Supabase.
+ */
+data class CloudUser(
+    val uid: String,
+    val email: String? = null,
+    val displayName: String? = null,
+    val photoUrl: String? = null,
+    val isAnonymous: Boolean = false,
+    val isEmailVerified: Boolean = false,
+)
+
+/**
+ * Authentication for the learner's personal account via Supabase Auth.
  *
- * Supports both Google Play Services GoogleSignInClient (Native Universal Account Picker)
- * and Jetpack CredentialManager.
+ * Supports Jetpack CredentialManager, native GoogleSignInClient,
+ * and Supabase anonymous / email authentication.
  */
 object CloudAuth {
     private const val TAG = "CloudAuth"
 
-    private val auth get() = Firebase.auth
+    private val auth: Auth get() = SupabaseClientProvider.client.auth
 
-    val currentUser: FirebaseUser? get() = auth.currentUser
-    val uid: String? get() = auth.currentUser?.uid
-    val isAnonymous: Boolean get() = auth.currentUser?.isAnonymous ?: true
+    private fun UserInfo.toCloudUser(): CloudUser {
+        val meta = userMetadata
+        val name = meta?.get("full_name")?.jsonPrimitive?.content
+            ?: meta?.get("name")?.jsonPrimitive?.content
+            ?: meta?.get("display_name")?.jsonPrimitive?.content
+        val avatar = meta?.get("avatar_url")?.jsonPrimitive?.content
+            ?: meta?.get("picture")?.jsonPrimitive?.content
+        val anon = identities.isNullOrEmpty() && email.isNullOrBlank()
+        val verified = emailConfirmedAt != null
+        return CloudUser(
+            uid = id,
+            email = email,
+            displayName = name,
+            photoUrl = avatar,
+            isAnonymous = anon,
+            isEmailVerified = verified
+        )
+    }
 
-    val displayName: String? get() = auth.currentUser?.displayName
-    val email: String? get() = auth.currentUser?.email
-    val photoUrl: String? get() = auth.currentUser?.photoUrl?.toString()
+    val currentUser: CloudUser? get() = auth.currentUserOrNull()?.toCloudUser()
+    val uid: String? get() = currentUser?.uid
+    val isAnonymous: Boolean get() = currentUser?.isAnonymous ?: true
 
-    /**
-     * هل بريد الحساب الحالي موثّق؟ Google Sign-In يوثّقه دائماً تلقائياً؛
-     * حسابات البريد/كلمة المرور تحتاج ضغط رابط أُرسل بالبريد.
-     *
-     * مهم أمنياً: قواعد Firestore (`isSuperAdminToken`) لا تمنح صلاحيات
-     * المالك إلا لبريد موثّق — بدون هذا الشرط يستطيع أي شخص إنشاء حساب
-     * ببريد `mohammedalbkhyty@gmail.com` وكلمة مرور من اختياره وانتحال
-     * صلاحيات المالك دون أن يملك صندوق البريد فعلاً.
-     */
-    val isEmailVerified: Boolean get() = auth.currentUser?.isEmailVerified ?: false
+    val displayName: String? get() = currentUser?.displayName
+    val email: String? get() = currentUser?.email
+    val photoUrl: String? get() = currentUser?.photoUrl
+
+    val isEmailVerified: Boolean get() = currentUser?.isEmailVerified ?: false
 
     const val DEFAULT_WEB_CLIENT_ID = "836170376747-1ctsqum4pd34hf3bcvvvdkg42t7f6ni5.apps.googleusercontent.com"
 
@@ -75,7 +102,7 @@ object CloudAuth {
     val googleSignInAvailable: Boolean get() = true
 
     /**
-     * Build the standard GoogleSignInClient used by all Android apps to show the native account picker.
+     * Build standard GoogleSignInClient for account picker compatibility.
      */
     fun getGoogleSignInClient(context: Context): GoogleSignInClient {
         val effectiveClientId = resolveEffectiveWebClientId(context)
@@ -89,100 +116,99 @@ object CloudAuth {
 
     fun getGoogleSignInIntent(context: Context): Intent {
         val client = getGoogleSignInClient(context)
-        // Sign out first so the user can choose from all accounts every time
         runCatching { client.signOut() }
         return client.signInIntent
     }
 
     /**
-     * Ensure SOME Firebase user exists — call once at app startup.
+     * Ensure SOME Supabase user exists — call once at app startup.
      */
-    suspend fun ensureSignedIn(): FirebaseUser? {
-        auth.currentUser?.let { return it }
-        return runCatching { auth.signInAnonymously().await().user }.getOrNull()
+    suspend fun ensureSignedIn(): CloudUser? {
+        currentUser?.let { return it }
+        return runCatching {
+            auth.signInAnonymously()
+            currentUser
+        }.getOrNull()
     }
 
     /**
-     * Authenticate or link with Google ID Token in Firebase Auth.
+     * Authenticate or link with Google ID Token in Supabase Auth.
      */
-    suspend fun signInWithIdToken(idToken: String): Result<FirebaseUser?> = runCatching {
-        val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-        val current = auth.currentUser
-        val user = if (current != null && current.isAnonymous) {
-            try {
-                current.linkWithCredential(firebaseCredential).await().user
-            } catch (e: Exception) {
-                // If already linked to another account, sign in directly with that account
-                auth.signInWithCredential(firebaseCredential).await().user
-            }
-        } else {
-            auth.signInWithCredential(firebaseCredential).await().user
+    suspend fun signInWithIdToken(idToken: String): Result<CloudUser?> = runCatching {
+        auth.signInWith(IDToken) {
+            this.idToken = idToken
+            this.provider = Google
         }
-        user ?: throw IllegalStateException("فشل التحقق من هوية Google لدى Firebase")
+        val user = currentUser
+        user ?: throw IllegalStateException("فشل التحقق من هوية Google لدى Supabase")
     }
 
     /**
      * Sign in with Email and Password
      */
-    suspend fun signInWithEmail(email: String, pass: String): Result<FirebaseUser?> = runCatching {
+    suspend fun signInWithEmail(email: String, pass: String): Result<CloudUser?> = runCatching {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isBlank() || pass.isBlank()) {
             throw IllegalArgumentException("يرجى إدخال البريد الإلكتروني وكلمة المرور")
         }
-        val res = auth.signInWithEmailAndPassword(trimmedEmail, pass).await()
-        res.user ?: throw IllegalStateException("تعذّر تسجيل الدخول بالبريد الإلكتروني")
+        auth.signInWith(Email) {
+            this.email = trimmedEmail
+            this.password = pass
+        }
+        currentUser ?: throw IllegalStateException("تعذّر تسجيل الدخول بالبريد الإلكتروني")
     }
 
     /**
      * Sign up (Create new account) with Email, Password and Display Name
      */
-    suspend fun signUpWithEmail(email: String, pass: String, name: String): Result<FirebaseUser?> = runCatching {
+    suspend fun signUpWithEmail(email: String, pass: String, name: String): Result<CloudUser?> = runCatching {
         val trimmedEmail = email.trim()
         val trimmedName = name.trim()
         if (trimmedEmail.isBlank() || pass.length < 6) {
             throw IllegalArgumentException("كلمة المرور يجب ألا تقل عن 6 أحرف")
         }
-        val res = auth.createUserWithEmailAndPassword(trimmedEmail, pass).await()
-        val user = res.user ?: throw IllegalStateException("تعذّر إنشاء الحساب")
-        if (trimmedName.isNotBlank()) {
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                .setDisplayName(trimmedName)
-                .build()
-            user.updateProfile(profileUpdates).await()
+        auth.signUpWith(Email) {
+            this.email = trimmedEmail
+            this.password = pass
+            if (trimmedName.isNotBlank()) {
+                data = buildJsonObject {
+                    put("full_name", trimmedName)
+                    put("name", trimmedName)
+                    put("display_name", trimmedName)
+                }
+            }
         }
-        // يُرسَل تلقائياً — ضروري خصوصاً لو كان هذا بريد المالك: القواعد
-        // السحابية لا تمنح صلاحيات المالك إلا بعد توثيق البريد (اضغط الرابط).
-        runCatching { user.sendEmailVerification().await() }
-        user
+        currentUser ?: throw IllegalStateException("تعذّر إنشاء الحساب")
     }
 
-    /** إعادة إرسال رابط توثيق البريد للحساب الحالي (لو لم يوثَّق بعد). */
+    /** Resend email verification link */
     suspend fun resendEmailVerification(): Result<Unit> = runCatching {
-        val user = auth.currentUser ?: throw IllegalStateException("لا يوجد حساب مسجّل الدخول")
-        if (user.isEmailVerified) return@runCatching
-        user.sendEmailVerification().await()
+        val email = currentUser?.email ?: throw IllegalStateException("لا يوجد حساب مسجّل الدخول")
+        if (isEmailVerified) return@runCatching
+        auth.resendEmail(OtpType.Email.SIGNUP, email)
     }
 
-    /** يعيد تحميل بيانات المستخدم من Firebase — لازم بعد ضغط رابط التوثيق. */
+    /** Reload user session from Supabase */
     suspend fun reloadCurrentUser(): Result<Unit> = runCatching {
-        auth.currentUser?.reload()?.await() ?: Unit
+        runCatching {
+            auth.retrieveUserForCurrentSession(updateSession = true)
+        }
     }
 
-    /**
-     * Send Password Reset Email
-     */
+    /** Send Password Reset Email */
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> = runCatching {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isBlank()) {
             throw IllegalArgumentException("يرجى كتابة البريد الإلكتروني")
         }
-        auth.sendPasswordResetEmail(trimmedEmail).await()
+        auth.resetPasswordForEmail(trimmedEmail)
     }
 
     /**
-     * Fallback or direct Credential Manager sign in
+     * Jetpack Credential Manager sign in flow.
+     * Nonce is intentionally not added to prevent invalid_nonce mismatches.
      */
-    suspend fun signInWithCredentialManager(context: Context): Result<FirebaseUser?> = runCatching {
+    suspend fun signInWithCredentialManager(context: Context): Result<CloudUser?> = runCatching {
         val effectiveClientId = resolveEffectiveWebClientId(context)
         if (effectiveClientId.isBlank()) {
             throw IllegalStateException("يرجى إدخال Web Client ID")
@@ -220,12 +246,12 @@ object CloudAuth {
         signInWithIdToken(googleIdTokenCredential.idToken).getOrThrow()
     }
 
-    /** Sign out of Google and drop back to a fresh anonymous session. */
+    /** Sign out and revert to an anonymous session. */
     suspend fun signOut(context: Context? = null) {
         if (context != null) {
-            runCatching { getGoogleSignInClient(context).signOut().await() }
+            runCatching { getGoogleSignInClient(context).signOut() }
         }
-        auth.signOut()
+        runCatching { auth.signOut() }
         ensureSignedIn()
     }
 }

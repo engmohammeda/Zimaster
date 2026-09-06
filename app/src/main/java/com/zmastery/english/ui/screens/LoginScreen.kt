@@ -757,7 +757,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             text = {
                 Column {
                     Text(
-                        "لربط Google Sign-In بمشروع Firebase الخاص بك:\n1. افتح Firebase Console > Authentication > Sign-in method > Google.\n2. انسخ Web Client ID وضعه هنا إذا كان يختلف عن الافتراضي:",
+                        "لربط Google Sign-In بمشروع Supabase الخاص بك:\n1. افتح Google Cloud Console أو Supabase > Authentication > Providers > Google.\n2. انسخ Web Client ID وضعه هنا إذا كان يختلف عن الافتراضي:",
                         fontSize = 12.sp,
                         color = ZTextSecondary,
                         lineHeight = 18.sp,

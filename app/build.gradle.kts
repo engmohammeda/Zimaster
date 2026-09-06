@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -20,6 +19,15 @@ android {
         // baseline below.
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 2
         versionName = "1.1.0"
+
+        val supabaseUrl: String = (project.findProperty("SUPABASE_URL") as? String)
+            ?: System.getenv("SUPABASE_URL")
+            ?: "https://dummy-project.supabase.co"
+        val supabaseAnonKey: String = (project.findProperty("SUPABASE_ANON_KEY") as? String)
+            ?: System.getenv("SUPABASE_ANON_KEY")
+            ?: "dummy-anon-key"
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
     signingConfigs {
@@ -33,10 +41,8 @@ android {
 
     buildTypes {
         debug {
-            // توقيع الـ debug يستخدم المفتاح التلقائي لأدوات البناء (يُنشأ تلقائياً)
-            // بدل الاعتماد على debug.keystore الموجود في جذر المشروع وغير المودع،
-            // حتى لا يفشل assembleDebug في بيئة CI حين لا يوجد الملف.
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
         release {
             isMinifyEnabled = true
@@ -88,13 +94,16 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.2.0")
 
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
-    implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
+    // Supabase
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.1.1"))
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
 
-    // Google Sign-In
+    // Ktor OkHttp Client for Supabase
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
+
+    // Google Sign-In via Credential Manager & Play Services
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")

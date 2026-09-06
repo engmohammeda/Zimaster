@@ -266,7 +266,7 @@ fun ProfileContent(vm: AppViewModel) {
                     InfoRow(
                         Icons.Filled.CloudSync,
                         "المزامنة السحابية",
-                        if (vm.cloudSyncEnabled) "مفعّلة (Firebase Firestore) ✓" else "معطلة",
+                        if (vm.cloudSyncEnabled) "مفعّلة (Supabase) ✓" else "معطلة",
                     )
                     InfoRow(
                         Icons.Filled.Security,

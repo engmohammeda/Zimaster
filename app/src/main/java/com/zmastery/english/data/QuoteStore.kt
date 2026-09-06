@@ -19,7 +19,7 @@ import kotlinx.serialization.json.Json
  */
 object QuoteStore {
 
-    /** عبارة سحابية (يضيفها المسؤول عبر Firestore وتتزامن). */
+    /** عبارة سحابية (يضيفها المسؤول عبر Supabase وتتزامن). */
     @Serializable
     data class CloudQuote(
         val id: String = "",

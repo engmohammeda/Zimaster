@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 =============================================================================
-Z-Mastery Bulk Lessons Cloud Uploader
+Z-Mastery Bulk Lessons Cloud Uploader (Supabase)
 =============================================================================
-هذا السكربت يقوم برفع وقراءة كافة مجلدات الدروس (القراءة، القواعد، الصوتيات،
-الكتابة، المحادثة، من الصفر) ورفعها تلقائياً وبشكل دفعي إلى Firebase Firestore.
+هذا السكربت يقوم بقراءة كافة مجلدات الدروس (القراءة، القواعد، الصوتيات،
+الكتابة، المحادثة، من الصفر) ورفعها تلقائياً وبشكل دفعي إلى Supabase (Postgres).
 """
 
 import os
@@ -15,60 +15,36 @@ import glob
 import time
 
 try:
-    import firebase_admin
-    from firebase_admin import credentials, firestore
+    from supabase import create_client, Client
 except ImportError:
-    print("❌ الرجاء تثبيت مكتبة firebase-admin أولاً عبر الأمر:")
-    print("   pip install firebase-admin")
+    print("❌ الرجاء تثبيت مكتبة supabase أولاً عبر الأمر:")
+    print("   pip install supabase")
     sys.exit(1)
 
-# اسم مشروع Firebase (لازم فقط مع بيانات اعتماد المستخدم/ADC، وليس مع مفتاح حساب خدمة)
-FIREBASE_PROJECT_ID = "zmastery"
-
-# مسار اختياري لملف مفتاح حساب خدمة (Service Account) — لن يُستخدم غالباً لأن
-# أغلب مؤسسات Google Cloud الحديثة تمنع تنزيله افتراضياً عبر سياسة
-# iam.disableServiceAccountKeyCreation. اترك هذا الملف غير موجود واستخدم بدلاً
-# منه بيانات اعتماد المستخدم (ADC) كما هو موضّح أدناه — لا تحتاج أي مفتاح.
-SERVICE_ACCOUNT_KEY_PATH = "serviceAccountKey.json"
+# بيانات الاتصال بـ Supabase من متغيرات البيئة (لا تُكتب في الكود أبداً)
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # المجلد الأساسي الذي يحوي مجلدات الدروس
-LESSONS_ROOT_DIR = "./الدروس"  # أو ضع المسار لمجلد الدروس لديك
+LESSONS_ROOT_DIR = "./الدروس"
 
-def init_firebase():
-    # 1) الطريقة المفضّلة (تعمل حتى مع سياسة iam.disableServiceAccountKeyCreation
-    #    المفعّلة على مؤسستك): بيانات اعتماد المستخدم الافتراضية (ADC) — سجّل
-    #    الدخول مرة واحدة من جهازك بالأمر التالي (لا يُنشئ أي مفتاح حساب خدمة،
-    #    بل جلسة شخصية مؤقتة قابلة للإلغاء بأمر gcloud auth revoke):
-    #        gcloud auth application-default login \
-    #          --scopes=https://www.googleapis.com/auth/cloud-platform
-    #    بعدها شغّل هذا السكربت مباشرة بلا أي إعداد إضافي.
-    if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
-        try:
-            firebase_admin.initialize_app(options={"projectId": FIREBASE_PROJECT_ID})
-            print("✓ تمت المصادقة عبر بيانات اعتماد المستخدم الافتراضية (ADC) — بلا أي مفتاح JSON.")
-            return firestore.client()
-        except Exception as e:
-            print("❌ لم يتم العثور على مفتاح حساب خدمة ولا بيانات اعتماد افتراضية صالحة.")
-            print("💡 نفّذ مرة واحدة من جهازك:")
-            print("   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform")
-            print(f"   (تفاصيل الخطأ: {e})")
-            sys.exit(1)
-
-    # 2) الطريقة القديمة (فقط إن كانت مؤسستك من الاستثناءات القليلة التي لا
-    #    تزال تسمح بتنزيل مفاتيح حسابات الخدمة، أو استخدمت مشروعاً استثنيته
-    #    يدوياً من السياسة):
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    print("✓ تمت المصادقة عبر ملف مفتاح حساب الخدمة المحلي.")
-    return firestore.client()
+def init_supabase() -> Client:
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        print("❌ لم يتم العثور على SUPABASE_URL أو SUPABASE_SERVICE_ROLE_KEY في متغيرات البيئة.")
+        print("💡 للتنفيذ:")
+        print("   export SUPABASE_URL='https://<project-ref>.supabase.co'")
+        print("   export SUPABASE_SERVICE_ROLE_KEY='eyJhbGci...'")
+        print("   python upload_lessons.py")
+        sys.exit(1)
+    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 def normalize_course_id(raw_id, folder_name=""):
     raw = (raw_id or "").strip().lower()
     folder = folder_name.strip().lower()
     
-    if "read" in raw or "قراء" in raw or "قراء" in folder or "reading" in folder:
+    if "read" in raw or "قراء" in raw or "reading" in folder:
         return "reading_l1"
-    if "gram" in raw or "قواعد" in raw or "قواعد" in folder or "grammar" in folder:
+    if "gram" in raw or "قواعد" in raw or "grammar" in folder:
         return "grammar_l1"
     if "phon" in raw or "صوت" in raw or "صوتيات" in folder or "phonetics" in folder:
         return "phonetics"
@@ -101,7 +77,6 @@ def extract_lessons_from_file(file_path):
         if "lessons" in data and isinstance(data["lessons"], list):
             for item in data["lessons"]:
                 if isinstance(item, dict):
-                    # لو كان يحوي metadata
                     if "metadata" not in item and "lesson_no" in item:
                         item = {
                             "metadata": {
@@ -122,7 +97,7 @@ def extract_lessons_from_file(file_path):
     
     return lessons
 
-def upload_all_lessons(db, root_dir):
+def upload_all_lessons(sb: Client, root_dir):
     json_files = glob.glob(os.path.join(root_dir, "**/*.json"), recursive=True)
     print(f"🔍 تم العثور على {len(json_files)} ملف JSON في المجلد...")
 
@@ -136,55 +111,42 @@ def upload_all_lessons(db, root_dir):
         print("⚠️ لا توجد دروس لرفعها.")
         return
 
-    batch = db.batch()
-    count = 0
-    uploaded_total = 0
-
+    rows = []
     for lesson in all_lessons:
         meta = lesson.get("metadata", {})
         raw_course_id = meta.get("course_id", "")
         course_name_ar = meta.get("course_name_ar", "")
         lesson_no = meta.get("lesson_no", 1)
         title = meta.get("title", "بدون عنوان")
-        level = meta.get("level", 1)
+        level = str(meta.get("level", 1))
 
         course_id = normalize_course_id(raw_course_id, course_name_ar)
         doc_id = f"{course_id}_lesson_{lesson_no}"
 
-        doc_ref = db.collection("lessons").document(doc_id)
-        
-        # حفظ كود JSON الكامل للدرس
         lesson_json_str = json.dumps(lesson, ensure_ascii=False)
-        
         now_millis = int(time.time() * 1000)
-        doc_data = {
-            "docId": doc_id,
-            "courseId": course_id,
-            "lessonNo": lesson_no,
+
+        rows.append({
+            "doc_id": doc_id,
+            "course_id": course_id,
+            "lesson_no": int(lesson_no),
             "title": title,
             "level": level,
             "json": lesson_json_str,
-            "updated_at": now_millis,
-            "client_updated_at": now_millis,
-            "updatedAtServer": firestore.SERVER_TIMESTAMP,
-        }
+            "updated_at": now_millis
+        })
 
-        batch.set(doc_ref, doc_data, merge=True)
-        count += 1
-        uploaded_total += 1
+    # Batch upsert in chunks of 100
+    chunk_size = 100
+    uploaded_total = 0
+    for i in range(0, len(rows), chunk_size):
+        chunk = rows[i:i + chunk_size]
+        sb.table("lessons").upsert(chunk).execute()
+        uploaded_total += len(chunk)
+        print(f"  ✓ تم رفع {uploaded_total}/{len(rows)} درس...")
 
-        if count >= 400:
-            batch.commit()
-            print(f"  ✓ تم رفع {uploaded_total} درس...")
-            batch = db.batch()
-            count = 0
-
-    if count > 0:
-        batch.commit()
-        print(f"  ✓ تم رفع {uploaded_total} درس...")
-
-    print(f"\n🎉 اكتمل رفع جميع الدروس بنجاح إلى Firebase Firestore! (الإجمالي: {uploaded_total})")
+    print(f"\n🎉 اكتمل رفع جميع الدروس بنجاح إلى Supabase! (الإجمالي: {uploaded_total})")
 
 if __name__ == "__main__":
-    db = init_firebase()
-    upload_all_lessons(db, LESSONS_ROOT_DIR)
+    sb = init_supabase()
+    upload_all_lessons(sb, LESSONS_ROOT_DIR)

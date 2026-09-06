@@ -59,23 +59,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: google-services.json (سرّ إن وُجد وإلا الملف المودع)
+      - name: Configure Supabase Credentials
         env:
-          GSC: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          SB_URL: ${{ secrets.SUPABASE_URL }}
+          SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -n "$GSC" ]; then
-            # يقبل السرّ بصيغتين: JSON خام (يبدأ بـ {) أو base64 — بلا تحويل إجباري.
-            case "$GSC" in
-              '{'*) printf '%s' "$GSC" > app/google-services.json ;;
-              *)    printf '%s' "$GSC" | base64 -d > app/google-services.json ;;
-            esac
-          elif [ -f app/google-services.json ]; then
-            echo "لا سرّ مضبوط — استخدم app/google-services.json المودع (آمن: معرفات عامة فقط)"
-          else
-            echo "::error::لا سرّ GOOGLE_SERVICES_JSON ولا ملف مودع في app/"
-            exit 1
+          if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
+            echo "SUPABASE_URL=$SB_URL" >> local.properties
+            echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
           fi
-          test -s app/google-services.json
 
       - name: Unit tests (بوابة الجودة)
         run: |
@@ -130,23 +122,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: google-services.json (سرّ إن وُجد وإلا الملف المودع)
+      - name: Configure Supabase Credentials
         env:
-          GSC: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          SB_URL: ${{ secrets.SUPABASE_URL }}
+          SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -n "$GSC" ]; then
-            # يقبل السرّ بصيغتين: JSON خام (يبدأ بـ {) أو base64 — بلا تحويل إجباري.
-            case "$GSC" in
-              '{'*) printf '%s' "$GSC" > app/google-services.json ;;
-              *)    printf '%s' "$GSC" | base64 -d > app/google-services.json ;;
-            esac
-          elif [ -f app/google-services.json ]; then
-            echo "لا سرّ مضبوط — استخدم app/google-services.json المودع (آمن: معرفات عامة فقط)"
-          else
-            echo "::error::لا سرّ GOOGLE_SERVICES_JSON ولا ملف مودع في app/"
-            exit 1
+          if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
+            echo "SUPABASE_URL=$SB_URL" >> local.properties
+            echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
           fi
-          test -s app/google-services.json
 
       - name: Prepare Signing Keystore
         id: signing

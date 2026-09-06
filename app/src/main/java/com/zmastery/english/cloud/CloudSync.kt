@@ -1,36 +1,47 @@
 package com.zmastery.english.cloud
 
 import android.os.Build
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.firestore
 import com.zmastery.english.data.ImportEngine
 import com.zmastery.english.data.LessonPackage
 import com.zmastery.english.data.QuoteStore
-import kotlinx.coroutines.tasks.await
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import io.github.jan.supabase.realtime.realtime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
- * Cloud content + user provisioning + progress sync built on Cloud Firestore.
+ * Cloud content, user provisioning, progress sync, and realtime updates built on Supabase.
  */
 object CloudSync {
 
-    private val db get() = Firebase.firestore
+    private val supabase: SupabaseClient get() = SupabaseClientProvider.client
 
-    private const val LESSONS_COLLECTION = "lessons"
-    private const val USERS_COLLECTION = "users"
-    private const val ANNOUNCEMENTS_COLLECTION = "announcements"
-    private const val QUOTES_COLLECTION = "quotes"
-    private const val LEADERBOARD_COLLECTION = "leaderboard"
-    private const val UPDATED_AT = "updated_at"
+    private const val LESSONS_TABLE = "lessons"
+    private const val PROFILES_TABLE = "profiles"
+    private const val ANNOUNCEMENTS_TABLE = "announcements"
+    private const val QUOTES_TABLE = "quotes"
+    private const val LEADERBOARD_VIEW = "leaderboard"
+    private const val USER_PROGRESS_TABLE = "user_progress"
+    private const val USER_ROLES_TABLE = "user_roles"
+    private const val PERMISSION_PROBE_ID = "__permission_probe__"
 
-    /** Known super-admin emails */
-    private val SUPER_ADMIN_EMAILS = setOf(
-        "mohammedalbkhyty@gmail.com",
-    )
-
+    @Serializable
     data class Announcement(
         val id: String = "",
         val title: String = "",
@@ -68,168 +79,210 @@ object CloudSync {
         val deviceModel: String? = null,
     )
 
+    @Serializable
+    private data class ProfileRow(
+        val user_id: String,
+        val email: String? = null,
+        val display_name: String = "Learner",
+        val photo_url: String? = null,
+        val is_anonymous: Boolean = false,
+        val streak: Int = 0,
+        val xp: Int = 0,
+        val completed_lessons_count: Int = 0,
+        val words_learned_count: Int = 0,
+        val accuracy: Double = 0.0,
+        val last_active_millis: Long = 0L,
+        val device_model: String? = null,
+        val android_version: String? = null,
+        val app_version: String? = null,
+        val platform: String? = "android",
+        val role: String = "student",
+        val created_at_millis: Long = 0L,
+    )
+
+    @Serializable
+    private data class LeaderboardRow(
+        val uid: String,
+        val display_name: String = "Learner",
+        val photo_url: String? = null,
+        val streak: Int = 0,
+        val xp: Int = 0,
+        val completed_lessons_count: Int = 0,
+        val words_learned_count: Int = 0,
+        val accuracy: Double = 0.0,
+        val last_active_millis: Long = 0L,
+    )
+
+    @Serializable
+    private data class LessonRow(
+        val doc_id: String,
+        val course_id: String,
+        val lesson_no: Int,
+        val title: String,
+        val level: String,
+        val json: String,
+        val updated_at: Long,
+    )
+
+    @Serializable
+    private data class LessonIndexRow(
+        val doc_id: String,
+        val updated_at: Long,
+    )
+
+    @Serializable
+    private data class UserProgressRow(
+        val user_id: String,
+        val payload: JsonElement,
+        val client_ts: Long = 0L,
+    )
+
+    @Serializable
+    private data class QuoteRow(
+        val id: String,
+        val text: String,
+        val author: String = "",
+        val is_active: Boolean = true,
+        val created_at_millis: Long = 0L,
+        val created_by_uid: String? = null,
+    )
+
+    @Serializable
+    private data class AnnouncementRow(
+        val id: String,
+        val title: String,
+        val message: String,
+        val type: String = "info",
+        val created_at_millis: Long = 0L,
+        val is_active: Boolean = true,
+        val is_probe: Boolean = false,
+    )
+
+    @Serializable
+    private data class UserRoleRow(
+        val user_id: String,
+        val role: String,
+    )
+
     /**
-     * Auto-provision or update the user document in `/users/{uid}` in Firestore.
+     * Auto-provision or update the user document in `profiles` table in Supabase.
      */
     suspend fun provisionOrUpdateUser(
-        user: FirebaseUser,
+        user: CloudUser,
         profile: UserProfileSnapshot,
     ): Result<String> = runCatching {
-        val userRef = db.collection(USERS_COLLECTION).document(user.uid)
-        val existingDoc = userRef.get().await()
+        val now = System.currentTimeMillis()
 
-        // مطابقة تماماً لشرط `isSuperAdminToken()` في firestore.rules: البريد
-        // وحده لا يكفي — يجب أن يكون موثّقاً، وإلا يرسل العميل role="admin"
-        // فترفضه القواعد، فيبقى المستند بلا 'role' وتبدو الكتابة "فاشلة بصمت".
-        val isSuperAdmin = user.isEmailVerified &&
-            (user.email?.lowercase()?.trim() in SUPER_ADMIN_EMAILS)
-        val existingRole = existingDoc.getString("role")
+        // Fetch current role from user_roles or RPC is_admin
+        val isAdmin = runCatching {
+            supabase.postgrest.rpc("is_admin").decodeAs<Boolean>()
+        }.getOrDefault(false)
 
-        val userData = mutableMapOf<String, Any?>(
-            "uid" to user.uid,
-            "email" to user.email,
-            "displayName" to (user.displayName ?: profile.displayName ?: "Learner"),
-            "photoUrl" to (user.photoUrl?.toString() ?: profile.photoUrl),
-            "isAnonymous" to user.isAnonymous,
-            "streak" to profile.streak,
-            "xp" to profile.xp,
-            "completedLessonsCount" to profile.completedLessonsCount,
-            "wordsLearnedCount" to profile.wordsLearnedCount,
-            "accuracy" to profile.accuracy,
-            "lastActive" to FieldValue.serverTimestamp(),
-            "lastActiveMillis" to System.currentTimeMillis(),
-            "deviceModel" to "${Build.MANUFACTURER} ${Build.MODEL}",
-            "androidVersion" to Build.VERSION.RELEASE,
-            "appVersion" to com.zmastery.english.BuildConfig.VERSION_NAME,
-            "platform" to "android",
+        val currentRole = if (isAdmin) "admin" else {
+            runCatching {
+                supabase.from(USER_ROLES_TABLE).select {
+                    filter { eq("user_id", user.uid) }
+                }.decodeSingleOrNull<UserRoleRow>()?.role
+            }.getOrNull() ?: "student"
+        }
+
+        val row = ProfileRow(
+            user_id = user.uid,
+            email = user.email,
+            display_name = user.displayName ?: profile.displayName ?: "Learner",
+            photo_url = user.photoUrl ?: profile.photoUrl,
+            is_anonymous = user.isAnonymous,
+            streak = profile.streak,
+            xp = profile.xp,
+            completed_lessons_count = profile.completedLessonsCount,
+            words_learned_count = profile.wordsLearnedCount,
+            accuracy = profile.accuracy,
+            last_active_millis = now,
+            device_model = "${Build.MANUFACTURER} ${Build.MODEL}",
+            android_version = Build.VERSION.RELEASE,
+            app_version = com.zmastery.english.BuildConfig.VERSION_NAME,
+            platform = "android",
+            role = currentRole,
+            created_at_millis = now,
         )
 
-        // SECURITY (anti privilege-escalation): the 'role' key is written ONLY
-        // by the verified super-admin account. Everyone else must omit it
-        // entirely — Firestore rules reject any write that attempts to change
-        // 'role', so sending it would break the whole profile sync.
-        if (isSuperAdmin) userData["role"] = "admin"
-
-        if (!existingDoc.exists()) {
-            userData["createdAt"] = FieldValue.serverTimestamp()
-            userData["createdAtMillis"] = System.currentTimeMillis()
-        }
-
-        userRef.set(userData, SetOptions.merge()).await()
-
-        // Public leaderboard mirror. /leaderboard is readable by EVERY signed-in
-        // learner, so it must never contain the email (or any private field) —
-        // the same rule also validates this server-side.
-        db.collection(LEADERBOARD_COLLECTION).document(user.uid).set(
-            mapOf(
-                "uid" to user.uid,
-                "displayName" to (user.displayName ?: profile.displayName ?: "Learner"),
-                "photoUrl" to (user.photoUrl?.toString() ?: profile.photoUrl),
-                "streak" to profile.streak,
-                "xp" to profile.xp,
-                "completedLessonsCount" to profile.completedLessonsCount,
-                "wordsLearnedCount" to profile.wordsLearnedCount,
-                "accuracy" to profile.accuracy,
-                "lastActiveMillis" to System.currentTimeMillis(),
-            ),
-            SetOptions.merge(),
-        ).await()
-
-        when {
-            isSuperAdmin -> "admin"
-            existingRole != null -> existingRole
-            else -> "student"
-        }
+        supabase.from(PROFILES_TABLE).upsert(row)
+        currentRole
     }
 
     /**
-     * Fetch the user's role from Firestore ("admin" or "student")
+     * Fetch the user's role from Supabase ("admin" or "student")
      */
     suspend fun fetchUserRole(uid: String): String = runCatching {
-        val doc = db.collection(USERS_COLLECTION).document(uid).get().await()
-        doc.getString("role") ?: "student"
+        val roleRow = supabase.from(USER_ROLES_TABLE).select {
+            filter { eq("user_id", uid) }
+        }.decodeSingleOrNull<UserRoleRow>()
+        roleRow?.role ?: "student"
     }.getOrDefault("student")
 
     /**
-     * نفس [fetchUserRole] لكنها تميّز «لا يوجد مستند» من «المستند بلا دور» —
-     * يحتاجها تشخيص سبب رفض النشر في شاشة أدوات المطور.
-     * القيم: "admin" / "student" / "no-doc".
+     * Distinguishes "no-doc" from "admin" / "student" for developer UI diagnostics.
      */
     suspend fun fetchRoleDoc(uid: String): Result<String> = runCatching {
-        val doc = db.collection(USERS_COLLECTION).document(uid).get().await()
-        if (!doc.exists()) "no-doc" else (doc.getString("role") ?: "student")
+        val profile = supabase.from(PROFILES_TABLE).select {
+            filter { eq("user_id", uid) }
+        }.decodeSingleOrNull<ProfileRow>()
+        if (profile == null) "no-doc" else profile.role
     }
 
     /**
-     * Fetch all registered users (for admin dashboard)
+     * Fetch all registered users (for admin dashboard).
      */
     suspend fun fetchAllUsers(): Result<List<UserRecord>> = runCatching {
-        val snap = try {
-            db.collection(USERS_COLLECTION)
-                .orderBy("lastActiveMillis", Query.Direction.DESCENDING)
-                .limit(100)
-                .get()
-                .await()
+        val rows = try {
+            supabase.from(PROFILES_TABLE).select {
+                order("last_active_millis", Order.DESCENDING)
+                limit(100)
+            }.decodeList<ProfileRow>()
         } catch (e: Exception) {
-            // Fallback without ordering in case index or field is not indexed yet
-            db.collection(USERS_COLLECTION)
-                .limit(100)
-                .get()
-                .await()
+            supabase.from(PROFILES_TABLE).select {
+                limit(100)
+            }.decodeList<ProfileRow>()
         }
 
-        snap.documents.mapNotNull { doc ->
+        rows.map { doc ->
             UserRecord(
-                uid = doc.getString("uid") ?: doc.id,
-                email = doc.getString("email"),
-                displayName = doc.getString("displayName") ?: "مستخدم",
-                photoUrl = doc.getString("photoUrl"),
-                role = doc.getString("role") ?: "student",
-                streak = (doc.getLong("streak") ?: 0L).toInt(),
-                xp = (doc.getLong("xp") ?: 0L).toInt(),
-                completedLessonsCount = (doc.getLong("completedLessonsCount") ?: 0L).toInt(),
-                wordsLearnedCount = (doc.getLong("wordsLearnedCount") ?: 0L).toInt(),
-                accuracy = doc.getDouble("accuracy") ?: 0.0,
-                lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
-                deviceModel = doc.getString("deviceModel"),
+                uid = doc.user_id,
+                email = doc.email,
+                displayName = doc.display_name,
+                photoUrl = doc.photo_url,
+                role = doc.role,
+                streak = doc.streak,
+                xp = doc.xp,
+                completedLessonsCount = doc.completed_lessons_count,
+                wordsLearnedCount = doc.words_learned_count,
+                accuracy = doc.accuracy,
+                lastActiveMillis = doc.last_active_millis,
+                deviceModel = doc.device_model,
             )
         }.sortedByDescending { it.lastActiveMillis }
     }
 
     // ---------------------------------------------------------------- LESSONS
 
-    /** One lesson document pulled from Firestore. */
     data class RemoteLesson(val docId: String, val json: String, val updatedAtMillis: Long)
 
     /**
      * Fetch every lesson document added/changed since [sinceMillis]
      */
     suspend fun fetchLessonsSince(sinceMillis: Long): Result<List<RemoteLesson>> = runCatching {
-        val snap = try {
-            if (sinceMillis > 0L) {
-                db.collection(LESSONS_COLLECTION)
-                    .whereGreaterThan(UPDATED_AT, sinceMillis)
-                    .orderBy(UPDATED_AT, Query.Direction.ASCENDING)
-                    .get()
-                    .await()
-            } else {
-                db.collection(LESSONS_COLLECTION)
-                    .get()
-                    .await()
-            }
-        } catch (e: Exception) {
-            // Fallback to plain collection fetch
-            db.collection(LESSONS_COLLECTION)
-                .get()
-                .await()
+        val rows = if (sinceMillis > 0L) {
+            supabase.from(LESSONS_TABLE).select {
+                filter { gt("updated_at", sinceMillis) }
+                order("updated_at", Order.ASCENDING)
+            }.decodeList<LessonRow>()
+        } else {
+            supabase.from(LESSONS_TABLE).select {
+                order("updated_at", Order.ASCENDING)
+            }.decodeList<LessonRow>()
         }
 
-        snap.documents.mapNotNull { doc ->
-            val json = doc.getString("json") ?: return@mapNotNull null
-            val updatedAt = doc.getLong(UPDATED_AT) ?: 0L
-            if (sinceMillis > 0L && updatedAt <= sinceMillis) null
-            else RemoteLesson(doc.id, json, updatedAt)
-        }.sortedBy { it.updatedAtMillis }
+        rows.map { RemoteLesson(it.doc_id, it.json, it.updated_at) }
     }
 
     suspend fun fetchAllLessons(): Result<List<RemoteLesson>> = fetchLessonsSince(0L)
@@ -263,167 +316,199 @@ object CloudSync {
     // ---------------------------------------------------------------- PUBLISH / ADMIN (LESSONS)
 
     /**
-     * Publish or update a single lesson package to Firestore under `/lessons/{docId}`.
+     * Publish or update a single lesson package in Supabase under `lessons`.
      */
     suspend fun publishLessonToCloud(pkg: LessonPackage): Result<String> = runCatching {
         val courseKey = pkg.metadata.courseId.ifBlank { "l1_scratch" }
         val docId = "${courseKey}_lesson_${pkg.metadata.lessonNo}"
         val json = ImportEngine.json.encodeToString(LessonPackage.serializer(), pkg)
+        val now = System.currentTimeMillis()
 
-        val docData = mapOf(
-            "docId" to docId,
-            "courseId" to courseKey,
-            "lessonNo" to pkg.metadata.lessonNo,
-            "title" to pkg.metadata.title,
-            "level" to pkg.metadata.level,
-            "json" to json,
-            UPDATED_AT to System.currentTimeMillis(),
-            "updatedAtServer" to FieldValue.serverTimestamp(),
+        val row = LessonRow(
+            doc_id = docId,
+            course_id = courseKey,
+            lesson_no = pkg.metadata.lessonNo,
+            title = pkg.metadata.title,
+            level = pkg.metadata.level.toString(),
+            json = json,
+            updated_at = now,
         )
 
-        db.collection(LESSONS_COLLECTION).document(docId).set(docData, SetOptions.merge()).await()
+        supabase.from(LESSONS_TABLE).upsert(row)
         docId
     }
 
     /**
-     * Publish a batch of lesson packages to Firestore.
+     * Publish a batch of lesson packages to Supabase.
      */
     suspend fun publishLessonsBatchToCloud(packages: List<LessonPackage>): Result<Int> = runCatching {
-        var count = 0
-        packages.forEach { pkg ->
-            publishLessonToCloud(pkg).getOrThrow()
-            count++
+        val now = System.currentTimeMillis()
+        val rows = packages.map { pkg ->
+            val courseKey = pkg.metadata.courseId.ifBlank { "l1_scratch" }
+            val docId = "${courseKey}_lesson_${pkg.metadata.lessonNo}"
+            val json = ImportEngine.json.encodeToString(LessonPackage.serializer(), pkg)
+            LessonRow(
+                doc_id = docId,
+                course_id = courseKey,
+                lesson_no = pkg.metadata.lessonNo,
+                title = pkg.metadata.title,
+                level = pkg.metadata.level.toString(),
+                json = json,
+                updated_at = now,
+            )
         }
-        count
+        supabase.from(LESSONS_TABLE).upsert(rows)
+        packages.size
     }
 
     /**
-     * Delete a lesson from Firestore by docId.
+     * Delete a lesson from Supabase by docId.
      */
     suspend fun deleteLessonFromCloud(docId: String): Result<Unit> = runCatching {
-        db.collection(LESSONS_COLLECTION).document(docId).delete().await()
+        supabase.from(LESSONS_TABLE).delete {
+            filter { eq("doc_id", docId) }
+        }
         Unit
     }
 
     /**
-     * فهرس الدروس الموجودة فعلاً في السحابة: `docId → updated_at`.
-     *
-     * هذا هو مصدر الحقيقة لشارة «تم الرفع» — يشمل أيضاً الدروس التي رفعها
-     * سكربت البايثون خارج التطبيق. ملاحظة تقنية: Firestore على أندرويد لا
-     * يدعم اختيار حقول معيّنة، لذا تُنزَّل المستندات كاملة؛ لهذا يُستدعى
-     * الفحص بطلب صريح من زر «التحقق من السحابة» لا تلقائياً.
+     * Index of lessons in Supabase: docId -> updated_at.
+     * Uses column projection to only download doc_id and updated_at, saving network bandwidth.
      */
     suspend fun fetchCloudLessonIndex(): Result<Map<String, Long>> = runCatching {
-        val snap = db.collection(LESSONS_COLLECTION).get().await()
-        snap.documents.associate { doc -> doc.id to (doc.getLong(UPDATED_AT) ?: 0L) }
+        val rows = supabase.from(LESSONS_TABLE)
+            .select(Columns.list("doc_id", "updated_at"))
+            .decodeList<LessonIndexRow>()
+        rows.associate { it.doc_id to it.updated_at }
     }
 
     // ---------------------------------------------------------------- QUOTES
 
     /**
-     * يسحب كل العبارات النشطة من `/quotes` (يضيفها المسؤول وتتزامن عبر الأجهزة).
+     * Pull active quotes from Supabase.
      */
     suspend fun pullQuotes(): Result<List<QuoteStore.CloudQuote>> = runCatching {
-        val snap = db.collection(QUOTES_COLLECTION)
-            .whereEqualTo("active", true)
-            .get()
-            .await()
-        snap.documents.mapNotNull { doc ->
-            val text = doc.getString("text") ?: return@mapNotNull null
+        val rows = supabase.from(QUOTES_TABLE).select {
+            filter { eq("is_active", true) }
+        }.decodeList<QuoteRow>()
+
+        rows.map {
             QuoteStore.CloudQuote(
-                id = doc.id,
-                text = text,
-                author = doc.getString("author") ?: "",
-                active = doc.getBoolean("active") ?: true,
+                id = it.id,
+                text = it.text,
+                author = it.author,
+                active = it.is_active,
             )
         }
     }
 
     /**
-     * يضيف المسؤول عبارة جديدة إلى `/quotes` فتظهر لكل الأجهزة عند مزامنتها.
+     * Add quote to Supabase (Admin only).
      */
     suspend fun addQuote(text: String, author: String, uid: String): Result<String> = runCatching {
         require(text.isNotBlank()) { "نص العبارة فارغ" }
-        val ref = db.collection(QUOTES_COLLECTION).document()
-        ref.set(
-            mapOf(
-                "text" to text.trim(),
-                "author" to author.trim(),
-                "active" to true,
-                "createdAt" to FieldValue.serverTimestamp(),
-                "createdAtMillis" to System.currentTimeMillis(),
-                "createdByUid" to uid,
-            )
-        ).await()
-        ref.id
+        val newId = java.util.UUID.randomUUID().toString()
+        val row = QuoteRow(
+            id = newId,
+            text = text.trim(),
+            author = author.trim(),
+            is_active = true,
+            created_at_millis = System.currentTimeMillis(),
+            created_by_uid = uid,
+        )
+        supabase.from(QUOTES_TABLE).insert(row)
+        newId
     }
 
-    /** يحذف المسؤول عبارة (إلغاء تفعيلها بالكامل). */
+    /**
+     * Delete quote by id.
+     */
     suspend fun deleteQuote(quoteId: String): Result<Unit> = runCatching {
-        db.collection(QUOTES_COLLECTION).document(quoteId).delete().await()
+        supabase.from(QUOTES_TABLE).delete {
+            filter { eq("id", quoteId) }
+        }
         Unit
     }
 
     // ---------------------------------------------------------------- PROGRESS
 
-    private fun progressDoc(uid: String) =
-        db.collection("users").document(uid).collection("progress").document("state")
-
+    /**
+     * Push user progress to Supabase via `push_progress` RPC.
+     */
     suspend fun pushProgress(uid: String, stateJson: String): Result<Unit> = runCatching {
-        progressDoc(uid).set(
-            mapOf(
-                "json" to stateJson,
-                UPDATED_AT to FieldValue.serverTimestamp(),
-                "client_updated_at" to System.currentTimeMillis(),
-            )
-        ).await()
+        val jsonElement = Json.parseToJsonElement(stateJson)
+        val clientTs = System.currentTimeMillis()
+        val params = buildJsonObject {
+            put("payload", jsonElement)
+            put("client_ts", clientTs)
+        }
+        supabase.postgrest.rpc("push_progress", params)
         Unit
     }
 
+    /**
+     * Pull user progress state from Supabase.
+     */
     suspend fun pullProgress(uid: String): Result<String?> = runCatching {
-        val doc = progressDoc(uid).get().await()
-        doc.getString("json")
+        val row = supabase.from(USER_PROGRESS_TABLE).select {
+            filter { eq("user_id", uid) }
+        }.decodeSingleOrNull<UserProgressRow>()
+        row?.payload?.toString()
     }
 
+    /**
+     * Pull timestamp of user progress state.
+     */
     suspend fun pullProgressTimestamp(uid: String): Result<Long> = runCatching {
-        val doc = progressDoc(uid).get().await()
-        doc.getLong("client_updated_at") ?: 0L
+        val row = supabase.from(USER_PROGRESS_TABLE).select {
+            filter { eq("user_id", uid) }
+        }.decodeSingleOrNull<UserProgressRow>()
+        row?.client_ts ?: 0L
+    }
+
+    /**
+     * Realtime subscription for user progress state updates.
+     */
+    suspend fun subscribeToRealtimeProgress(uid: String, onUpdate: (String) -> Unit): RealtimeChannel {
+        val channel = supabase.realtime.channel("user_progress:$uid")
+        channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+            table = USER_PROGRESS_TABLE
+            filter("user_id", FilterOperator.EQ, uid)
+        }.onEach { action ->
+            if (action is PostgresAction.Update || action is PostgresAction.Insert) {
+                val progress = pullProgress(uid).getOrNull()
+                if (progress != null) onUpdate(progress)
+            }
+        }.launchIn(CoroutineScope(Dispatchers.IO))
+        channel.subscribe()
+        return channel
     }
 
     // ---------------------------------------------------------------- ANNOUNCEMENTS & LEADERBOARD
 
     /**
-     * Fetch the latest active announcement to show to students.
+     * Fetch the latest active announcement.
      */
     suspend fun fetchActiveAnnouncement(): Result<Announcement?> = runCatching {
-        val snap = try {
-            db.collection(ANNOUNCEMENTS_COLLECTION)
-                .whereEqualTo("isActive", true)
-                .orderBy("createdAtMillis", Query.Direction.DESCENDING)
-                .limit(1)
-                .get()
-                .await()
-        } catch (e: Exception) {
-            // Fallback without ordering in case compound index is building
-            db.collection(ANNOUNCEMENTS_COLLECTION)
-                .whereEqualTo("isActive", true)
-                .limit(10)
-                .get()
-                .await()
+        val rows = supabase.from(ANNOUNCEMENTS_TABLE).select {
+            filter {
+                eq("is_active", true)
+                eq("is_probe", false)
+            }
+            order("created_at_millis", Order.DESCENDING)
+            limit(1)
+        }.decodeList<AnnouncementRow>()
+
+        rows.firstOrNull()?.let {
+            Announcement(
+                id = it.id,
+                title = it.title,
+                message = it.message,
+                type = it.type,
+                createdAtMillis = it.created_at_millis,
+                isActive = it.is_active,
+            )
         }
-
-        val doc = snap.documents
-            .sortedByDescending { it.getLong("createdAtMillis") ?: 0L }
-            .firstOrNull() ?: return@runCatching null
-
-        Announcement(
-            id = doc.id,
-            title = doc.getString("title") ?: "",
-            message = doc.getString("message") ?: "",
-            type = doc.getString("type") ?: "info",
-            createdAtMillis = doc.getLong("createdAtMillis") ?: 0L,
-            isActive = doc.getBoolean("isActive") ?: true,
-        )
     }
 
     /**
@@ -432,87 +517,93 @@ object CloudSync {
     suspend fun postAnnouncement(title: String, message: String, type: String = "info"): Result<String> = runCatching {
         require(title.isNotBlank()) { "عنوان الإعلان فارغ" }
         require(message.isNotBlank()) { "نص الإعلان فارغ" }
-        val docRef = db.collection(ANNOUNCEMENTS_COLLECTION).document()
-        val data = mapOf(
-            "id" to docRef.id,
-            "title" to title.trim(),
-            "message" to message.trim(),
-            "type" to type,
-            "createdAtMillis" to System.currentTimeMillis(),
-            "createdAt" to FieldValue.serverTimestamp(),
-            "isActive" to true,
+        val newId = java.util.UUID.randomUUID().toString()
+        val row = AnnouncementRow(
+            id = newId,
+            title = title.trim(),
+            message = message.trim(),
+            type = type,
+            created_at_millis = System.currentTimeMillis(),
+            is_active = true,
+            is_probe = false,
         )
-        docRef.set(data).await()
-        docRef.id
+        supabase.from(ANNOUNCEMENTS_TABLE).insert(row)
+        newId
     }
 
     /**
-     * Deactivate or delete an announcement (Admin only).
+     * Deactivate an announcement (Admin only).
      */
     suspend fun deactivateAnnouncement(id: String): Result<Unit> = runCatching {
-        db.collection(ANNOUNCEMENTS_COLLECTION).document(id).update("isActive", false).await()
+        supabase.from(ANNOUNCEMENTS_TABLE).update(buildJsonObject {
+            put("is_active", false)
+        }) {
+            filter { eq("id", id) }
+        }
         Unit
     }
 
     /**
-     * فحص حيّ لصلاحية النشر: يكتب مستند اختبار داخل `/announcements` ثم يحذفه.
-     *
-     * لماذا؟ لأن «البث لا يعمل» له ثلاثة أسباب مختلفة تماماً (لا يوجد حساب،
-     * القواعد لم تُنشر، الحساب ليس مسؤولاً) والرسالة الخام وحدها لا تميّزها.
-     * المستند يُكتب بـ `isActive = false` فلا يراه أي طالب إطلاقاً، ويُمسح
-     * فوراً بعد الفحص.
+     * Probes publish permission by testing `can_publish()` RPC or writing a probe announcement.
      */
     suspend fun probePublishPermission(): Result<String> = runCatching {
-        val ref = db.collection(ANNOUNCEMENTS_COLLECTION).document(PERMISSION_PROBE_ID)
-        ref.set(
-            mapOf(
-                "id" to PERMISSION_PROBE_ID,
-                "title" to "فحص الصلاحية",
-                "message" to "مستند اختبار يُحذف تلقائياً",
-                "type" to "info",
-                "isActive" to false,
-                "isProbe" to true,
-                "createdAtMillis" to System.currentTimeMillis(),
-            )
-        ).await()
-        runCatching { ref.delete().await() }
+        // First try the security definer function
+        val canPublish = runCatching {
+            supabase.postgrest.rpc("can_publish").decodeAs<Boolean>()
+        }.getOrNull()
+
+        if (canPublish == true) {
+            return@runCatching PERMISSION_PROBE_ID
+        }
+
+        // Fallback: write and delete temporary probe row
+        val probeRow = AnnouncementRow(
+            id = PERMISSION_PROBE_ID,
+            title = "فحص الصلاحية",
+            message = "مستند اختبار يُحذف تلقائياً",
+            type = "info",
+            created_at_millis = System.currentTimeMillis(),
+            is_active = false,
+            is_probe = true,
+        )
+        supabase.from(ANNOUNCEMENTS_TABLE).upsert(probeRow)
+        runCatching {
+            supabase.from(ANNOUNCEMENTS_TABLE).delete {
+                filter { eq("id", PERMISSION_PROBE_ID) }
+            }
+        }
         PERMISSION_PROBE_ID
     }
 
-    private const val PERMISSION_PROBE_ID = "__permission_probe__"
-
     /**
-     * Fetch the global leaderboard from `/leaderboard` — a public mirror of
-     * each learner's stats that deliberately contains NO email and NO role.
-     * (Reading `/users` directly is admin-only under the Firestore rules.)
+     * Fetch the global leaderboard from `leaderboard` VIEW.
+     * The VIEW deliberately excludes email and role to protect privacy.
      */
     suspend fun fetchLeaderboard(limit: Int = 30): Result<List<UserRecord>> = runCatching {
-        val snap = try {
-            db.collection(LEADERBOARD_COLLECTION)
-                .orderBy("xp", Query.Direction.DESCENDING)
-                .limit(limit.toLong())
-                .get()
-                .await()
+        val rows = try {
+            supabase.from(LEADERBOARD_VIEW).select {
+                order("xp", Order.DESCENDING)
+                limit(limit.toLong())
+            }.decodeList<LeaderboardRow>()
         } catch (e: Exception) {
-            db.collection(LEADERBOARD_COLLECTION)
-                .limit((limit * 2).toLong())
-                .get()
-                .await()
+            supabase.from(LEADERBOARD_VIEW).select {
+                limit((limit * 2).toLong())
+            }.decodeList<LeaderboardRow>()
         }
 
-        snap.documents.mapNotNull { doc ->
+        rows.map { row ->
             UserRecord(
-                uid = doc.getString("uid") ?: doc.id,
+                uid = row.uid,
                 email = null,
-                displayName = doc.getString("displayName") ?: "متعلم",
-                photoUrl = doc.getString("photoUrl"),
+                displayName = row.display_name,
+                photoUrl = row.photo_url,
                 role = "student",
-                streak = (doc.getLong("streak") ?: 0L).toInt(),
-                xp = (doc.getLong("xp") ?: 0L).toInt(),
-                completedLessonsCount = (doc.getLong("completedLessonsCount") ?: 0L).toInt(),
-                wordsLearnedCount = (doc.getLong("wordsLearnedCount") ?: 0L).toInt(),
-                accuracy = doc.getDouble("accuracy") ?: 0.0,
-                lastActiveMillis = doc.getLong("lastActiveMillis") ?: 0L,
+                streak = row.streak,
+                xp = row.xp,
+                completedLessonsCount = row.completed_lessons_count,
+                wordsLearnedCount = row.words_learned_count,
+                accuracy = row.accuracy,
+                lastActiveMillis = row.last_active_millis,
                 deviceModel = null,
             )
         }.sortedByDescending { it.xp }
