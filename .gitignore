@@ -21,6 +21,13 @@ local.properties
 upload_tool/__pycache__/
 __pycache__/
 
+# ============ Supabase CLI local state — NEVER in the repo ============
+supabase/.branches/
+supabase/.temp/
+
+# ============ Local env files (Python tooling) — NEVER in the repo ============
+.env
+
 # ============ Firebase secrets — NEVER in the repo ============
 # Admin SDK service account keys (used by upload_lessons.py or manual CLI
 # deploys). GitHub Actions uses the FIREBASE_SERVICE_ACCOUNT repo secret

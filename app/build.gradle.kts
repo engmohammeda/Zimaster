@@ -5,6 +5,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Supabase credentials resolution (first non-blank value wins):
+//   1. Environment variables (CI-friendly, highest priority)
+//   2. local.properties at the repo root (git-ignored: local overrides + CI secrets)
+//   3. Gradle project properties: root gradle.properties or -P flags (committed defaults)
+//   4. Dummy fallback so the project still compiles with zero configuration
+val supabaseLocalProperties = java.util.Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) localFile.inputStream().use(::load)
+}
+fun supabaseCredential(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: supabaseLocalProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: (project.findProperty(name) as? String)?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "com.zmastery.english"
     compileSdk = 36
@@ -20,11 +34,9 @@ android {
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 2
         versionName = "1.1.0"
 
-        val supabaseUrl: String = (project.findProperty("SUPABASE_URL") as? String)
-            ?: System.getenv("SUPABASE_URL")
+        val supabaseUrl: String = supabaseCredential("SUPABASE_URL")
             ?: "https://dummy-project.supabase.co"
-        val supabaseAnonKey: String = (project.findProperty("SUPABASE_ANON_KEY") as? String)
-            ?: System.getenv("SUPABASE_ANON_KEY")
+        val supabaseAnonKey: String = supabaseCredential("SUPABASE_ANON_KEY")
             ?: "dummy-anon-key"
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")

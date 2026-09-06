@@ -1,0 +1,5 @@
+# Supabase CLI project configuration (`supabase init` equivalent).
+# Links every local `supabase` command to the Zimaster cloud project.
+# Everything else uses CLI defaults; override only when needed.
+# Docs: https://supabase.com/docs/guides/cli/config
+project_id = "eduobulbcwgcjruzphgc"
