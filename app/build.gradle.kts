@@ -54,7 +54,13 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
-            signingConfig = signingConfigs.getByName("debugConfig")
+            // Fresh clones lack debug.keystore (git-ignored): fall back to AGP's
+            // auto-generated ~/.android/debug.keystore so local builds just work.
+            signingConfig = if (file("${rootDir}/debug.keystore").exists()) {
+                signingConfigs.getByName("debugConfig")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         release {
             isMinifyEnabled = true
