@@ -38,18 +38,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: ''
-
-      - name: Install SDK components
+      - name: Set up Android SDK & Accept Licenses
         run: |
-          if ! command -v sdkmanager >/dev/null 2>&1; then
-            for p in "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/cmdline-tools"/*/bin "$ANDROID_HOME/tools/bin"; do
-              if [ -x "$p/sdkmanager" ]; then export PATH="$p:$PATH"; break; fi
-            done
-          fi
+          for p in "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/cmdline-tools"/*/bin "$ANDROID_HOME/platform-tools"; do
+            if [ -d "$p" ]; then
+              echo "$p" >> "$GITHUB_PATH"
+              export PATH="$p:$PATH"
+            fi
+          done
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
@@ -140,18 +136,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: ''
-
-      - name: Install SDK components
+      - name: Set up Android SDK & Accept Licenses
         run: |
-          if ! command -v sdkmanager >/dev/null 2>&1; then
-            for p in "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/cmdline-tools"/*/bin "$ANDROID_HOME/tools/bin"; do
-              if [ -x "$p/sdkmanager" ]; then export PATH="$p:$PATH"; break; fi
-            done
-          fi
+          for p in "$ANDROID_HOME/cmdline-tools/latest/bin" "$ANDROID_HOME/cmdline-tools"/*/bin "$ANDROID_HOME/platform-tools"; do
+            if [ -d "$p" ]; then
+              echo "$p" >> "$GITHUB_PATH"
+              export PATH="$p:$PATH"
+            fi
+          done
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 

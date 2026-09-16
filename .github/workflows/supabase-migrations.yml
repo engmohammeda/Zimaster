@@ -19,16 +19,8 @@ name: Supabase Migrations
 on:
   push:
     branches: [ "main", "master" ]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/config.toml"
-      - ".github/workflows/supabase-migrations.yml"
   pull_request:
     branches: [ "main", "master" ]
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/config.toml"
-      - ".github/workflows/supabase-migrations.yml"
   workflow_dispatch:
 
 permissions:

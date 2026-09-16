@@ -16,6 +16,10 @@ name: Supabase Keepalive
 on:
   schedule:
     - cron: '0 */6 * * *'
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 permissions:
