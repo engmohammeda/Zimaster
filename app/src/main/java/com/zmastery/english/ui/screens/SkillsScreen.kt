@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.zmastery.english.audio.AudioButton
 import com.zmastery.english.audio.rememberSpeechCapture
+import com.zmastery.english.data.ArchivedStory
 import com.zmastery.english.domain.usecases.ChatTurn
 import com.zmastery.english.domain.usecases.PhoneticDrill
 import com.zmastery.english.domain.usecases.SkillScore
@@ -62,7 +63,7 @@ private data class SkillDef(
 
 @Composable
 private fun skillDefs(): List<SkillDef> = listOf(
-    SkillDef("reading", "القراءة", "اقرأ القطعة بصوت عالٍ وقارن نطقك بالنموذج", Icons.Filled.AutoStories, listOf(ZCyanDeep, ZCyan)),
+    SkillDef("reading", "القراءة", "القصص وأهدافي التطبيقية · قطع القراءة والتدريب الصوتي", Icons.Filled.AutoStories, listOf(ZCyanDeep, ZCyan)),
     SkillDef("listening", "الاستماع", "استمع ثم اكتب ما سمعت أو أجب عن الفهم", Icons.Filled.Headphones, listOf(ZEmerald, ZEmeraldDeep)),
     SkillDef("speaking", "التحدث", "محادثة لايف: تكلّم فيردّ عليك النموذج فوراً", Icons.Filled.RecordVoiceOver, listOf(ZRose, Color(0xFFE11D48))),
     SkillDef("writing", "الكتابة", "اكتب فقرة وصحّحها الذكاء الاصطناعي", Icons.Filled.Edit, listOf(ZCyanDeep, ZIndigo)),
@@ -70,10 +71,10 @@ private fun skillDefs(): List<SkillDef> = listOf(
 )
 
 @Composable
-fun SkillsScreen(vm: AppViewModel) {
+fun SkillsScreen(vm: AppViewModel, onOpenStories: () -> Unit = {}) {
     var active by remember { mutableStateOf<String?>(null) }
     if (active != null) {
-        SkillDetail(active!!, vm) { active = null }
+        SkillDetail(active!!, vm, onOpenStories = onOpenStories) { active = null }
         return
     }
     val defs = skillDefs()
@@ -117,7 +118,7 @@ fun SkillsScreen(vm: AppViewModel) {
 }
 
 @Composable
-private fun SkillDetail(key: String, vm: AppViewModel, onBack: () -> Unit) {
+private fun SkillDetail(key: String, vm: AppViewModel, onOpenStories: () -> Unit = {}, onBack: () -> Unit) {
     val skill = skillDefs().first { it.key == key }
     if (key == "speaking") {
         Column(Modifier.fillMaxSize()) {
@@ -144,7 +145,7 @@ private fun SkillDetail(key: String, vm: AppViewModel, onBack: () -> Unit) {
         }
         SkillHero(skill, compact = false)
         when (key) {
-            "reading" -> ReadingSkill(vm)
+            "reading" -> ReadingSkill(vm, onOpenStories = onOpenStories)
             "listening" -> ListeningSkill(vm)
             "writing" -> WritingSkill(vm)
             else -> PhoneticsSkill(vm)
@@ -271,7 +272,11 @@ private fun rememberMicPermission(): Pair<Boolean, () -> Unit> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun ReadingSkill(vm: AppViewModel) {
+private fun ReadingSkill(vm: AppViewModel, onOpenStories: () -> Unit = {}) {
+    var selectedSection by remember { mutableStateOf(0) } // 0: القصص وأهدافي 🎯 · 1: قطع التدريب والنطق 🎙️
+    var showGoalManager by remember { mutableStateOf(false) }
+    var showStageQuiz by remember { mutableStateOf(false) }
+
     val passages = remember(vm.lessons.toList()) { SkillsEngine.readingPassages(vm.lessons.toList()) }
     var index by remember { mutableStateOf(0) }
     val passage = passages.getOrNull(index) ?: passages.first()
@@ -287,98 +292,274 @@ private fun ReadingSkill(vm: AppViewModel) {
         vm.grantXp(if (s.percent >= 70) 20 else 8)
     }
 
-    SkillCard("قطعة القراءة") {
-        PassageChooser(passages, passage) { picked ->
-            index = passages.indexOf(picked).coerceAtLeast(0)
-            transcript = ""; score = null
-            vm.clearReadingCoach()
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(passage.en, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp)
-        if (passage.ar.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text(passage.ar, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 22.sp)
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            AudioButton(text = passage.en, audioKey = "read-${passage.id}", accent = ZCyanDeep, size = 48.dp)
-            Text("استمع للنموذج ثم اقرأ أنت", color = ZTextMuted, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = {
-                if (!micOk) { requestMic(); return@Button }
-                if (speech.isListening) speech.stop()
-                else speech.start { grade(it) }
-            },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (speech.isListening) ZRose else ZIndigo),
+    // Segmented tab switch: القصص وأهدافي 🎯 vs قطع التدريب والنطق 🎙️
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = ZCard,
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(if (speech.isListening) Icons.Filled.Stop else Icons.Filled.Mic, null)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (speech.isListening) "جارٍ الاستماع... تحدّث الآن" else "اقرأ القطعة بصوت عالٍ",
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        if (speech.partial.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text("سمعت: ${speech.partial}", color = ZCyan, fontSize = 12.sp)
-        }
-        speech.error?.let {
-            Spacer(Modifier.height(6.dp))
-            Text(it, color = ZRose, fontSize = 11.sp)
-        }
-        score?.let {
-            Spacer(Modifier.height(12.dp))
-            ScoreBanner(it)
-        }
-        if (transcript.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text("نصّك: $transcript", color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
+            Button(
+                onClick = { selectedSection = 0 },
+                modifier = Modifier.weight(1f).height(42.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selectedSection == 0) ZCyanDeep else Color.Transparent,
+                    contentColor = if (selectedSection == 0) Color.White else ZTextSecondary,
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
+            ) {
+                Icon(Icons.Filled.AutoStories, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("القصص وأهدافي", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            Button(
+                onClick = { selectedSection = 1 },
+                modifier = Modifier.weight(1f).height(42.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selectedSection == 1) ZCyanDeep else Color.Transparent,
+                    contentColor = if (selectedSection == 1) Color.White else ZTextSecondary,
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
+            ) {
+                Icon(Icons.Filled.RecordVoiceOver, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("قطع التدريب والنطق", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
         }
     }
 
-    SkillCard("مدرّب القراءة") {
-        Text(
-            "يلخّص المعنى بجملتين عربيتين ثم يطرح سؤالاً إنجليزياً واحداً من القطعة — من شخصية الاستوديو.",
-            color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
-        )
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { vm.coachReading(passage.en, passage.ar) },
-            enabled = !vm.isCoachingReading,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ZCyanDeep, disabledContainerColor = ZBorder),
-        ) {
-            if (vm.isCoachingReading) {
-                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("جارٍ التلخيص…", fontWeight = FontWeight.Bold)
+    if (selectedSection == 0) {
+        // 🎯 1. بطاقة أهدافي التطبيقية (My Active Goal)
+        SkillCard("هدفي التطبيقي 🎯") {
+            val activeGoal = vm.activeGoal
+            if (activeGoal != null) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
+                                .background(ZCyanDeep.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Filled.TrackChanges, null, tint = ZCyanDeep, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(activeGoal.title, color = ZTextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                            Text(
+                                if (activeGoal.isFinished) "هدف مكتمل 🏆"
+                                else "المرحلة ${activeGoal.stageIndex + 1} من ${activeGoal.stages.size}: ${activeGoal.currentStage}",
+                                color = ZCyanDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    if (activeGoal.stages.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        val progress = if (activeGoal.isFinished) 1f else ((activeGoal.stageIndex + 1).toFloat() / activeGoal.stages.size)
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                            color = ZCyanDeep,
+                            trackColor = ZBorder,
+                        )
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = { showGoalManager = true },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = ZCyanDeep),
+                        ) {
+                            Icon(Icons.Filled.Tune, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("إدارة الأهداف", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { showStageQuiz = true },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ZAmber),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ZAmberDeep),
+                        ) {
+                            Icon(Icons.Filled.School, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("إثبات المرحلة", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
             } else {
-                Icon(Icons.Filled.AutoAwesome, null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (vm.hasAiKey) "لخّص واسأل" else "يتطلب مفتاح الذكاء الاصطناعي", fontWeight = FontWeight.Bold)
+                Column {
+                    Text(
+                        "حدد هدفك التطبيقي (مثلاً: التحضير لمقابلة عمل، السفر، التحدث مع عملاء) لتُبنى القصص والتمارين اليومية نحو هذا المسار.",
+                        color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { showGoalManager = true },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ZAmberDeep),
+                    ) {
+                        Icon(Icons.Filled.AddCircle, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("تحديد أو إنشاء هدف جديد", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
-        vm.readingCoachError?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = ZAmber, fontSize = 11.sp)
+
+        // 📖 2. بطاقة قصة اليوم نحو هدفك
+        TodayStoryCard(
+            vm = vm,
+            onOpen = { onOpenStories() },
+            onOpenInteractive = { onOpenStories() },
+        )
+
+        // 📚 3. أرشيف القصص الكامل
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = ZCard,
+            shadowElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
+                            .background(ZEmerald.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.LibraryBooks, null, tint = ZEmerald, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("أرشيف القصص الكامل", color = ZTextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("${vm.storiesSorted.size} قصة متوفرة · مدمجة مع مفرداتك", color = ZTextSecondary, fontSize = 11.sp)
+                    }
+                    Button(
+                        onClick = onOpenStories,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ZEmerald),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text("تصفح", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Filled.ArrowBack, null, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
         }
-        vm.readingCoach?.let { note ->
+
+        if (showGoalManager) {
+            GoalManagerDialog(vm, onDismiss = { showGoalManager = false })
+        }
+        if (showStageQuiz) {
+            StageQuizDialog(vm, onDismiss = { showStageQuiz = false })
+        }
+    } else {
+        // [Section 1: Passages & Voice Grading]
+        SkillCard("قطعة القراءة") {
+            PassageChooser(passages, passage) { picked ->
+                index = passages.indexOf(picked).coerceAtLeast(0)
+                transcript = ""; score = null
+                vm.clearReadingCoach()
+            }
             Spacer(Modifier.height(12.dp))
-            if (note.gistAr.isNotBlank()) {
-                Text(note.gistAr, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 22.sp)
-            }
-            if (note.questionEn.isNotBlank()) {
+            Text(passage.en, color = ZTextPrimary, fontSize = 16.sp, lineHeight = 26.sp)
+            if (passage.ar.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Surface(shape = RoundedCornerShape(12.dp), color = ZCyanDeep.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("سؤال", color = ZCyanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(note.questionEn, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
+                Text(passage.ar, color = ZTextSecondary, fontSize = 13.sp, lineHeight = 22.sp)
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AudioButton(text = passage.en, audioKey = "read-${passage.id}", accent = ZCyanDeep, size = 48.dp)
+                Text("استمع للنموذج ثم اقرأ أنت", color = ZTextMuted, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    if (!micOk) { requestMic(); return@Button }
+                    if (speech.isListening) speech.stop()
+                    else speech.start { grade(it) }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if (speech.isListening) ZRose else ZIndigo),
+            ) {
+                Icon(if (speech.isListening) Icons.Filled.Stop else Icons.Filled.Mic, null)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (speech.isListening) "جارٍ الاستماع... تحدّث الآن" else "اقرأ القطعة بصوت عالٍ",
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            if (speech.partial.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text("سمعت: ${speech.partial}", color = ZCyan, fontSize = 12.sp)
+            }
+            speech.error?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(it, color = ZRose, fontSize = 11.sp)
+            }
+            score?.let {
+                Spacer(Modifier.height(12.dp))
+                ScoreBanner(it)
+            }
+            if (transcript.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text("نصّك: $transcript", color = ZTextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
+            }
+        }
+
+        SkillCard("مدرّب القراءة") {
+            Text(
+                "يلخّص المعنى بجملتين عربيتين ثم يطرح سؤالاً إنجليزياً واحداً من القطعة — من شخصية الاستوديو.",
+                color = ZTextMuted, fontSize = 11.sp, lineHeight = 17.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = { vm.coachReading(passage.en, passage.ar) },
+                enabled = !vm.isCoachingReading,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ZCyanDeep, disabledContainerColor = ZBorder),
+            ) {
+                if (vm.isCoachingReading) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("جارٍ التلخيص…", fontWeight = FontWeight.Bold)
+                } else {
+                    Icon(Icons.Filled.AutoAwesome, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (vm.hasAiKey) "لخّص واسأل" else "يتطلب مفتاح الذكاء الاصطناعي", fontWeight = FontWeight.Bold)
+                }
+            }
+            vm.readingCoachError?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, color = ZAmber, fontSize = 11.sp)
+            }
+            vm.readingCoach?.let { note ->
+                Spacer(Modifier.height(12.dp))
+                if (note.gistAr.isNotBlank()) {
+                    Text(note.gistAr, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 22.sp)
+                }
+                if (note.questionEn.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Surface(shape = RoundedCornerShape(12.dp), color = ZCyanDeep.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("سؤال", color = ZCyanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(note.questionEn, color = ZTextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
+                        }
                     }
                 }
             }

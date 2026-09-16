@@ -116,7 +116,6 @@ private val tabs = listOf(
     NavTab("review", "المراجعة", Icons.Filled.Psychology),
     NavTab("levels", "المستويات", Icons.Filled.Layers),
     NavTab("vocab", "القاموس", Icons.Filled.MenuBook),
-    NavTab("exams", "الاختبارات", Icons.Filled.Quiz),
 )
 
 private data class MoreItem(val route: String, val label: String, val desc: String, val icon: ImageVector, val tint: Color)
@@ -125,16 +124,15 @@ private data class MoreItem(val route: String, val label: String, val desc: Stri
 private data class MoreGroup(val title: String, val items: List<MoreItem>)
 
 /**
- * هندسة معلومات مدروسة (ترتيب رحلة المتعلم، بلا تكرار مع الشريط السفلي):
+ * هندسة معلومات مدروسة:
  *   المولّد → مسارك → تقدّمك وحماسك → النظام.
- * «مراجعة الكلمات والدروس» في الشريط السفلي فلا تُكرر هنا، و«الاختبارات»
- * أصبحت تبويباً رئيسياً، والملف الشخصي والنسخ الاحتياطي داخل الإعدادات.
+ * «الاختبارات» نُقلت لشاشة المزيد، والقصص والأهداف داخل مهارة القراءة في التدريب.
  */
 private val moreGroups = listOf(
     MoreGroup("مسارك", listOf(
-        MoreItem("stories", "القصص وأهدافي", "قصة اليوم نحو هدفك التطبيقي", Icons.Filled.AutoStories, ZAmberDeep),
+        MoreItem("exams", "الاختبارات", "اختبارات ذكية وتراكمية وتثبيت النقاط", Icons.Filled.Quiz, ZAmberDeep),
         MoreItem("roadmap", "خريطة المنهج", "خطتك وتغطيتك", Icons.Filled.Map, ZEmerald),
-        MoreItem("skills", "التدريب", "قراءة · استماع · تحدث · كتابة · صوتيات", Icons.Filled.FitnessCenter, ZIndigo),
+        MoreItem("skills", "التدريب", "قراءة (مع القصص وأهدافي) · استماع · تحدث · كتابة · صوتيات", Icons.Filled.FitnessCenter, ZIndigo),
     )),
     MoreGroup("تقدّمك وحماسك", listOf(
         MoreItem("analytics", "التحليلات", "مدربك الذكي ومرآة إدراكك", Icons.Filled.Analytics, ZPurple),
@@ -262,7 +260,7 @@ fun ZMasteryApp(
     // "dashboard" is ALSO deliberately excluded — it renders its own
     // Duolingo-style StreakTopBar at the very top of the screen, so the
     // generic app bar underneath it would just be redundant duplication.
-    val extraTop = listOf("generator", "stories", "stories/{focus}", "settings", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools", "inbox")
+    val extraTop = listOf("generator", "stories", "stories/{focus}", "settings", "skills", "roadmap", "analytics", "import", "backup", "phonetics_preview", "momentum", "devtools", "inbox", "exams")
     val showBars = currentRoute in (tabs.map { it.route }.filter { it != "dashboard" } + extraTop)
 
     // Navigate to a top-level destination as a SINGLE instance:
@@ -328,7 +326,9 @@ fun ZMasteryApp(
                     val focus = entry.arguments?.getString("focus")?.toIntOrNull()
                     StoriesScreen(vm, focusStoryId = focus)
                 }
-                composable("skills") { SkillsScreen(vm) }
+                composable("skills") {
+                    SkillsScreen(vm, onOpenStories = { nav.navigate("stories") })
+                }
                 composable("roadmap") {
                     RoadmapScreen(
                         vm,
@@ -726,7 +726,7 @@ private fun ZBottomBar(nav: NavHostController, currentRoute: String?, onMore: ()
             )
         }
         // More button — opens the sheet with all secondary screens (incl. importer)
-        val moreActive = currentRoute in listOf("generator", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import", "inbox")
+        val moreActive = currentRoute in listOf("generator", "roadmap", "skills", "stories", "stories/{focus}", "analytics", "settings", "import", "inbox", "exams")
         NavigationBarItem(
             selected = moreActive,
             onClick = onMore,

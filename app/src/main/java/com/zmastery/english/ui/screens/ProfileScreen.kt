@@ -227,7 +227,7 @@ fun ProfileContent(vm: AppViewModel) {
                 }
             }
 
-            // Account info
+            // الإعدادات العامة (تم النقل بالكامل من شاشة الإعدادات)
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = ZCard,
@@ -235,59 +235,26 @@ fun ProfileContent(vm: AppViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Settings, null, tint = ZCyanDeep, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
                         Text(
-                            "معلومات الحساب والمزامنة",
+                            "الإعدادات العامة",
                             color = ZTextPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                         )
-                        if (vm.isAdmin) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = ZAmber.copy(alpha = 0.2f),
-                            ) {
-                                Text(
-                                    "👑 مدير النظام",
-                                    color = ZAmber,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                )
-                            }
-                        }
                     }
                     Spacer(Modifier.height(12.dp))
+                    InfoRow(Icons.Filled.Language, "لغة التطبيق", "العربية (الافتراضية)")
                     InfoRow(Icons.Filled.Storage, "التخزين المحلي", "محلي دائم (Room DB + DataStore)")
-                    InfoRow(
-                        Icons.Filled.CloudSync,
-                        "المزامنة السحابية",
-                        if (vm.cloudSyncEnabled) "مفعّلة (Supabase) ✓" else "معطلة",
-                    )
-                    InfoRow(
-                        Icons.Filled.Security,
-                        "المصادقة وحالة الحساب",
-                        if (!vm.cloudIsAnonymous && vm.cloudUid != null) {
-                            "حساب سحابي موثّق (${vm.cloudEmail ?: vm.learnerEmail})"
-                        } else {
-                            "حساب ضيف محلي (غير مربوط بسحابة)"
-                        },
-                    )
-                    if (vm.cloudIsAnonymous) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "💡 يمكنك ربط حسابك بجوجل أو بريدك الإلكتروني من شاشة الإعدادات لمزامنة تقدمك والظهور في لوحة الشرف.",
-                            color = ZTextMuted,
-                            fontSize = 11.sp,
-                            lineHeight = 16.sp,
-                        )
-                    }
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
+
+            // المزامنة السحابية وإدارة الحساب بالكامل
+            CloudSyncGroup(vm)
 
         Spacer(Modifier.height(80.dp))
     }

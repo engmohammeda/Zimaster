@@ -541,7 +541,7 @@ private fun MnemonicsCard(onOpen: () -> Unit) {
 
 /** إدارة الأهداف: تفعيل/إنشاء — الهدف النشط هو بوصلة القصة اليومية. */
 @Composable
-private fun GoalManagerDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+internal fun GoalManagerDialog(vm: AppViewModel, onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var stagesText by remember { mutableStateOf("") }
     var showCreate by remember { mutableStateOf(false) }
@@ -633,7 +633,7 @@ private fun GoalManagerDialog(vm: AppViewModel, onDismiss: () -> Unit) {
 
 /** اختبار إثبات المرحلة: ٣ أسئلة موقفية، واجتياز ≥٢ يقدّم المرحلة. */
 @Composable
-private fun StageQuizDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+internal fun StageQuizDialog(vm: AppViewModel, onDismiss: () -> Unit) {
     var answers by remember { mutableStateOf<List<Int>>(emptyList()) }
     var result by remember { mutableStateOf<String?>(null) }
 

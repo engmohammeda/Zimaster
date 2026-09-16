@@ -45,7 +45,6 @@ private enum class SettingsSection(val title: String, val subtitle: String, val 
     BACKUP("النسخ الاحتياطي والبيانات", "التصدير · الاستعادة · المكتبة · حذف المحتوى", Icons.Filled.CloudSync, listOf(ZEmerald, ZCyanDeep)),
     NOTIFICATIONS("الإشعارات والتنبيهات", "التذكير اليومي وتنبيهات الحماسة والأصوات", Icons.Filled.NotificationsActive, listOf(ZAmber, ZRose)),
     HOME("الشاشة الرئيسية", "أداة الشاشة الرئيسية", Icons.Filled.Widgets, listOf(ZPurple, ZIndigo)),
-    GENERAL("عام", "اللغة والمزامنة", Icons.Filled.Settings, listOf(ZCyanDeep, ZIndigo)),
     ABOUT("حول", "الإصدار والخصوصية", Icons.Filled.Info, listOf(ZEmerald, ZEmeraldDeep)),
 }
 
@@ -172,13 +171,6 @@ private fun SettingsDetail(vm: AppViewModel, section: SettingsSection, onBackup:
             SettingsSection.BACKUP -> BackupSection(vm, onBackup)
             SettingsSection.NOTIFICATIONS -> NotificationSection(vm)
             SettingsSection.HOME -> SettingsGroup("الشاشة الرئيسية") { WidgetRow() }
-            SettingsSection.GENERAL -> {
-                SettingsGroup("عام") {
-                    ActionRow(Icons.Filled.Language, "اللغة", "العربية")
-                }
-                Spacer(Modifier.height(16.dp))
-                CloudSyncGroup(vm)
-            }
             SettingsSection.ABOUT -> SettingsGroup("حول") {
                 // The mission is the product thesis — always re-readable.
                 Column(
@@ -761,10 +753,8 @@ private fun AudioGenStatusRow(vm: AppViewModel) {
 }
 
 @Composable
-private fun CloudSyncGroup(vm: AppViewModel) {
+internal fun CloudSyncGroup(vm: AppViewModel) {
     val ctx = LocalContext.current
-    var webIdField by remember { mutableStateOf(vm.googleWebClientId) }
-    var showWebIdField by remember { mutableStateOf(false) }
     var isSigningIn by remember { mutableStateOf(false) }
     var showAdminDialog by remember { mutableStateOf(false) }
     var adminCodeInput by remember { mutableStateOf("") }
@@ -881,60 +871,6 @@ private fun CloudSyncGroup(vm: AppViewModel) {
                     }
                     TextButton(onClick = { showAdminDialog = true }) {
                         Text(if (vm.isAdmin) "👑 صلاحياتك" else "🔑 وضع المطور", color = ZAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (showWebIdField) {
-                    Spacer(Modifier.height(12.dp))
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = ZSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(
-                                "🔑 معرف العميل (Web Client ID):",
-                                color = ZTextPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "معرّف المشروع جاهز افتراضياً، ويمكنك تعديله يدوياً إذا رغبت.",
-                                color = ZTextMuted,
-                                fontSize = 10.sp,
-                                lineHeight = 15.sp,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = webIdField,
-                                onValueChange = { webIdField = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("xxxx.apps.googleusercontent.com", color = ZTextMuted, fontSize = 12.sp) },
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = ZIndigo,
-                                    unfocusedBorderColor = ZBorder,
-                                    focusedTextColor = ZTextPrimary,
-                                    unfocusedTextColor = ZTextPrimary,
-                                ),
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    vm.updateGoogleWebClientId(webIdField)
-                                    showWebIdField = false
-                                },
-                                modifier = Modifier.fillMaxWidth().height(40.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = ZIndigo),
-                            ) {
-                                Icon(Icons.Filled.Save, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("حفظ المعرّف واستخدامه", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                        }
                     }
                 }
 

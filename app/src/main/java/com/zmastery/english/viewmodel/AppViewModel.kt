@@ -110,8 +110,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             "${result.health.vocabCount} vocab")
                 }
             }
-            if (lessons.isEmpty()) {
-                importer.importLessons(StarterCurriculum.defaultPackages)
+            // حذف الدروس الافتراضية نهائياً بناءً على رغبة المستخدم
+            val defaultLessonTitles = setOf(
+                "التحيات والتعارف الأساسي - Greetings & Basics",
+                "الفرق بين أصوات الحروف A و E و I وطريقة التشكيل",
+                "ضمائر الفاعل وفعل الكينونة - Subject Pronouns & Verb To Be",
+                "تكوين الجملة الإنجليزية البسيطة (Subject + Verb + Object)",
+                "يومي المشرق - My Bright Day",
+                "في المقهى - At the Coffee Shop",
+                "رحلة إلى المزرعة - A Day at the Farm",
+                "طلب القهوة في المقهى - Ordering at a Cafe"
+            )
+            val defaultLessonsToRemove = lessons.filter { it.title in defaultLessonTitles }
+            if (defaultLessonsToRemove.isNotEmpty()) {
+                val removedIds = defaultLessonsToRemove.map { it.id }.toSet()
+                lessons.removeAll { it.id in removedIds }
+                vocab.removeAll { it.lessonId in removedIds }
+                persist()
             }
             isLoaded = true
             loadInbox()

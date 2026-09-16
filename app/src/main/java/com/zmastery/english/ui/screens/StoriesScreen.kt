@@ -192,7 +192,7 @@ private fun HeaderPill(icon: androidx.compose.ui.graphics.vector.ImageVector, te
 
 /** The daily ritual card: generate today's story, or jump straight into it. */
 @Composable
-private fun TodayStoryCard(
+internal fun TodayStoryCard(
     vm: AppViewModel,
     onOpen: (Int) -> Unit,
     onOpenInteractive: (ArchivedStory) -> Unit
