@@ -64,18 +64,50 @@ jobs:
           SB_URL: ${{ secrets.SUPABASE_URL }}
           SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # Fed to Gradle through TWO channels on purpose:
+          #   • exported env vars → resolved first by app/build.gradle.kts
+          #   • local.properties  → the historical CI path, now actually read
+          # If neither secret is set the build still succeeds using the public
+          # values committed in gradle.properties (they are not sensitive), so a
+          # fork or a secret-less run never produces a dummy-credential APK.
+          if [ -n "$SB_URL" ]; then echo "SUPABASE_URL=$SB_URL" >> "$GITHUB_ENV"; fi
+          if [ -n "$SB_KEY" ]; then echo "SUPABASE_ANON_KEY=$SB_KEY" >> "$GITHUB_ENV"; fi
           if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
             echo "SUPABASE_URL=$SB_URL" >> local.properties
             echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
+            echo "✔ Supabase credentials injected from repository secrets."
+          else
+            echo "ℹ SUPABASE_URL / SUPABASE_ANON_KEY secrets not set — falling back to gradle.properties."
           fi
 
       - name: Unit tests (بوابة الجودة)
+        id: tests
+        continue-on-error: true
         run: |
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache
+          ./gradlew :app:testDebugUnitTest --stacktrace --build-cache 2>&1 | tee gradle-tests.log
 
       - name: Build Debug (فحص ترجمة)
-        run: ./gradlew :app:assembleDebug --stacktrace --build-cache
+        id: build
+        continue-on-error: true
+        run: ./gradlew :app:assembleDebug --stacktrace --build-cache 2>&1 | tee gradle-build.log
+
+      # Raw job logs live on a blob host that is not reachable from every
+      # environment (proxied or sandboxed CI observers only see "Process
+      # completed with exit code 1"). Re-emitting the real compiler and task
+      # failures as annotations keeps them readable through the checks API.
+      - name: Surface Gradle failures as annotations
+        if: steps.tests.outcome == 'failure' || steps.build.outcome == 'failure'
+        run: |
+          for f in gradle-tests.log gradle-build.log; do
+            [ -f "$f" ] || continue
+            # POSIX ERE only — no lookarounds. The Gradle stacktrace itself is
+            # noise here; the compiler/task lines above it are the diagnosis.
+            grep -E "^e: |error:|FAILURE:|What went wrong|^> Task .* FAILED|^Caused by:|^> [A-Z].*" "$f" \
+              | grep -vE "^[[:space:]]+at |org\.gradle\.internal" | head -25 \
+              | while IFS= read -r line; do echo "::error title=$f::${line}"; done
+          done
+          exit 1
 
       - name: Upload CI APK
         uses: actions/upload-artifact@v4
@@ -127,9 +159,20 @@ jobs:
           SB_URL: ${{ secrets.SUPABASE_URL }}
           SB_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # Fed to Gradle through TWO channels on purpose:
+          #   • exported env vars → resolved first by app/build.gradle.kts
+          #   • local.properties  → the historical CI path, now actually read
+          # If neither secret is set the build still succeeds using the public
+          # values committed in gradle.properties (they are not sensitive), so a
+          # fork or a secret-less run never produces a dummy-credential APK.
+          if [ -n "$SB_URL" ]; then echo "SUPABASE_URL=$SB_URL" >> "$GITHUB_ENV"; fi
+          if [ -n "$SB_KEY" ]; then echo "SUPABASE_ANON_KEY=$SB_KEY" >> "$GITHUB_ENV"; fi
           if [ -n "$SB_URL" ] && [ -n "$SB_KEY" ]; then
             echo "SUPABASE_URL=$SB_URL" >> local.properties
             echo "SUPABASE_ANON_KEY=$SB_KEY" >> local.properties
+            echo "✔ Supabase credentials injected from repository secrets."
+          else
+            echo "ℹ SUPABASE_URL / SUPABASE_ANON_KEY secrets not set — falling back to gradle.properties."
           fi
 
       - name: Prepare Signing Keystore
@@ -144,6 +187,8 @@ jobs:
               echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}"
               echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD || 'android' }}"
             } >> "$GITHUB_ENV"
+            # Legacy fallback: app/build.gradle.kts reads RELEASE_STORE_FILE
+            # directly now, but the copy keeps older branches building too.
             cp "$RUNNER_TEMP/keystore/app.keystore" debug.keystore
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           elif [ -f debug.keystore ]; then

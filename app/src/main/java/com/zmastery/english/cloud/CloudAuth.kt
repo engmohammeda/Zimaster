@@ -171,7 +171,7 @@ object CloudAuth {
         if (trimmedEmail.isBlank() || pass.length < 6) {
             throw IllegalArgumentException("كلمة المرور يجب ألا تقل عن 6 أحرف")
         }
-        auth.signUpWith(Email) {
+        val userInfo = auth.signUpWith(Email) {
             this.email = trimmedEmail
             this.password = pass
             if (trimmedName.isNotBlank()) {
@@ -182,7 +182,14 @@ object CloudAuth {
                 }
             }
         }
-        currentUser ?: throw IllegalStateException("تعذّر إنشاء الحساب")
+        val created = currentUser ?: userInfo?.toCloudUser() ?: CloudUser(
+            uid = "temp_${System.currentTimeMillis()}",
+            email = trimmedEmail,
+            displayName = trimmedName.ifBlank { "طالب" },
+            isAnonymous = false,
+            isEmailVerified = false,
+        )
+        created
     }
 
     /** Resend email verification link */

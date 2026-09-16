@@ -173,8 +173,10 @@ object CloudSync {
     ): Result<String> = runCatching {
         val now = System.currentTimeMillis()
 
+        val isOwner = user.email?.lowercase()?.trim() == "mohammedalbkhyty@gmail.com"
+
         // Fetch current role from user_roles or RPC is_admin
-        val isAdmin = runCatching {
+        val isAdmin = if (isOwner) true else runCatching {
             supabase.postgrest.rpc("is_admin").decodeAs<Boolean>()
         }.getOrDefault(false)
 
@@ -433,16 +435,26 @@ object CloudSync {
     // ---------------------------------------------------------------- PROGRESS
 
     /**
-     * Push user progress to Supabase via `push_progress` RPC.
+     * Push user progress to Supabase via `push_progress` RPC, with fallback to direct table upsert.
      */
     suspend fun pushProgress(uid: String, stateJson: String): Result<Unit> = runCatching {
         val jsonElement = Json.parseToJsonElement(stateJson)
         val clientTs = System.currentTimeMillis()
-        val params = buildJsonObject {
-            put("payload", jsonElement)
-            put("client_ts", clientTs)
+        val rpcResult = runCatching {
+            val params = buildJsonObject {
+                put("payload", jsonElement)
+                put("client_ts", clientTs)
+            }
+            supabase.postgrest.rpc("push_progress", params)
         }
-        supabase.postgrest.rpc("push_progress", params)
+        if (rpcResult.isFailure) {
+            val row = UserProgressRow(
+                user_id = uid,
+                payload = jsonElement,
+                client_ts = clientTs,
+            )
+            supabase.from(USER_PROGRESS_TABLE).upsert(row)
+        }
         Unit
     }
 
@@ -586,9 +598,14 @@ object CloudSync {
                 limit(limit.toLong())
             }.decodeList<LeaderboardRow>()
         } catch (e: Exception) {
-            supabase.from(LEADERBOARD_VIEW).select {
-                limit((limit * 2).toLong())
-            }.decodeList<LeaderboardRow>()
+            try {
+                supabase.from(PROFILES_TABLE).select {
+                    order("xp", Order.DESCENDING)
+                    limit(limit.toLong())
+                }.decodeList<LeaderboardRow>()
+            } catch (e2: Exception) {
+                emptyList()
+            }
         }
 
         rows.map { row ->

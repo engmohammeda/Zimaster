@@ -1,15 +1,43 @@
 name: Supabase Migrations
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Applies supabase/migrations/*.sql to the remote project.
+#
+#   • push to main / master touching supabase/migrations/**  → apply
+#   • pull request touching supabase/migrations/**           → dry-run only
+#   • workflow_dispatch (manual "Run workflow")              → apply, and FAIL
+#     loudly if the secrets are missing (a green run that quietly did nothing
+#     is worse than a red one)
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN   personal access token — https://supabase.com/dashboard/account/tokens
+#   SUPABASE_DB_PASSWORD    password of the `postgres` database user
+#   SUPABASE_PROJECT_REF    eduobulbcwgcjruzphgc (optional — falls back to
+#                           project_id in supabase/config.toml)
+# See docs/SUPABASE_SETUP.md §2 and §6.
+# ═══════════════════════════════════════════════════════════════════════════
 on:
   push:
     branches: [ "main", "master" ]
     paths:
       - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - ".github/workflows/supabase-migrations.yml"
   pull_request:
     branches: [ "main", "master" ]
     paths:
       - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - ".github/workflows/supabase-migrations.yml"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Migrations must never run twice against the same project at the same time.
+  group: supabase-migrations-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -23,28 +51,96 @@ jobs:
         with:
           version: latest
 
-      - name: Verify / Dry run migrations (PR)
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Resolve project ref (secret → supabase/config.toml)
+        id: ref
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          REF_SECRET: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-            supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-            supabase db push --dry-run
+          set -euo pipefail
+          REF="$REF_SECRET"
+          if [ -z "$REF" ]; then
+            REF=$(sed -nE 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' supabase/config.toml | head -n1)
+          fi
+          if [ -z "$REF" ]; then
+            echo "::error::Could not resolve the project ref. Set the SUPABASE_PROJECT_REF secret or project_id in supabase/config.toml."
+            exit 1
+          fi
+          echo "project_ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "✔ Target project: $REF"
+
+      - name: Verify credentials are configured
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DB_PASS: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+          MISSING=""
+          [ -z "$TOKEN" ]   && MISSING="$MISSING SUPABASE_ACCESS_TOKEN"
+          [ -z "$DB_PASS" ] && MISSING="$MISSING SUPABASE_DB_PASSWORD"
+          if [ -n "$MISSING" ]; then
+            if [ "$MANUAL" = "true" ]; then
+              # A manual run means somebody expects a deployment to happen.
+              echo "::error::Manual run requested but these secrets are missing:$MISSING"
+              echo "::error::Add them at Settings → Secrets and variables → Actions (docs/SUPABASE_SETUP.md §2)."
+              exit 1
+            fi
+            echo "::warning::Skipping migration push — missing:$MISSING"
+            echo "skip=true" >> "$GITHUB_ENV"
           else
-            echo "Skipping push: SUPABASE_ACCESS_TOKEN not set"
+            echo "skip=false" >> "$GITHUB_ENV"
           fi
 
-      - name: Apply migrations (main)
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+      - name: List pending migration files
+        run: |
+          echo "Migrations in this repository:"
+          ls -1 supabase/migrations/*.sql 2>/dev/null || echo "  (none)"
+
+      - name: Link project
+        if: env.skip != 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase link --project-ref "${{ steps.ref.outputs.project_ref }}"
+
+      - name: Verify / dry-run migrations (PR)
+        if: env.skip != 'true' && github.event_name == 'pull_request'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --dry-run
+
+      - name: Apply migrations (main / manual)
+        if: env.skip != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: yes | supabase db push
+
+      - name: Run security & performance advisors
+        if: env.skip != 'true' && always()
+        continue-on-error: true
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-            supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-            yes | supabase db push
-          else
-            echo "Skipping push: SUPABASE_ACCESS_TOKEN not set"
-          fi
+          # Flags missing RLS policies, unindexed foreign keys, exposed
+          # auth.users, missing indexes and long-lived transactions.
+          # Uses the project linked by the `supabase link` step above.
+          supabase db advisors || true
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🗄️ Supabase Migrations"
+            echo ""
+            echo "- **Project:** \`${{ steps.ref.outputs.project_ref }}\`"
+            echo "- **Event:** \`${{ github.event_name }}\`"
+            if [ "${skip:-false}" = "true" ]; then
+              echo "- **Result:** ⚠️ skipped — repository secrets are not configured"
+            elif [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "- **Result:** 🧪 dry-run only (nothing was applied)"
+            else
+              echo "- **Result:** ✅ migrations applied"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

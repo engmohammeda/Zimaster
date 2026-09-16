@@ -1,9 +1,25 @@
 name: Supabase Keepalive
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Proves, end to end, that the credentials the APP uses actually work:
+#   URL reachable → API key accepted → PostgREST up → `lessons` exposed →
+#   RLS policy for anon/authenticated in place.
+#
+# This is the cheapest possible "is production healthy?" signal, and it fails
+# the run instead of printing a status code and exiting 0. A green checkmark on
+# a 401 tells you nothing; a red one tells you exactly what to fix.
+#
+# Required secrets: SUPABASE_URL, SUPABASE_ANON_KEY
+# (Both are public values — see gradle.properties. They are read from secrets so
+# they can be rotated without a code change.)
+# ═══════════════════════════════════════════════════════════════════════════
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   keepalive:
@@ -14,12 +30,92 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          set -uo pipefail
+          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "Skipping keepalive: SUPABASE_URL or SUPABASE_ANON_KEY not set"
+            if [ "$MANUAL" = "true" ]; then
+              echo "::error::Manual run requested but SUPABASE_URL / SUPABASE_ANON_KEY are not set."
+              echo "::error::Add them at Settings → Secrets and variables → Actions (docs/SUPABASE_SETUP.md §2)."
+              exit 1
+            fi
+            echo "::warning::Skipping keepalive — SUPABASE_URL or SUPABASE_ANON_KEY is not set."
+            echo "state=skipped" >> "$GITHUB_ENV"
             exit 0
           fi
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          echo "state=ok" >> "$GITHUB_ENV"
+
+          ENDPOINT="$SUPABASE_URL/rest/v1/lessons?select=doc_id&limit=1"
+          BODY_FILE=$(mktemp)
+          HTTP_STATUS=$(curl -s -o "$BODY_FILE" -w "%{http_code}" --max-time 30 \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/lessons?select=doc_id&limit=1")
-          echo "Supabase keepalive ping response: $HTTP_STATUS"
+            -H "Accept: application/json" \
+            "$ENDPOINT")
+          echo "GET $ENDPOINT → HTTP $HTTP_STATUS"
+          echo "http_status=$HTTP_STATUS" >> "$GITHUB_ENV"
+          head -c 400 "$BODY_FILE"; echo
+
+          case "$HTTP_STATUS" in
+            200|206)
+              echo "✅ Supabase is reachable, the API key is valid and public.lessons is readable."
+              ;;
+            401|403)
+              echo "::error::HTTP $HTTP_STATUS — the API key was rejected. Re-copy it from Dashboard → Project Settings → API and update the SUPABASE_ANON_KEY secret."
+              exit 1
+              ;;
+            404)
+              echo "::error::HTTP 404 — the endpoint or the \`lessons\` table does not exist. Either SUPABASE_URL is wrong, or the migrations have not been applied yet (Actions → Supabase Migrations → Run workflow)."
+              exit 1
+              ;;
+            000)
+              echo "::error::No response at all — DNS or network failure. Check SUPABASE_URL ($SUPABASE_URL)."
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected HTTP $HTTP_STATUS from Supabase."
+              exit 1
+              ;;
+          esac
+
+      - name: Ping Auth endpoint
+        if: env.state == 'ok'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -uo pipefail
+          # CloudAuth.ensureSignedIn() depends on anonymous sign-in being enabled.
+          HTTP_STATUS=$(curl -s -o /tmp/settings.json -w "%{http_code}" --max-time 30 \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/auth/v1/settings")
+          echo "GET $SUPABASE_URL/auth/v1/settings → HTTP $HTTP_STATUS"
+          echo "auth_status=$HTTP_STATUS" >> "$GITHUB_ENV"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::GoTrue settings endpoint returned HTTP $HTTP_STATUS."
+            exit 1
+          fi
+          if grep -q '"external"' /tmp/settings.json && grep -q '"google":true' /tmp/settings.json; then
+            echo "✅ Google sign-in is enabled on the project."
+            echo "google_enabled=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Google sign-in does not appear to be enabled — CloudAuth.signInWithIdToken(Google) will fail. Enable it at Dashboard → Authentication → Providers → Google."
+            echo "google_enabled=false" >> "$GITHUB_ENV"
+          fi
+          if grep -q '"anon_users_enabled":true\|"external":{' /tmp/settings.json; then
+            echo "ℹ Auth settings retrieved; verify anonymous sign-in is ON (Dashboard → Authentication → Providers → Anonymous)."
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 💓 Supabase keepalive"
+            echo ""
+            if [ "${state:-}" = "skipped" ]; then
+              echo "⚠️ Skipped — SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set."
+            else
+              echo "- **REST (PostgREST):** HTTP \`${http_status:-?}\`"
+              echo "- **Auth (GoTrue):** HTTP \`${auth_status:-?}\`"
+              echo "- **Google provider:** ${google_enabled:-unknown}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

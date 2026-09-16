@@ -272,15 +272,15 @@ fun ProfileContent(vm: AppViewModel) {
                         Icons.Filled.Security,
                         "المصادقة وحالة الحساب",
                         if (!vm.cloudIsAnonymous && vm.cloudUid != null) {
-                            "حساب Google (${vm.cloudEmail ?: vm.learnerEmail})"
+                            "حساب سحابي موثّق (${vm.cloudEmail ?: vm.learnerEmail})"
                         } else {
-                            "حساب ضيف (غير مربوط بجوجل)"
+                            "حساب ضيف محلي (غير مربوط بسحابة)"
                         },
                     )
                     if (vm.cloudIsAnonymous) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "💡 يمكنك ربط حسابك بجوجل من الإعدادات لمزامنة تقدمك والظهور في لوحة الشرف.",
+                            "💡 يمكنك ربط حسابك بجوجل أو بريدك الإلكتروني من شاشة الإعدادات لمزامنة تقدمك والظهور في لوحة الشرف.",
                             color = ZTextMuted,
                             fontSize = 11.sp,
                             lineHeight = 16.sp,

@@ -676,18 +676,18 @@ internal class CloudController(internal val vm: AppViewModel) {
                 runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
             }
             refreshCloudAuthState()
-            val uid = cloudUid ?: return@launch
-            // Pull the cloud snapshot and MERGE it in — never replace. Local
-            // content always survives; cloud-only items join in. (The old
-            // `lastCloudLessonSyncMillis == 0L` gate + full restoreFrom was
-            // the data-loss bug: a stale cloud snapshot wiped freshly
-            // imported lessons on every launch.)
-            withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
-                runCatching {
-                    com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
-                }.getOrNull()
-            }?.let { cloudJson ->
-                adoptCloudProgress(cloudJson)
+            val uid = cloudUid
+            if (uid != null) {
+                // Pull the cloud snapshot and MERGE it in — never replace. Local
+                // content always survives; cloud-only items join in.
+                withTimeoutOrNull(CLOUD_TIMEOUT_MS) {
+                    runCatching {
+                        com.zmastery.english.cloud.CloudSync.pullProgress(uid).getOrNull()
+                    }.getOrNull()
+                }?.let { cloudJson ->
+                    adoptCloudProgress(cloudJson)
+                }
+                pushProgressToCloud()
             }
             syncCloudLessons(silent = true)
             syncQuotes()
@@ -710,15 +710,9 @@ internal class CloudController(internal val vm: AppViewModel) {
         launch {
             isSyncingCloud = true
             if (!silent) cloudSyncMessage = "جارٍ التحقق من دروس جديدة…"
-            val uid = cloudUid ?: run {
+            if (cloudUid == null) {
                 runCatching { com.zmastery.english.cloud.CloudAuth.ensureSignedIn() }
                 refreshCloudAuthState()
-                cloudUid
-            }
-            if (uid == null) {
-                isSyncingCloud = false
-                if (!silent) cloudSyncMessage = "تعذّر الاتصال بالسحابة الآن"
-                return@launch
             }
             val result = timedCloud("مزامنة الدروس") {
                 com.zmastery.english.cloud.CloudSync.pullNewLessons(lastCloudLessonSyncMillis)
@@ -767,6 +761,22 @@ internal class CloudController(internal val vm: AppViewModel) {
                 com.zmastery.english.cloud.CloudSync.pushProgress(uid, raw)
             }
             syncUserProfileToCloud()
+        }
+    }
+
+    private var debouncedPushJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Debounced cloud push — batches rapid local mutations (e.g. completing cards/words)
+     * into a single network push after 2 seconds of inactivity.
+     */
+    fun debouncedPushProgressToCloud() {
+        if (!cloudSyncEnabled) return
+        val uid = cloudUid ?: return
+        debouncedPushJob?.cancel()
+        debouncedPushJob = vm.vmScope.launch {
+            kotlinx.coroutines.delay(2000)
+            pushProgressToCloud()
         }
     }
 

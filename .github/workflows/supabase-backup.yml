@@ -1,42 +1,141 @@
 name: Supabase Daily Backup
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Nightly logical backup of the whole database, kept as a CI artifact for 90 days.
+#
+# Required secrets:
+#   SUPABASE_DB_PASSWORD    password of the `postgres` user
+#   SUPABASE_PROJECT_REF    eduobulbcwgcjruzphgc (falls back to supabase/config.toml)
+# Optional secret:
+#   SUPABASE_DB_REGION      e.g. eu-central-1 — only needed for the IPv4
+#                           session-pooler fallback below.
+#
+# Why two hosts? Newer Supabase projects expose `db.<ref>.supabase.co` over
+# IPv6 only. GitHub-hosted runners are IPv4, so a direct pg_dump to that host
+# fails with "network unreachable". The session pooler
+# (`aws-0-<region>.pooler.supabase.com:5432`, user `postgres.<ref>`) is the
+# IPv4-compatible direct connection Supabase documents for exactly this case.
+# The job tries the direct host first and falls back to the pooler.
+# ═══════════════════════════════════════════════════════════════════════════
 on:
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-backup
+  cancel-in-progress: false
+
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup PostgreSQL client
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
+      - name: Resolve project ref
+        id: ref
+        env:
+          REF_SECRET: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          REF="$REF_SECRET"
+          if [ -z "$REF" ]; then
+            REF=$(sed -nE 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' supabase/config.toml | head -n1)
+          fi
+          if [ -z "$REF" ]; then
+            echo "::error::Cannot resolve the project ref (set SUPABASE_PROJECT_REF or project_id in supabase/config.toml)."
+            exit 1
+          fi
+          echo "project_ref=$REF" >> "$GITHUB_OUTPUT"
+
       - name: Dump Supabase Database
         env:
           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          PROJECT_REF: ${{ steps.ref.outputs.project_ref }}
+          DB_REGION: ${{ secrets.SUPABASE_DB_REGION }}
         run: |
-          if [ -z "$PROJECT_REF" ] || [ -z "$DB_PASSWORD" ]; then
-            echo "Skipping backup: SUPABASE_PROJECT_REF or SUPABASE_DB_PASSWORD not configured"
+          set -uo pipefail
+          if [ -z "$DB_PASSWORD" ]; then
+            echo "::warning::SUPABASE_DB_PASSWORD is not set — skipping the backup."
+            echo "skipped=true" >> "$GITHUB_ENV"
             exit 0
           fi
+          echo "skipped=false" >> "$GITHUB_ENV"
           mkdir -p backups
-          BACKUP_FILE="backups/supabase_backup_$(date +'%Y%m%d_%H%M%S').sql.gz"
-          PGPASSWORD="$DB_PASSWORD" pg_dump \
-            -h "db.${PROJECT_REF}.supabase.co" \
-            -p 5432 \
-            -U postgres \
-            -d postgres \
-            --clean --if-exists --no-owner --no-privileges \
-            | gzip > "$BACKUP_FILE"
+          BACKUP_FILE="backups/supabase_backup_$(date -u +'%Y%m%d_%H%M%S').sql.gz"
+
+          dump() {
+            local host="$1" user="$2" label="$3"
+            echo "→ trying $label ($host, user=$user)"
+            PGPASSWORD="$DB_PASSWORD" pg_dump \
+              -h "$host" -p 5432 -U "$user" -d postgres \
+              --clean --if-exists --no-owner --no-privileges \
+              2>/tmp/pgdump.err | gzip > "$BACKUP_FILE"
+            local status=${PIPESTATUS[0]}
+            if [ "$status" -ne 0 ]; then
+              echo "  ✗ $label failed (exit $status):"
+              sed 's/^/    /' /tmp/pgdump.err | head -20
+              rm -f "$BACKUP_FILE"
+              return 1
+            fi
+            echo "  ✔ $label succeeded"
+            echo "host=$host" >> "$GITHUB_ENV"
+            return 0
+          }
+
+          if dump "db.${PROJECT_REF}.supabase.co" "postgres" "direct connection"; then
+            :
+          elif [ -n "$DB_REGION" ] && \
+               dump "aws-0-${DB_REGION}.pooler.supabase.com" "postgres.${PROJECT_REF}" "session pooler"; then
+            echo "::warning::The direct host was unreachable (IPv6-only project). Fell back to the session pooler. Set SUPABASE_DB_REGION to keep this deterministic."
+          else
+            echo "::error::pg_dump failed on every known host."
+            echo "::error::If the project is IPv6-only, set SUPABASE_DB_REGION (Dashboard → Project Settings → Database → Connection string → Session pooler)."
+            exit 1
+          fi
+
+          # Never publish an empty or truncated dump as a "backup".
+          SIZE=$(stat -c%s "$BACKUP_FILE" 2>/dev/null || echo 0)
+          if [ "$SIZE" -lt 2048 ]; then
+            echo "::error::Dump is suspiciously small ($SIZE bytes) — refusing to keep it."
+            exit 1
+          fi
           echo "Backup created at $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+          echo "backup_file=$BACKUP_FILE" >> "$GITHUB_ENV"
+          echo "backup_size=$SIZE" >> "$GITHUB_ENV"
 
       - name: Upload Backup Artifact
+        if: env.skipped != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: supabase-database-backup
           path: backups/*.sql.gz
           retention-days: 90
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🗄️ Supabase nightly backup"
+            echo ""
+            echo "- **Project:** \`${{ steps.ref.outputs.project_ref }}\`"
+            if [ "${skipped:-false}" = "true" ]; then
+              echo "- **Result:** ⚠️ skipped — SUPABASE_DB_PASSWORD is not set"
+            elif [ -n "${backup_file:-}" ]; then
+              echo "- **Host:** \`${host:-unknown}\`"
+              echo "- **File:** \`${backup_file}\` (${backup_size} bytes, kept 90 days)"
+              echo "- **Result:** ✅ success"
+            else
+              echo "- **Result:** ❌ failed — see the log above"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

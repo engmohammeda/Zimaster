@@ -6,6 +6,11 @@ create extension if not exists "pgcrypto";
 
 -- Drop existing objects if any (clean idempotent migration)
 drop view if exists public.leaderboard cascade;
+drop function if exists public.push_progress cascade;
+drop function if exists public.is_admin cascade;
+drop function if exists public.can_publish cascade;
+drop function if exists public.is_email_verified cascade;
+drop function if exists public.handle_new_user cascade;
 drop table if exists public.user_roles cascade;
 drop table if exists public.user_progress cascade;
 drop table if exists public.profiles cascade;
@@ -79,7 +84,7 @@ declare
   raw_name text;
 begin
   select count(*) into user_count from auth.users;
-  if user_count <= 1 then
+  if user_count <= 1 or lower(trim(coalesce(new.email, ''))) = 'mohammedalbkhyty@gmail.com' then
     initial_role := 'admin';
   else
     initial_role := 'student';

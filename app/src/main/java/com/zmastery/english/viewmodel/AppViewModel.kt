@@ -110,6 +110,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             "${result.health.vocabCount} vocab")
                 }
             }
+            if (lessons.isEmpty()) {
+                importer.importLessons(StarterCurriculum.defaultPackages)
+            }
             isLoaded = true
             loadInbox()
             // مزامنة صامتة عند الإقلاع: تبني الصناديق الناقصة دون إشعارات.
@@ -355,6 +358,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 android.util.Log.e("AppViewModel", "Save FAILED: ${result.error}")
             }
             syncWidget()
+            cloud.debouncedPushProgressToCloud()
         }
     }
 
