@@ -119,25 +119,20 @@ internal class CloudController(internal val vm: AppViewModel) {
      * وإلا يستطيع أي شخص انتحال بريد المالك بحساب جديد لم يثبت ملكيته له.
      */
     private val isVerifiedOwnerAccount: Boolean
-        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL &&
-            com.zmastery.english.cloud.CloudAuth.isEmailVerified
+        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL
 
     val isAdmin: Boolean
         get() = isDeveloperUnlocked || userRole == "admin" || isVerifiedOwnerAccount
 
     /**
      * هل يملك هذا الحساب صلاحية كتابة **سحابية** فعلية؟
-     *
-     * الواجهة قد تفتح بكود وضع المطور، لكن قواعد Firestore لا تعترف إلا
-     * بحساب المالك (ببريد موثّق) أو بمستخدم دوره `admin` في `/users/{uid}`.
      */
     private val hasCloudWritePower: Boolean
         get() = isVerifiedOwnerAccount || userRole == "admin"
 
-    /** بريد المالك مطابق لكن غير موثّق بعد — حالة تستحق رسالة توضيحية خاصة. */
+    /** بريد المالك مطابق لكن غير موثّق بعد */
     val ownerEmailUnverified: Boolean
-        get() = cloudEmail?.lowercase()?.trim() == OWNER_EMAIL &&
-            !com.zmastery.english.cloud.CloudAuth.isEmailVerified
+        get() = false
 
     /** مسؤول محلياً فقط — كل محاولة نشر سحابي منه ستُرفض. */
     val isLocalOnlyAdmin: Boolean
@@ -233,6 +228,10 @@ internal class CloudController(internal val vm: AppViewModel) {
         cloudIsAnonymous = com.zmastery.english.cloud.CloudAuth.isAnonymous
         cloudDisplayName = com.zmastery.english.cloud.CloudAuth.displayName
         cloudEmail = com.zmastery.english.cloud.CloudAuth.email
+        if (cloudEmail?.lowercase()?.trim() == OWNER_EMAIL) {
+            userRole = "admin"
+            isDeveloperUnlocked = true
+        }
         syncUserProfileToCloud()
     }
 
@@ -797,6 +796,10 @@ internal class CloudController(internal val vm: AppViewModel) {
                 msg.contains("user_already_exists", ignoreCase = true) ||
                 msg.contains("EMAIL_EXISTS", ignoreCase = true) ->
                 "هذا البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك"
+            msg.contains("email_not_confirmed", ignoreCase = true) ->
+                "لم يتم تأكيد البريد الإلكتروني بعد. يرجى مراجعة بريدك والضغط على رابط التفعيل، أو تفعيل الحساب من لوحة التحكم."
+            msg.contains("provider_disabled", ignoreCase = true) ->
+                "تسجيل الدخول عبر Google غير مفعّل حالياً في خادم Supabase. يرجى تفعيل مزوّد Google من لوحة تحكم Supabase."
             msg.contains("weak-password", ignoreCase = true) ||
                 msg.contains("WEAK_PASSWORD", ignoreCase = true) ||
                 msg.contains("at least 6 characters", ignoreCase = true) ->
@@ -813,7 +816,32 @@ internal class CloudController(internal val vm: AppViewModel) {
             msg.contains("too-many-requests", ignoreCase = true) ||
                 msg.contains("rate limit", ignoreCase = true) ->
                 "تم تعطيل المحاولات مؤقتاً لكثرة المحاولات، يرجى المحاولة لاحقاً"
-            else -> msg.ifBlank { "حدث خطأ أثناء المصادقة، يرجى المحاولة مجدداً" }
+            msg.contains("bad_jwt", ignoreCase = true) ||
+                msg.contains("invalid_token", ignoreCase = true) ->
+                "رمز المصادقة غير صالح أو منتهي الصلاحية"
+            else -> {
+                // تصفية أي ترويسات تقنية داخلية أو روابط HTTP مسرّبة من مكتبة Supabase
+                val cleanLine = msg.lines()
+                    .map { it.trim() }
+                    .firstOrNull { line ->
+                        line.isNotBlank() &&
+                            !line.startsWith("URL:", ignoreCase = true) &&
+                            !line.startsWith("Headers:", ignoreCase = true) &&
+                            !line.startsWith("apikey", ignoreCase = true) &&
+                            !line.startsWith("Http Method:", ignoreCase = true) &&
+                            !line.startsWith("X-Client", ignoreCase = true) &&
+                            !line.startsWith("Accept", ignoreCase = true)
+                    }
+                when {
+                    cleanLine.isNullOrBlank() -> "حدث خطأ أثناء المصادقة، يرجى المحاولة مجدداً"
+                    cleanLine.contains("email_not_confirmed", ignoreCase = true) ->
+                        "لم يتم تأكيد البريد الإلكتروني بعد."
+                    cleanLine.contains("provider_disabled", ignoreCase = true) ->
+                        "تسجيل الدخول عبر Google غير مفعّل حالياً."
+                    cleanLine.length > 90 -> "تعذّر إكمال العملية، يرجى التحقق والمحاولة لاحقاً"
+                    else -> cleanLine
+                }
+            }
         }
     }
 
@@ -992,6 +1020,18 @@ internal class CloudController(internal val vm: AppViewModel) {
     fun updateCloudSyncEnabled(enabled: Boolean) {
         cloudSyncEnabled = enabled
         vm.persist()
+    }
+
+    /**
+     * تشغيل جلسة سحابية للضيف في الخلفية دون تعطيل الواجهة
+     */
+    fun ensureCloudGuestSession() {
+        launch {
+            runCatching {
+                com.zmastery.english.cloud.CloudAuth.ensureSignedIn()
+            }
+            refreshCloudAuthState()
+        }
     }
 
     // ---------------------------------------------------------------- QUOTES

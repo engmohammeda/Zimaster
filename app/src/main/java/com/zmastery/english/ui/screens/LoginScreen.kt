@@ -69,9 +69,6 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
     var resetEmailInput by remember { mutableStateOf("") }
     var resetMessage by remember { mutableStateOf<String?>(null) }
 
-    var showWebClientConfigDialog by remember { mutableStateOf(false) }
-    var customWebClientId by remember { mutableStateOf(vm.googleWebClientId) }
-
     // Observe cloud auth state changes
     val signedIn = vm.cloudUid != null && !vm.cloudIsAnonymous
 
@@ -95,20 +92,20 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                             Toast.makeText(ctx, "مرحباً بك ${account.displayName ?: ""} 🎉", Toast.LENGTH_SHORT).show()
                             onFinish()
                         } else {
-                            error = err ?: "فشل تسجيل الدخول بحساب Google لدى Firebase"
+                            error = err ?: "تعذّر تسجيل الدخول بحساب Google"
                         }
                     }
                 } else {
                     isSigningIn = false
-                    error = "لم يرجع حساب Google رمز المصادقة (ID Token). يرجى التأكد من إضافة Web Client ID الصحيح"
+                    error = "تعذّر الحصول على رمز التحقق من Google، يرجى المحاولة لاحقاً"
                 }
             } catch (e: ApiException) {
                 isSigningIn = false
                 val msg = when (e.statusCode) {
-                    12500 -> "خطأ في تهيئة خدمات Google Play على الجهاز (رمز 12500)"
+                    12500 -> "خطأ في تهيئة خدمات Google Play على الجهاز"
                     12501 -> "تم إلغاء اختيار الحساب"
                     12502 -> "حدثت مشكلة أثناء الاتصال بخدمات Google"
-                    10 -> "خطأ في إعدادات التطبيق (Developer Error: تأكد من إضافة SHA-1 و Web Client ID في Firebase)"
+                    10 -> "خطأ في إعدادات الاتصال بحساب Google (تأكد من إعداد بصمة التطبيق SHA-1)"
                     7 -> "لا يوجد اتصال بالإنترنت"
                     else -> "تعذّر تسجيل الدخول (رمز: ${e.statusCode})"
                 }
@@ -396,14 +393,6 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 }
                             }
                         }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        TextButton(onClick = { showWebClientConfigDialog = true }) {
-                            Icon(Icons.Filled.Settings, null, tint = ZTextMuted, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("إعدادات معرّف Web Client ID", color = ZTextSecondary, fontSize = 12.sp)
-                        }
                     } else {
                         // ── TAB 1: EMAIL & PASSWORD ──
                         if (isSignUpMode) {
@@ -565,6 +554,7 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
                                 vm.learnerName = "ضيف"
                             }
                             vm.persist()
+                            vm.ensureCloudGuestSession()
                             onFinish()
                         },
                         modifier = Modifier
@@ -744,48 +734,6 @@ fun LoginScreen(vm: AppViewModel, onFinish: () -> Unit) {
             dismissButton = {
                 TextButton(onClick = { showForgotPassDialog = false }) {
                     Text("إغلاق")
-                }
-            },
-        )
-    }
-
-    // Web Client ID Config Dialog
-    if (showWebClientConfigDialog) {
-        AlertDialog(
-            onDismissRequest = { showWebClientConfigDialog = false },
-            title = { Text("إعدادات Google OAuth Client ID", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-            text = {
-                Column {
-                    Text(
-                        "لربط Google Sign-In بمشروع Supabase الخاص بك:\n1. افتح Google Cloud Console أو Supabase > Authentication > Providers > Google.\n2. انسخ Web Client ID وضعه هنا إذا كان يختلف عن الافتراضي:",
-                        fontSize = 12.sp,
-                        color = ZTextSecondary,
-                        lineHeight = 18.sp,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = customWebClientId,
-                        onValueChange = { customWebClientId = it },
-                        label = { Text("Web Client ID") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        vm.updateGoogleWebClientId(customWebClientId)
-                        showWebClientConfigDialog = false
-                        Toast.makeText(ctx, "تم تحديث Web Client ID بنجاح", Toast.LENGTH_SHORT).show()
-                    },
-                ) {
-                    Text("حفظ")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWebClientConfigDialog = false }) {
-                    Text("إلغاء")
                 }
             },
         )

@@ -2229,6 +2229,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateCloudSyncEnabled(enabled: Boolean) = cloud.updateCloudSyncEnabled(enabled)
 
+    fun ensureCloudGuestSession() = cloud.ensureCloudGuestSession()
+
     /** مزامنة عبارات السحابة محلياً (للودجت والشاشة الرئيسية). */
     fun syncQuotes(onResult: ((Boolean, Int) -> Unit)? = null) = cloud.syncQuotes(onResult)
 
